@@ -1,0 +1,9 @@
+import type { User } from './types';
+
+/** The demo user is always Super Admin. */
+export const CURRENT_USER_ID = 'u-admin';
+
+/** Display name for a user id; falls back to the raw value (the mockup fixture stores a display name as owner). */
+export function userName(users: User[], idOrName: string): string {
+  return users.find((u) => u.id === idOrName)?.name ?? idOrName;
+}

@@ -1,7 +1,9 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { AppLayout } from './components/AppLayout';
 import { LoginPage } from './features/auth/LoginPage';
+import { CandidatePoolPage } from './features/candidates/CandidatePoolPage';
 import { DashboardPage } from './features/dashboard/DashboardPage';
+import { NotesPage } from './features/notes/NotesPage';
 
 function Placeholder({ title }: { title: string }) {
   return <div className="p-8 max-w-[1400px] mx-auto text-[#896a61]">{title}</div>;
@@ -44,7 +46,9 @@ export function AppRoutes() {
     <Routes>
       <Route path="/" element={<DashboardPage />} />
       <Route path="/login" element={<LoginPage />} />
-      {INTERNAL.filter(({ path }) => path !== '/').map(({ path, title }) => (
+      <Route path="/candidates" element={<CandidatePoolPage />} />
+      <Route path="/notes" element={<NotesPage />} />
+      {INTERNAL.filter(({ path }) => !['/', '/candidates', '/notes'].includes(path)).map(({ path, title }) => (
         <Route
           key={path}
           path={path}

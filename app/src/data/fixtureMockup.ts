@@ -51,6 +51,13 @@ function buildCandidates(): Candidate[] {
   });
 }
 
+/** Avatar colours the mockup shows per row (its own palette hash is not reproducible from the data). */
+export const MOCKUP_AVATAR_TONES: Record<string, 'purple' | 'blue' | 'teal' | 'orange'> = {
+  'cand-mock-01': 'purple', 'cand-mock-02': 'purple', 'cand-mock-03': 'teal', 'cand-mock-04': 'orange',
+  'cand-mock-05': 'blue', 'cand-mock-06': 'orange', 'cand-mock-07': 'purple', 'cand-mock-08': 'teal',
+  'cand-mock-09': 'blue', 'cand-mock-10': 'purple',
+};
+
 const USER_ROWS: Array<[id: string, name: string, email: string, role: string, status: string, createdAt: string]> = [
   ['u-mock-01', 'Lê Minh Châu', 'chau.le@company.demo', 'Super Admin', 'Active', '2026-06-03'],
   ['u-mock-02', 'Demo User 04', 'demo.user04@example.com', 'Candidate', 'Active', '2026-10-03'],

@@ -1,6 +1,7 @@
 type Props = { page: number; pageSize: number; total: number; noun?: string; onPage: (page: number) => void };
 
 const NAV = 'size-8 flex items-center justify-center rounded-lg border border-[#e6dddb] dark:border-[#3a3433] text-[#896a61] disabled:opacity-50 disabled:cursor-not-allowed';
+const NEXT = `${NAV} bg-white dark:bg-[#251f1e] text-[#181211] dark:text-white hover:border-primary transition-colors`;
 const NUM = 'size-8 flex items-center justify-center rounded-lg text-xs font-medium transition-colors border';
 const NUM_ON = `${NUM} border-[#e6dddb] dark:border-[#3a3433] bg-white dark:bg-[#251f1e] text-[#181211] dark:text-white hover:border-primary`;
 const NUM_OFF = `${NUM} border-transparent text-[#896a61] hover:text-[#181211] dark:hover:text-white`;
@@ -39,7 +40,7 @@ export function Pagination({ page, pageSize, total, noun = 'results', onPage }: 
             <button key={p} onClick={() => onPage(p)} className={p === page ? NUM_ON : NUM_OFF}>{p}</button>
           ),
         )}
-        <button aria-label="Next page" disabled={page >= pages} onClick={() => onPage(page + 1)} className={NAV}>
+        <button aria-label="Next page" disabled={page >= pages} onClick={() => onPage(page + 1)} className={NEXT}>
           <span className="material-symbols-outlined text-[18px]">chevron_right</span>
         </button>
       </div>
