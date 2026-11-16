@@ -1,0 +1,159 @@
+<!-- New screen (designed, not in production): JD Matching — AI ranking of candidates for a JD.
+     Built only with classes present in the production CSS bundle + the small <style> below. -->
+<style>
+  .jm-grid { display: grid; grid-template-columns: 360px minmax(0, 1fr); gap: 24px; align-items: start; }
+  .jm-score { width: 44px; height: 44px; border-radius: 9999px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 13px; }
+  .jm-bar { height: 6px; border-radius: 9999px; background: #f1f5f9; overflow: hidden; }
+  .jm-bar > div { height: 100%; border-radius: 9999px; }
+  .jm-row:hover { background: #fafafa; }
+  .jm-sticky { position: sticky; top: 0; }
+</style>
+<header class="h-16 bg-white dark:bg-[#1e1e1e] border-b border-[#e6dddb] dark:border-[#2a2423] px-8 flex items-center justify-between shrink-0">
+  <div class="flex items-center gap-3">
+    <div>
+      <h2 class="text-xl font-bold text-[#181211] dark:text-white">JD Matching</h2>
+      <p class="text-gray-500 font-medium text-sm">AI ranks candidates in the talent pool against a job description</p>
+    </div>
+  </div>
+</header>
+<main class="flex-1 overflow-y-auto custom-scrollbar">
+  <div class="p-8 max-w-[1400px] mx-auto space-y-6 min-h-full bg-[#f9fafb]">
+
+    <!-- Run summary -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div class="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-sm">
+        <div class="flex items-center gap-3">
+          <div class="size-12 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-600"><span class="material-symbols-outlined !text-[24px]">groups</span></div>
+          <div><p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Candidates scanned</p><h3 class="text-2xl font-bold text-slate-900">781</h3></div>
+        </div>
+      </div>
+      <div class="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-sm">
+        <div class="flex items-center gap-3">
+          <div class="size-12 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-600"><span class="material-symbols-outlined !text-[24px]">verified</span></div>
+          <div><p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Strong match ≥ 80</p><h3 class="text-2xl font-bold text-slate-900">12</h3></div>
+        </div>
+      </div>
+      <div class="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-sm">
+        <div class="flex items-center gap-3">
+          <div class="size-12 rounded-2xl bg-amber-50 flex items-center justify-center text-amber-600"><span class="material-symbols-outlined !text-[24px]">trending_up</span></div>
+          <div><p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Partial 60–79</p><h3 class="text-2xl font-bold text-slate-900">37</h3></div>
+        </div>
+      </div>
+      <div class="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-sm">
+        <div class="flex items-center gap-3">
+          <div class="size-12 rounded-2xl bg-purple-50 flex items-center justify-center text-purple-600"><span class="material-symbols-outlined !text-[24px]">auto_awesome</span></div>
+          <div><p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Last run</p><h3 class="text-2xl font-bold text-slate-900">20:41</h3><p class="text-xs text-[#896a61]">Nov 16, 2026</p></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="jm-grid">
+      <!-- JD panel -->
+      <div class="jm-sticky space-y-6">
+        <div class="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-sm space-y-5">
+          <div class="flex items-center justify-between">
+            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Job description</p>
+            <a href="jd-detail.html" class="text-xs font-bold text-primary hover:underline">View JD</a>
+          </div>
+          <button class="w-full flex items-center justify-between gap-2 px-4 py-3 bg-white border border-[#e6dddb] rounded-xl text-left hover:border-primary/50 transition-colors">
+            <div>
+              <div class="font-bold text-[#181211]">Senior Frontend Developer</div>
+              <div class="text-xs text-[#896a61]">ID: JD-2026-002 · Published</div>
+            </div>
+            <span class="material-symbols-outlined text-[20px] text-[#896a61]">expand_more</span>
+          </button>
+          <div class="space-y-2">
+            <p class="text-xs font-bold text-[#896a61] uppercase tracking-wide">Tech stack</p>
+            <div class="flex flex-wrap gap-1.5">
+              <span class="px-2 py-0.5 text-xs font-bold bg-orange-50 text-orange-600 rounded border border-orange-100">React</span>
+              <span class="px-2 py-0.5 text-xs font-bold bg-orange-50 text-orange-600 rounded border border-orange-100">TypeScript</span>
+              <span class="px-2 py-0.5 text-xs font-bold bg-orange-50 text-orange-600 rounded border border-orange-100">Vue</span>
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div><p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Seniority</p><p class="text-sm font-bold text-slate-900">Senior</p></div>
+            <div><p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Experience</p><p class="text-sm font-bold text-slate-900">5 yrs</p></div>
+            <div><p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Domain</p><p class="text-sm font-bold text-slate-900">Healthcare, SaaS</p></div>
+            <div><p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">English</p><p class="text-sm font-bold text-slate-900">Intermediate+</p></div>
+          </div>
+          <hr class="border-[#e6dddb]">
+          <div class="space-y-3">
+            <p class="text-xs font-bold text-[#896a61] uppercase tracking-wide">Scoring weights</p>
+            <div class="space-y-1"><div class="flex justify-between text-xs"><span class="text-slate-700 font-medium">Tech stack</span><span class="font-bold">40%</span></div><div class="jm-bar"><div class="bg-primary" style="width:40%"></div></div></div>
+            <div class="space-y-1"><div class="flex justify-between text-xs"><span class="text-slate-700 font-medium">Experience &amp; seniority</span><span class="font-bold">30%</span></div><div class="jm-bar"><div class="bg-primary" style="width:30%"></div></div></div>
+            <div class="space-y-1"><div class="flex justify-between text-xs"><span class="text-slate-700 font-medium">Domain</span><span class="font-bold">20%</span></div><div class="jm-bar"><div class="bg-primary" style="width:20%"></div></div></div>
+            <div class="space-y-1"><div class="flex justify-between text-xs"><span class="text-slate-700 font-medium">English level</span><span class="font-bold">10%</span></div><div class="jm-bar"><div class="bg-primary" style="width:10%"></div></div></div>
+          </div>
+          <button class="w-full h-11 bg-[#F97316] hover:bg-[#EA580C] text-white rounded-full font-bold shadow-lg shadow-orange-500/20 flex items-center justify-center gap-2 transition-all active:scale-95 text-sm"><span class="material-symbols-outlined text-[20px]">auto_awesome</span> Re-run AI Match</button>
+        </div>
+      </div>
+
+      <!-- Ranked results -->
+      <div class="bg-white rounded-[2rem] border border-gray-100 shadow-sm overflow-hidden">
+        <div class="px-6 py-5 flex items-center justify-between gap-4 border-b border-[#f4f1f0]">
+          <div>
+            <h3 class="text-lg font-bold text-slate-900">Ranked candidates</h3>
+            <p class="text-xs text-[#896a61]">Top 49 of 781 · sorted by match score</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button class="flex items-center gap-2 px-3 py-2 bg-white border border-[#e6dddb] rounded-lg text-sm font-medium text-[#181211] hover:border-primary/50 transition-colors whitespace-nowrap"><span class="material-symbols-outlined text-[18px] text-[#896a61]">filter_list</span><span>Score: ≥ 60</span><span class="material-symbols-outlined text-[18px] text-[#896a61]">expand_more</span></button>
+            <button class="flex items-center gap-2 px-3 py-2 bg-white border border-[#e6dddb] rounded-lg text-sm font-medium text-[#181211] hover:border-primary/50 transition-colors whitespace-nowrap"><span class="material-symbols-outlined text-[18px] text-[#896a61]">download</span><span>Export</span></button>
+          </div>
+        </div>
+        <div id="jm-list" class="divide-y divide-[#f4f1f0]"></div>
+        <div class="px-6 py-4 flex items-center justify-between text-sm text-[#896a61] border-t border-[#f4f1f0]">
+          <span>Showing <b class="text-[#181211]">1-8</b> of <b class="text-[#181211]">49</b> matches</span>
+          <div class="flex items-center gap-1">
+            <button class="size-8 flex items-center justify-center rounded-lg border border-[#e6dddb]"><span class="material-symbols-outlined text-[18px]">chevron_left</span></button>
+            <button class="size-8 flex items-center justify-center rounded-lg bg-primary text-white font-bold">1</button>
+            <button class="size-8 flex items-center justify-center rounded-lg border border-[#e6dddb]">2</button>
+            <button class="size-8 flex items-center justify-center rounded-lg border border-[#e6dddb]">…</button>
+            <button class="size-8 flex items-center justify-center rounded-lg border border-[#e6dddb]">7</button>
+            <button class="size-8 flex items-center justify-center rounded-lg border border-[#e6dddb]"><span class="material-symbols-outlined text-[18px]">chevron_right</span></button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+<script>
+(function () {
+  // Fictional data
+  const rows = [
+    { n: 'Nguyen Hoang Long', r: 'Senior Frontend Engineer', s: 94, sen: 'Senior', y: 7, en: 'Advanced', have: ['React', 'TypeScript', 'Vue'], miss: [], why: '7 yrs React/TypeScript, 3 yrs on a hospital booking SaaS. Led migration from Vue 2 to Vue 3.' },
+    { n: 'Tran Thi Mai Anh', r: 'Frontend Tech Lead', s: 91, sen: 'Lead', y: 9, en: 'Advanced', have: ['React', 'TypeScript'], miss: ['Vue'], why: 'Strong React + TS, leads a team of 5 on a B2B SaaS dashboard. No recent Vue work.' },
+    { n: 'Le Quang Huy', r: 'Senior Software Engineer (Web)', s: 87, sen: 'Senior', y: 6, en: 'Intermediate', have: ['React', 'Vue', 'TypeScript'], miss: [], why: 'Full frontend stack match. Domain is fintech rather than healthcare.' },
+    { n: 'Pham Ngoc Tram', r: 'Frontend Developer', s: 82, sen: 'Middle', y: 5, en: 'Advanced', have: ['React', 'TypeScript'], miss: ['Vue'], why: '5 yrs React in an e-health startup. Seniority one level below the JD.' },
+    { n: 'Vo Minh Tuan', r: 'Senior Vue.js Developer', s: 78, sen: 'Senior', y: 8, en: 'Intermediate', have: ['Vue', 'TypeScript'], miss: ['React'], why: 'Vue expert with SaaS background. Limited React experience (side projects only).' },
+    { n: 'Dang Bao Tran', r: 'Fullstack Developer', s: 74, sen: 'Senior', y: 6, en: 'Basic', have: ['React', 'TypeScript'], miss: ['Vue'], why: 'Good stack overlap, mostly backend in the last 2 years. English below requirement.' },
+    { n: 'Huynh Gia Khang', r: 'UI Engineer', s: 69, sen: 'Middle', y: 4, en: 'Advanced', have: ['React'], miss: ['TypeScript', 'Vue'], why: 'Strong UI/design-system work in React, JavaScript only. 4 yrs experience.' },
+    { n: 'Bui Thanh Son', r: 'Frontend Developer', s: 63, sen: 'Middle', y: 3, en: 'Intermediate', have: ['Vue'], miss: ['React', 'TypeScript'], why: 'Vue 3 on healthcare portal. Below required experience and stack coverage.' },
+  ];
+  const colors = ['bg-purple-100 text-purple-600 border-purple-200', 'bg-blue-100 text-blue-600 border-blue-200', 'bg-emerald-100 text-emerald-600 border-emerald-200', 'bg-amber-100 text-amber-600 border-amber-200'];
+  const tone = (s) => s >= 80 ? ['#ecfdf5', '#059669', '#10b981'] : s >= 60 ? ['#fffbeb', '#d97706', '#f59e0b'] : ['#fef2f2', '#dc2626', '#ef4444'];
+  const ini = (n) => { const p = n.split(' '); return (p[0][0] + p[p.length - 1][0]).toUpperCase(); };
+  const chip = (t, ok) => ok
+    ? `<span class="px-2 py-0.5 text-xs font-medium bg-emerald-50 text-emerald-600 rounded border border-emerald-100 whitespace-nowrap">✓ ${t}</span>`
+    : `<span class="px-2 py-0.5 text-xs font-medium bg-red-50 text-red-500 rounded border border-red-100 whitespace-nowrap">✕ ${t}</span>`;
+  document.getElementById('jm-list').innerHTML = rows.map((c, i) => {
+    const [bg, fg, bar] = tone(c.s);
+    return `<div class="jm-row px-6 py-5 flex items-start gap-4 cursor-pointer transition-colors" onclick="location.href='candidate-detail.html'">
+      <div class="text-sm font-bold text-gray-400 w-5 pt-3">${i + 1}</div>
+      <div class="size-10 rounded-full flex items-center justify-center font-bold text-sm border shrink-0 ${colors[i % 4]}">${ini(c.n)}</div>
+      <div class="flex-1 min-w-0 space-y-2">
+        <div class="flex items-center gap-2 flex-wrap">
+          <span class="font-bold text-[#181211]">${c.n}</span>
+          <span class="text-xs text-[#896a61]">· ${c.r}</span>
+        </div>
+        <div class="flex items-center gap-1.5 flex-wrap">${c.have.map(t => chip(t, true)).join('')}${c.miss.map(t => chip(t, false)).join('')}
+          <span class="text-xs text-[#896a61] ml-1">${c.sen} · ${c.y} yrs · English ${c.en}</span></div>
+        <p class="text-sm text-slate-600"><span class="material-symbols-outlined text-[14px] text-purple-500 align-middle">auto_awesome</span> ${c.why}</p>
+      </div>
+      <div class="flex flex-col items-end gap-2 shrink-0" style="width:120px">
+        <div class="jm-score" style="background:${bg};color:${fg}">${c.s}</div>
+        <div class="jm-bar w-full"><div style="width:${c.s}%;background:${bar}"></div></div>
+      </div>
+    </div>`;
+  }).join('');
+})();
+</script>

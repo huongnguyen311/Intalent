@@ -1,0 +1,13 @@
+# Tool / session folders
+.playwright-mcp/
+.remember/
+node_modules/
+
+# Raw production captures — contain real candidate/user data. Never commit.
+reference/dom/*
+!reference/dom/login-body.html
+reference/prod/
+reference/prod-vp/
+reference/mock-shots/
+reference/text-dump.txt
+reference/private/
