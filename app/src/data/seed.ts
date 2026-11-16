@@ -348,6 +348,6 @@ export function buildSeed(rng: Rng = mulberry32(20261116)): DemoState {
     taxonomy: buildTaxonomy(candidates),
     prompts: buildPrompts(),
     chats: [],
-    ui: { lang: 'en', piiUnlocked: false },
+    ui: { lang: 'en', careersLang: 'vi', piiUnlocked: false },
   };
 }

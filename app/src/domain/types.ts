@@ -158,6 +158,8 @@ export interface ChatMessage {
 
 export interface UiState {
   lang: Lang;
+  /** Public careers site language; independent of the internal UI language. */
+  careersLang: Lang;
   piiUnlocked: boolean;
 }
 

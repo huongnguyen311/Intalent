@@ -146,7 +146,7 @@ export function buildMockupFixture(): DemoState {
     prompts: buildPrompts(),
     chats: [],
     // The mockup's candidate list shows contact details unlocked.
-    ui: { lang: 'en', piiUnlocked: true },
+    ui: { lang: 'en', careersLang: 'vi', piiUnlocked: true },
     meta: { totals: buildTotals() },
   };
 }

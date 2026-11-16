@@ -201,3 +201,14 @@ describe('persistence', () => {
     expect(store.getState().candidates).toEqual(buildSeed().candidates);
   });
 });
+
+describe('persisted ui migration', () => {
+  it('persisted ui without careersLang gets default vi', () => {
+    const raw = JSON.stringify({
+      version: 1,
+      state: { ...buildSeed(), ui: { lang: 'vi', piiUnlocked: true } },
+    });
+    const s = createDemoStore(memoryStorage({ [PERSIST_KEY]: raw })).getState();
+    expect(s.ui).toEqual({ lang: 'vi', piiUnlocked: true, careersLang: 'vi' });
+  });
+});

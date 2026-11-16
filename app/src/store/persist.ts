@@ -28,6 +28,8 @@ const COLLECTIONS = [
   'activities', 'users', 'jds', 'taxonomy', 'prompts', 'chats',
 ] as const;
 
+const isLang = (v: unknown) => v === 'en' || v === 'vi';
+
 /** True when every collection is an array and ui is an object with the expected fields. */
 export function isValidState(s: unknown): s is DemoState {
   if (typeof s !== 'object' || s === null) return false;
@@ -36,7 +38,9 @@ export function isValidState(s: unknown): s is DemoState {
   const ui = o.ui as Record<string, unknown> | null | undefined;
   return (
     typeof ui === 'object' && ui !== null &&
-    (ui.lang === 'en' || ui.lang === 'vi') && typeof ui.piiUnlocked === 'boolean'
+    isLang(ui.lang) && typeof ui.piiUnlocked === 'boolean' &&
+    // careersLang is absent in older saves (filled from seed on merge) but must be valid when present.
+    (ui.careersLang === undefined || isLang(ui.careersLang))
   );
 }
 
@@ -44,7 +48,9 @@ export function persistOptions<T extends DemoState>(storage: Storage): PersistOp
   return {
     // Same-version payloads skip migrate, so shape-validate here; invalid -> seed.
     merge: (persisted, current) =>
-      isValidState(persisted) ? { ...current, ...persisted } : { ...current, ...buildSeed() },
+      isValidState(persisted)
+        ? { ...current, ...persisted, ui: { ...buildSeed().ui, ...persisted.ui } }
+        : { ...current, ...buildSeed() },
     name: PERSIST_KEY,
     version: PERSIST_VERSION,
     storage: createJSONStorage(() => storage),
