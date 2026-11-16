@@ -11,14 +11,18 @@ export function candidateActions(set: Set, get: Get, env: Env): Pick<DemoActions
   return {
     updateCandidate(id, patch) {
       const existing = get().candidates.find((c) => c.id === id);
-      if (!existing) return undefined;
+      if (!existing) return { ok: false, reason: 'not_found' };
       const updated: Candidate = {
         ...existing,
         ...patch,
         ...(patch.email !== undefined ? { email: normalizeEmail(patch.email) } : {}),
+        ...(patch.phone !== undefined ? { phone: patch.phone.trim() } : {}),
       };
+      // One Candidate per real person: an edit may not make this profile collide with another one.
+      const conflict = findDuplicate(get().candidates.filter((c) => c.id !== id), updated);
+      if (conflict) return { ok: false, reason: 'duplicate', conflictId: conflict.id };
       set((s) => ({ candidates: s.candidates.map((c) => (c.id === id ? updated : c)) }));
-      return updated;
+      return { ok: true, candidate: updated };
     },
 
     upsertCandidate(input, ctx) {

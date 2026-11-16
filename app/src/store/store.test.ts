@@ -51,14 +51,37 @@ describe('upsertCandidate', () => {
 describe('updateCandidate', () => {
   it('patches fields, normalizes email and keeps identity', () => {
     const { store, candidate } = setup();
-    const updated = store.getState().updateCandidate(candidate.id, { title: 'Head of Sales', email: ' New@Example.com ' });
+    const res = store.getState().updateCandidate(candidate.id, { title: 'Head of Sales', email: ' New@Example.com ' });
+    expect(res.ok).toBe(true);
+    const updated = store.getState().candidates[0];
     expect(updated).toMatchObject({ id: candidate.id, title: 'Head of Sales', email: 'new@example.com', name: 'Khoa Pham' });
-    expect(store.getState().candidates[0]).toEqual(updated);
+    expect(res).toEqual({ ok: true, candidate: updated });
   });
 
-  it('returns undefined for an unknown candidate', () => {
+  it('reports an unknown candidate', () => {
     const { store } = setup();
-    expect(store.getState().updateCandidate('nope', { title: 'x' })).toBeUndefined();
+    expect(store.getState().updateCandidate('nope', { title: 'x' })).toEqual({ ok: false, reason: 'not_found' });
+  });
+
+  it('rejects an email that belongs to another candidate', () => {
+    const { store, candidate } = setup();
+    const other = store.getState().upsertCandidate({ name: 'Lan Tran', email: 'lan@example.com', phone: '0912000111' }, ctx).candidate;
+    const res = store.getState().updateCandidate(other.id, { email: ' KHOA.PHAM@example.com ' });
+    expect(res).toEqual({ ok: false, reason: 'duplicate', conflictId: candidate.id });
+    expect(store.getState().candidates.find((c) => c.id === other.id)!.email).toBe('lan@example.com');
+  });
+
+  it('rejects a phone that belongs to another candidate when there is no email', () => {
+    const { store, candidate } = setup();
+    const other = store.getState().upsertCandidate({ name: 'Lan Tran', phone: '0912000111' }, ctx).candidate;
+    const res = store.getState().updateCandidate(other.id, { phone: '+84 901 234 567' });
+    expect(res).toEqual({ ok: false, reason: 'duplicate', conflictId: candidate.id });
+    expect(store.getState().candidates.find((c) => c.id === other.id)!.phone).toBe('0912000111');
+  });
+
+  it('allows saving unchanged identity fields', () => {
+    const { store, candidate } = setup();
+    expect(store.getState().updateCandidate(candidate.id, { email: candidate.email, phone: candidate.phone }).ok).toBe(true);
   });
 });
 

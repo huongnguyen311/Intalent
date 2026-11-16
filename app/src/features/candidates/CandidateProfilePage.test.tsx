@@ -2,6 +2,7 @@ import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { buildMockupFixture } from '../../data/fixtureMockup';
+import { toast } from '../../components/Toast';
 import { buildSeed } from '../../data/seed';
 import { useStore } from '../../store/store';
 import { CandidateProfilePage } from './CandidateProfilePage';
@@ -38,6 +39,12 @@ describe('CandidateProfilePage', () => {
     expect(screen.getByText('pool page')).toBeInTheDocument();
   });
 
+  it('live CV pane has no mockup footer and owner links are English', () => {
+    renderAt(`/candidates/${id}`);
+    expect(screen.queryByText(/Sample CV/)).toBeNull();
+    expect(screen.getByText('Change owner')).toBeInTheDocument();
+  });
+
   it('shows a not-found message for an unknown id', () => {
     renderAt('/candidates/nope');
     expect(screen.getByText('Candidate not found')).toBeInTheDocument();
@@ -52,6 +59,19 @@ describe('CandidateProfilePage', () => {
     fireEvent.click(screen.getByRole('button', { name: /Save/ }));
     expect(useStore.getState().candidates[0].title).toBe('Principal Engineer');
     expect(screen.getByLabelText('Current Role')).toHaveAttribute('readonly');
+  });
+
+  it('Save with an email owned by another candidate shows an error and stays in edit mode', () => {
+    vi.mocked(toast).mockClear();
+    renderAt(`/candidates/${id}`);
+    const other = useStore.getState().candidates[1];
+    const before = useStore.getState().candidates[0];
+    fireEvent.click(screen.getByRole('button', { name: /Edit/ }));
+    fireEvent.change(screen.getByLabelText('Email'), { target: { value: other.email } });
+    fireEvent.click(screen.getByRole('button', { name: /Save/ }));
+    expect(toast).toHaveBeenCalledWith('Another profile already uses this email or phone', 'error');
+    expect(useStore.getState().candidates[0].email).toBe(before.email);
+    expect(screen.getByLabelText('Current Role')).not.toHaveAttribute('readonly');
   });
 
   it('Cancel discards edits', () => {
@@ -108,6 +128,7 @@ describe('CandidateProfilePage', () => {
       expect(screen.getByDisplayValue('MBA in Marketing')).toBeInTheDocument();
       expect(screen.getByText('Sales Strategy')).toBeInTheDocument();
       expect(screen.getByText(/Sample CV/)).toBeInTheDocument();
+      expect(screen.getByText('Đổi owner')).toBeInTheDocument();
       expect(screen.queryByText('Used in')).toBeNull();
       expect(screen.queryByRole('button', { name: /Add to Pipeline/ })).toBeNull();
     } finally {

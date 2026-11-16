@@ -11,12 +11,17 @@ import type {
   Via,
 } from '../../domain/types';
 
+export type UpdateCandidateResult =
+  | { ok: true; candidate: Candidate }
+  | { ok: false; reason: 'not_found' }
+  | { ok: false; reason: 'duplicate'; conflictId: string };
+
 export interface DemoActions {
   upsertCandidate(
     input: CandidateInput,
     ctx: { source: string; by: string },
   ): { candidate: Candidate; created: boolean };
-  updateCandidate(id: string, patch: CandidatePatch): Candidate | undefined;
+  updateCandidate(id: string, patch: CandidatePatch): UpdateCandidateResult;
   addToPipeline(
     candidateId: string,
     jobId: string,

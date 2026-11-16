@@ -150,8 +150,8 @@ export const en = {
   'profile.sendEmail': 'Send Email',
   'profile.openZalo': 'Open Zalo',
   'profile.openWhatsapp': 'Open WhatsApp',
-  'profile.changeOwner': 'Đổi owner',
-  'profile.ownerHistory': 'Lịch sử đổi owner',
+  'profile.changeOwner': 'Change owner',
+  'profile.ownerHistory': 'Owner history',
   'profile.doc.original': 'Original Document:',
   'profile.doc.zoomOut': 'Zoom out',
   'profile.doc.zoomIn': 'Zoom in',
@@ -169,6 +169,17 @@ export const en = {
   'via.talent_pool': 'Talent Pool',
   'via.campaign': 'Campaign',
   'via.manual': 'Manual',
+  'profile.err.duplicate': 'Another profile already uses this email or phone',
+  'profile.hide': 'Hide',
+  'profile.show': 'Show',
+  'profile.tip.sendEmail': 'Send email to candidate',
+  'profile.tip.zalo': 'Open Zalo',
+  'profile.tip.whatsapp': 'Open WhatsApp',
+  'profile.cv.summary': 'Professional Summary',
+  'profile.cv.experience': 'Professional Experience',
+  'profile.cv.education': 'Education',
+  'profile.cv.present': 'Present',
+  'profile.cv.sample': 'Sample CV — fictional data for mockup',
 } as const;
 
 export type TKey = keyof typeof en;

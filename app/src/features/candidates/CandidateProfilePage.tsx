@@ -70,6 +70,7 @@ function TextField({ label, value, editing, onChange, testId }: {
 function SecretField({ label, value, editing, onChange }: {
   label: string; value: string; editing: boolean; onChange: (v: string) => void;
 }) {
+  const t = useT();
   const unlocked = useStore((s) => s.ui.piiUnlocked);
   const [shown, setShown] = useState(false);
   const visible = shown || unlocked || editing;
@@ -87,7 +88,7 @@ function SecretField({ label, value, editing, onChange }: {
         />
         <button
           type="button"
-          aria-label={visible ? 'Hide' : 'Show'}
+          aria-label={t(visible ? 'profile.hide' : 'profile.show')}
           onClick={() => setShown(!shown)}
           className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-primary transition-colors material-symbols-outlined text-[20px]"
         >
@@ -129,7 +130,8 @@ export function CandidateProfilePage() {
   const [draft, setDraft] = useState<Draft | null>(null);
   const [zoom, setZoom] = useState(1);
   const [pipelineOpen, setPipelineOpen] = useState(false);
-  const search = isFixtureMode() ? '?fixture=mockup' : '';
+  const fixture = isFixtureMode();
+  const search = fixture ? '?fixture=mockup' : '';
 
   if (!candidate) {
     return (
@@ -151,7 +153,7 @@ export function CandidateProfilePage() {
     setEditing(false);
   };
   const save = () => {
-    useStore.getState().updateCandidate(c.id, {
+    const res = useStore.getState().updateCandidate(c.id, {
       name: form.name.trim() || c.name,
       title: form.title.trim(),
       email: form.email.trim(),
@@ -160,6 +162,10 @@ export function CandidateProfilePage() {
       english: form.english.trim(),
       summary: form.summary.trim(),
     });
+    if (!res.ok) {
+      toast(t('profile.err.duplicate'), 'error');
+      return;
+    }
     toast(t('profile.saved'));
     stopEdit();
   };
@@ -219,16 +225,16 @@ export function CandidateProfilePage() {
                   <TextField label={t('profile.field.role')} value={form.title} editing={editing} onChange={set('title')} />
                   <SecretField label={t('profile.field.email')} value={form.email} editing={editing} onChange={set('email')} />
                   <div className="flex items-end">
-                    <button className="w-full flex items-center justify-center gap-2 px-6 py-2.5 text-sm font-semibold rounded-xl shadow-sm transition-all whitespace-nowrap bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-blue-500/20" title="Send email to candidate">
+                    <button className="w-full flex items-center justify-center gap-2 px-6 py-2.5 text-sm font-semibold rounded-xl shadow-sm transition-all whitespace-nowrap bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-blue-500/20" title={t('profile.tip.sendEmail')}>
                       <span className="material-symbols-outlined text-[20px]">mail</span>{t('profile.sendEmail')}
                     </button>
                   </div>
                   <SecretField label={t('profile.field.phone')} value={form.phone} editing={editing} onChange={set('phone')} />
                   <div></div>
-                  <button className="h-auto flex-1 flex items-center justify-center gap-2 px-6 py-2.5 text-sm font-semibold rounded-xl shadow-sm transition-all whitespace-nowrap bg-gradient-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600 text-white shadow-green-500/20" title="Open Zalo">
+                  <button className="h-auto flex-1 flex items-center justify-center gap-2 px-6 py-2.5 text-sm font-semibold rounded-xl shadow-sm transition-all whitespace-nowrap bg-gradient-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600 text-white shadow-green-500/20" title={t('profile.tip.zalo')}>
                     <span className="material-symbols-outlined text-[20px]">open_in_new</span>{t('profile.openZalo')}
                   </button>
-                  <button className="flex-1 flex items-center justify-center gap-2 px-6 py-2.5 text-sm font-semibold rounded-xl shadow-sm transition-all whitespace-nowrap bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white shadow-emerald-500/20" title="Open WhatsApp">
+                  <button className="flex-1 flex items-center justify-center gap-2 px-6 py-2.5 text-sm font-semibold rounded-xl shadow-sm transition-all whitespace-nowrap bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white shadow-emerald-500/20" title={t('profile.tip.whatsapp')}>
                     <span className="material-symbols-outlined text-[20px]">call</span>{t('profile.openWhatsapp')}
                   </button>
                 </div>
@@ -305,8 +311,8 @@ export function CandidateProfilePage() {
                   <div className="space-y-2">
                     <TextField label={t('profile.field.cvOwner')} value={userName(users, c.cvOwner)} editing={false} testId="candidate-detail-cvowner-input" />
                     <div className="flex items-center gap-4">
-                      <button type="button" data-testid="candidate-detail-change-owner" className="text-sm font-semibold text-primary hover:underline">{t('profile.changeOwner')}</button>
-                      <button type="button" className="text-sm font-semibold text-[#896a61] hover:underline">{t('profile.ownerHistory')}</button>
+                      <button type="button" data-testid="candidate-detail-change-owner" className="text-sm font-semibold text-primary hover:underline">{fixture ? 'Đổi owner' : t('profile.changeOwner')}</button>
+                      <button type="button" className="text-sm font-semibold text-[#896a61] hover:underline">{fixture ? 'Lịch sử đổi owner' : t('profile.ownerHistory')}</button>
                     </div>
                   </div>
                   <TextField label={t('profile.field.lastUpdatedBy')} value="—" editing={false} testId="candidate-detail-lastupdatedby-input" />
