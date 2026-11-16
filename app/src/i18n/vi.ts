@@ -31,4 +31,9 @@ export const vi: Record<TKey, string> = {
   'intake.pool.desc': 'Tạo hồ sơ ứng viên chính thức, có thể tái sử dụng, tìm kiếm và so khớp với vị trí tuyển dụng.',
   'intake.note.title': 'Thêm vào Ghi chú',
   'intake.note.desc': 'Chỉ lưu ghi chú tham khảo. Người này không được thêm vào Kho nhân tài.',
+  'dashboard.openJobs': 'Vị trí đang mở',
+  'dashboard.byStage': 'Ứng viên theo giai đoạn',
+  'dashboard.hires': 'Đã tuyển',
+  'dashboard.topSources': 'Nguồn hàng đầu',
+  'dashboard.noApplications': 'Chưa có ứng viên',
 };

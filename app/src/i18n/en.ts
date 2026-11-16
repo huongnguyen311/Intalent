@@ -30,6 +30,11 @@ export const en = {
   'intake.pool.desc': 'Create an official, reusable candidate profile that can be searched and matched to jobs.',
   'intake.note.title': 'Add to Note',
   'intake.note.desc': 'Keep a reference note only. The person is not added to the Talent Pool.',
+  'dashboard.openJobs': 'Open jobs',
+  'dashboard.byStage': 'Applications by stage',
+  'dashboard.hires': 'Hires',
+  'dashboard.topSources': 'Top sources',
+  'dashboard.noApplications': 'No applications yet',
 } as const;
 
 export type TKey = keyof typeof en;

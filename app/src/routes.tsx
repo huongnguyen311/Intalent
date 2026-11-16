@@ -1,5 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { AppLayout } from './components/AppLayout';
+import { LoginPage } from './features/auth/LoginPage';
+import { DashboardPage } from './features/dashboard/DashboardPage';
 
 function Placeholder({ title }: { title: string }) {
   return <div className="p-8 max-w-[1400px] mx-auto text-[#896a61]">{title}</div>;
@@ -40,7 +42,9 @@ const PUBLIC: { path: string; title: string }[] = [
 export function AppRoutes() {
   return (
     <Routes>
-      {INTERNAL.map(({ path, title }) => (
+      <Route path="/" element={<DashboardPage />} />
+      <Route path="/login" element={<LoginPage />} />
+      {INTERNAL.filter(({ path }) => path !== '/').map(({ path, title }) => (
         <Route
           key={path}
           path={path}
@@ -51,7 +55,7 @@ export function AppRoutes() {
           }
         />
       ))}
-      {PUBLIC.map(({ path, title }) => (
+      {PUBLIC.filter(({ path }) => path !== '/login').map(({ path, title }) => (
         <Route key={path} path={path} element={<Placeholder title={title} />} />
       ))}
       <Route path="/dashboard" element={<Navigate to="/" replace />} />
