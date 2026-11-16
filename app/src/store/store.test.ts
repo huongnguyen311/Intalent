@@ -161,6 +161,33 @@ describe('persistence', () => {
     }
   });
 
+  it('loads seed when version matches but state shape is invalid', () => {
+    const seed = buildSeed();
+    const { ui: _ui, ...noUi } = seed;
+    const bad = [
+      { candidates: 'x' },
+      { candidates: null },
+      noUi,
+      { ...seed, ui: 'x' },
+      null,
+    ];
+    for (const state of bad) {
+      const raw = JSON.stringify({ version: 1, state });
+      const s = createDemoStore(memoryStorage({ [PERSIST_KEY]: raw })).getState();
+      expect(s.candidates).toEqual(seed.candidates);
+      expect(s.ui).toEqual(seed.ui);
+      expect(() => s.candidates.map((c) => c.id)).not.toThrow();
+    }
+  });
+
+  it('keeps valid persisted state of the current version', () => {
+    const seed = buildSeed();
+    const good = { ...seed, ui: { lang: 'vi', piiUnlocked: false } };
+    const raw = JSON.stringify({ version: 1, state: good });
+    const s = createDemoStore(memoryStorage({ [PERSIST_KEY]: raw })).getState();
+    expect(s.ui.lang).toBe('vi');
+  });
+
   it('persists under intalent-demo with version 1 and resetDemo restores seed', () => {
     const storage = memoryStorage();
     const store = createDemoStore(storage);
