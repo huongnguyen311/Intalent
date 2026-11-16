@@ -25,11 +25,15 @@ export function Popover({ trigger, children, wrapperClass, align = 'left' }: Pro
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && close();
     document.addEventListener('mousedown', onDown);
     document.addEventListener('keydown', onKey);
-    window.addEventListener('scroll', close, true);
+    // Scrolling the panel itself (long option lists) must not close it; any other scroll does.
+    const onScroll = (e: Event) => {
+      if (!ref.current?.contains(e.target as Node)) close();
+    };
+    window.addEventListener('scroll', onScroll, true);
     return () => {
       document.removeEventListener('mousedown', onDown);
       document.removeEventListener('keydown', onKey);
-      window.removeEventListener('scroll', close, true);
+      window.removeEventListener('scroll', onScroll, true);
     };
   }, [open]);
 
