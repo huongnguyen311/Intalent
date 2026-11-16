@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { buildMockupFixture } from '../../data/fixtureMockup';
@@ -48,6 +48,30 @@ describe('CandidatePoolPage', () => {
     fireEvent.click(screen.getAllByRole('checkbox')[1]);
     expect(screen.getByText('1 selected')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Add to Pipeline' })).toBeInTheDocument();
+  });
+
+  it('row menu opens Add to Pipeline for that candidate only', () => {
+    renderPage();
+    const { candidates } = useStore.getState();
+    const first = candidates.slice().sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
+    fireEvent.click(screen.getByRole('button', { name: `Actions for ${first.name}` }));
+    fireEvent.click(screen.getByText('Add to Pipeline'));
+    const dialog = screen.getByRole('dialog', { name: 'Add to Pipeline' });
+    const items = within(dialog).getAllByRole('listitem');
+    expect(items).toHaveLength(1);
+    expect(items[0]).toHaveTextContent(first.name);
+  });
+
+  it('bulk bar opens Add to Pipeline with every selected candidate', () => {
+    renderPage();
+    const boxes = screen.getAllByRole('checkbox');
+    fireEvent.click(boxes[1]);
+    fireEvent.click(boxes[3]);
+    const names = [boxes[1], boxes[3]].map((b) => b.getAttribute('aria-label')!.replace('Select ', ''));
+    fireEvent.click(screen.getByRole('button', { name: 'Add to Pipeline' }));
+    const dialog = screen.getByRole('dialog', { name: 'Add to Pipeline' });
+    const items = within(dialog).getAllByRole('listitem').map((li) => li.textContent);
+    expect(items).toEqual(names);
   });
 
   it('mockup fixture reports the full 781-candidate pool over 10 rows', () => {

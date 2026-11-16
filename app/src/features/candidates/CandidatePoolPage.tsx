@@ -12,6 +12,7 @@ import { useShowNew } from '../../hooks';
 import { useT, type TKey } from '../../i18n/i18n';
 import { useStore } from '../../store/store';
 import { IntakeModal } from '../intake/IntakeModal';
+import { AddToPipelineModal } from './AddToPipelineModal';
 
 const FILTER_BTN =
   'flex items-center gap-2 px-3 py-2 bg-white dark:bg-[#251f1e] border border-[#e6dddb] dark:border-[#3a3433] rounded-lg text-sm font-medium text-[#181211] dark:text-white hover:border-primary/50 transition-colors whitespace-nowrap ';
@@ -88,12 +89,7 @@ function FilterMenu({ icon, label, wide, options, value, onChange, anyLabel, tes
 
 const distinct = (vals: string[]) => [...new Set(vals.filter(Boolean))];
 
-type Props = {
-  /** Wired by the pipeline task; a no-op until then. */
-  onAddToPipeline?: (candidateIds: string[]) => void;
-};
-
-export function CandidatePoolPage({ onAddToPipeline = () => {} }: Props) {
+export function CandidatePoolPage() {
   const t = useT();
   const navigate = useNavigate();
   const showNew = useShowNew();
@@ -107,6 +103,9 @@ export function CandidatePoolPage({ onAddToPipeline = () => {} }: Props) {
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [intakeOpen, setIntakeOpen] = useState(false);
+  /** Candidates queued for the Add to Pipeline modal; null while it is closed. */
+  const [pipelineIds, setPipelineIds] = useState<string[] | null>(null);
+  const onAddToPipeline = setPipelineIds;
 
   const patch = (p: Partial<CandidateQuery>) => {
     setQ((cur) => ({ ...cur, ...p }));
@@ -353,6 +352,9 @@ export function CandidatePoolPage({ onAddToPipeline = () => {} }: Props) {
         </div>
       </div>
       <IntakeModal open={intakeOpen} onClose={() => setIntakeOpen(false)} />
+      {showNew && (
+        <AddToPipelineModal open={pipelineIds !== null} onClose={() => setPipelineIds(null)} candidateIds={pipelineIds ?? []} />
+      )}
     </AppLayout>
   );
 }

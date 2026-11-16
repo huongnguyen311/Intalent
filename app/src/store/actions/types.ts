@@ -3,6 +3,7 @@ import type {
   Application,
   Candidate,
   CandidateInput,
+  CandidatePatch,
   DemoState,
   Note,
   NoteInput,
@@ -15,6 +16,7 @@ export interface DemoActions {
     input: CandidateInput,
     ctx: { source: string; by: string },
   ): { candidate: Candidate; created: boolean };
+  updateCandidate(id: string, patch: CandidatePatch): Candidate | undefined;
   addToPipeline(
     candidateId: string,
     jobId: string,

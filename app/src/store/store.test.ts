@@ -48,6 +48,20 @@ describe('upsertCandidate', () => {
   });
 });
 
+describe('updateCandidate', () => {
+  it('patches fields, normalizes email and keeps identity', () => {
+    const { store, candidate } = setup();
+    const updated = store.getState().updateCandidate(candidate.id, { title: 'Head of Sales', email: ' New@Example.com ' });
+    expect(updated).toMatchObject({ id: candidate.id, title: 'Head of Sales', email: 'new@example.com', name: 'Khoa Pham' });
+    expect(store.getState().candidates[0]).toEqual(updated);
+  });
+
+  it('returns undefined for an unknown candidate', () => {
+    const { store } = setup();
+    expect(store.getState().updateCandidate('nope', { title: 'x' })).toBeUndefined();
+  });
+});
+
 describe('addToPipeline', () => {
   it('addToPipeline blocks duplicate application', () => {
     const { store, candidate } = setup();

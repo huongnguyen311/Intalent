@@ -5,9 +5,16 @@ import { AiButton } from './AiButton';
 import { Header } from './Header';
 import { Sidebar } from './Sidebar';
 
-type Props = { title: string; subtitle?: string; actions?: ReactNode; children: ReactNode };
+type Props = {
+  title: string;
+  subtitle?: string;
+  actions?: ReactNode;
+  /** The page renders its own header inside `children` (e.g. the candidate profile breadcrumb). */
+  bare?: boolean;
+  children: ReactNode;
+};
 
-export function AppLayout({ title, subtitle, actions, children }: Props) {
+export function AppLayout({ title, subtitle, actions, bare, children }: Props) {
   const { pathname } = useLocation();
   const fixture = isFixtureMode();
   // The static mockup only shows the floating AI button on the candidate screens.
@@ -16,7 +23,7 @@ export function AppLayout({ title, subtitle, actions, children }: Props) {
     <div className="flex h-screen overflow-hidden bg-background-light dark:bg-background-dark">
       <Sidebar />
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
-        <Header title={title} subtitle={subtitle} actions={actions} />
+        {!bare && <Header title={title} subtitle={subtitle} actions={actions} />}
         <main className="flex-1 overflow-y-auto custom-scrollbar">{children}</main>
       </div>
       {showAi && <AiButton search={fixture ? '?fixture=mockup' : ''} />}

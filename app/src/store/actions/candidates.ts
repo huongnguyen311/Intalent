@@ -7,8 +7,20 @@ function union(a: string[], b: string[] = []): string[] {
   return [...new Set([...a, ...b])];
 }
 
-export function candidateActions(set: Set, get: Get, env: Env): Pick<DemoActions, 'upsertCandidate'> {
+export function candidateActions(set: Set, get: Get, env: Env): Pick<DemoActions, 'upsertCandidate' | 'updateCandidate'> {
   return {
+    updateCandidate(id, patch) {
+      const existing = get().candidates.find((c) => c.id === id);
+      if (!existing) return undefined;
+      const updated: Candidate = {
+        ...existing,
+        ...patch,
+        ...(patch.email !== undefined ? { email: normalizeEmail(patch.email) } : {}),
+      };
+      set((s) => ({ candidates: s.candidates.map((c) => (c.id === id ? updated : c)) }));
+      return updated;
+    },
+
     upsertCandidate(input, ctx) {
       const at = env.now();
       const existing = findDuplicate(get().candidates, input);

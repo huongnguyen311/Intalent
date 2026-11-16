@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import { AppLayout } from './components/AppLayout';
 import { LoginPage } from './features/auth/LoginPage';
 import { CandidatePoolPage } from './features/candidates/CandidatePoolPage';
+import { CandidateProfilePage } from './features/candidates/CandidateProfilePage';
 import { DashboardPage } from './features/dashboard/DashboardPage';
 import { NotesPage } from './features/notes/NotesPage';
 
@@ -47,8 +48,9 @@ export function AppRoutes() {
       <Route path="/" element={<DashboardPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/candidates" element={<CandidatePoolPage />} />
+      <Route path="/candidates/:id" element={<CandidateProfilePage />} />
       <Route path="/notes" element={<NotesPage />} />
-      {INTERNAL.filter(({ path }) => !['/', '/candidates', '/notes'].includes(path)).map(({ path, title }) => (
+      {INTERNAL.filter(({ path }) => !['/', '/candidates', '/candidates/:id', '/notes'].includes(path)).map(({ path, title }) => (
         <Route
           key={path}
           path={path}

@@ -19,6 +19,33 @@ export interface Candidate {
   inTalentPool: true;
   createdAt: string;
   cv: string;
+  /** Optional profile detail; absent for candidates created from a bare intake form. */
+  summary?: string;
+  /** CV tagline and city, used only to render the original-document pane. */
+  headline?: string;
+  location?: string;
+  /** Shown as "Primary Skills" on the profile; falls back to `skills`. */
+  primarySkills?: string[];
+  secondarySkills?: string[];
+  techStack?: string[];
+  openToWork?: boolean;
+  experience?: WorkExperience[];
+  education?: EducationEntry[];
+}
+
+export interface WorkExperience {
+  title: string;
+  company: string;
+  /** YYYY-MM */
+  start: string;
+  end: string;
+  description: string;
+}
+
+export interface EducationEntry {
+  degree: string;
+  institution: string;
+  year: string;
 }
 
 export interface StageHistoryEntry {
@@ -216,6 +243,9 @@ export interface DemoState {
   /** Fixture-only overrides; undefined for the regular seed. */
   meta?: DemoMeta;
 }
+
+/** Fields an edit may change; identity, creation time and pool membership are fixed. */
+export type CandidatePatch = Partial<Omit<Candidate, 'id' | 'createdAt' | 'inTalentPool'>>;
 
 export type CandidateInput = Partial<Omit<Candidate, 'id' | 'createdAt' | 'inTalentPool' | 'source'>> & {
   name: string;

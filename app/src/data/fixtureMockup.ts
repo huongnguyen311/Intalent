@@ -34,6 +34,47 @@ const CANDIDATE_ROWS: Row[] = [
 // cvOwner is the display name here: the mockup's owner is not one of its 10 listed users.
 const CV_OWNER = 'Tran Bao Ngoc';
 
+/** Profile detail the mockup shows for its first candidate (candidate-detail.html); the other rows have none. */
+const FIRST_CANDIDATE_PROFILE: Partial<Candidate> = {
+  headline: 'Head of Sales | Business Development | MBA',
+  location: 'Ho Chi Minh City',
+  summary:
+    'Sales leader with 15+ years of experience in B2B software, payments and telecom. Builds and scales sales teams, designs go-to-market plans for new products, and manages long-term relationships with enterprise and banking clients. Comfortable working with cross-functional product and delivery teams.',
+  primarySkills: [
+    'Sales Strategy', 'Business Development', 'Key Account Management', 'Go-to-Market Strategy',
+    'Team Leadership', 'P&L Management', 'Sales Forecasting', 'Partnership Development',
+  ],
+  secondarySkills: [
+    'IT Managed Services', 'System Integration', 'Fintech Solutions', 'Online Payment Gateways', 'EMV-POS',
+    'Cybersecurity', 'Data Center Solutions', 'Cloud Solutions', 'Market Penetration', 'Channel Development',
+  ],
+  techStack: ['CRM Systems', 'Microsoft Office Suite'],
+  domains: ['IT', 'Telecommunications', 'Fintech', 'Banking', 'Financial Services', 'E-commerce', 'Healthcare'],
+  openToWork: false,
+  experience: [
+    {
+      title: 'Head of Sales', company: 'Nova Payments (demo)', start: '2024-01', end: '2026-06',
+      description: 'Built and led a sales team of 10. Launched the go-to-market plan for a new POS product line and reached 90% of the yearly target in the first two quarters. Set up the weekly pipeline review and forecasting process.',
+    },
+    {
+      title: 'Key Account Manager', company: 'BlueRiver Systems (demo)', start: '2021-03', end: '2023-12',
+      description: 'Managed 25 enterprise accounts in banking and retail. Grew account revenue 35% year over year through upsell of managed services and cloud solutions. Coordinated with solution architects on tenders.',
+    },
+    {
+      title: 'Sales Manager', company: 'Orion Tech JSC (demo)', start: '2017-06', end: '2021-02',
+      description: 'Sold system integration and IT managed services to FMCG and healthcare clients. Opened new accounts through outbound prospecting, partner referrals and industry events.',
+    },
+    {
+      title: 'Sales Specialist', company: 'Sunrise Telecom (demo)', start: '2011-01', end: '2017-05',
+      description: 'Sold data center, network and leased-line services to domestic and international companies. Worked with technical teams to deliver projects on time and supported bid preparation.',
+    },
+  ],
+  education: [
+    { degree: 'MBA in Marketing', institution: 'Saigon Business School (demo)', year: '2015' },
+    { degree: 'BA in Information Systems', institution: 'City University (demo)', year: '2010' },
+  ],
+};
+
 function buildCandidates(): Candidate[] {
   return CANDIDATE_ROWS.map(([name, title, email, phone, seniority, visible, hidden, english], i) => {
     const filler = FILLER_SKILLS.filter((s) => !visible.includes(s)).slice(i % 3, (i % 3) + hidden);
@@ -47,6 +88,7 @@ function buildCandidates(): Candidate[] {
       inTalentPool: true,
       createdAt: '2026-03-01T00:00:00.000Z',
       cv: '',
+      ...(i === 0 ? FIRST_CANDIDATE_PROFILE : {}),
     };
   });
 }

@@ -1,0 +1,117 @@
+import { fireEvent, render, screen, within } from '@testing-library/react';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { buildMockupFixture } from '../../data/fixtureMockup';
+import { buildSeed } from '../../data/seed';
+import { useStore } from '../../store/store';
+import { CandidateProfilePage } from './CandidateProfilePage';
+
+vi.mock('../../components/Toast', () => ({ toast: vi.fn(), Toaster: () => null }));
+
+const renderAt = (url: string) =>
+  render(
+    <MemoryRouter initialEntries={[url]}>
+      <Routes>
+        <Route path="/candidates/:id" element={<CandidateProfilePage />} />
+        <Route path="/candidates" element={<div>pool page</div>} />
+      </Routes>
+    </MemoryRouter>,
+  );
+
+const ME = { by: 'u-admin' };
+let id: string;
+
+beforeEach(() => {
+  const seed = buildSeed();
+  useStore.setState({ ...seed, applications: [], activities: [] });
+  id = seed.candidates[0].id;
+});
+
+describe('CandidateProfilePage', () => {
+  it('shows the candidate with a breadcrumb back to the pool', () => {
+    renderAt(`/candidates/${id}`);
+    const c = useStore.getState().candidates[0];
+    expect(screen.getByRole('heading', { name: 'Candidate Profile' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Full Name')).toHaveValue(c.name);
+    expect(screen.getByLabelText('Full Name')).toHaveAttribute('readonly');
+    fireEvent.click(screen.getByRole('button', { name: 'Candidate Pool' }));
+    expect(screen.getByText('pool page')).toBeInTheDocument();
+  });
+
+  it('shows a not-found message for an unknown id', () => {
+    renderAt('/candidates/nope');
+    expect(screen.getByText('Candidate not found')).toBeInTheDocument();
+  });
+
+  it('Edit makes fields editable and Save persists via updateCandidate', () => {
+    renderAt(`/candidates/${id}`);
+    fireEvent.click(screen.getByRole('button', { name: /Edit/ }));
+    const role = screen.getByLabelText('Current Role');
+    expect(role).not.toHaveAttribute('readonly');
+    fireEvent.change(role, { target: { value: 'Principal Engineer' } });
+    fireEvent.click(screen.getByRole('button', { name: /Save/ }));
+    expect(useStore.getState().candidates[0].title).toBe('Principal Engineer');
+    expect(screen.getByLabelText('Current Role')).toHaveAttribute('readonly');
+  });
+
+  it('Cancel discards edits', () => {
+    renderAt(`/candidates/${id}`);
+    const before = useStore.getState().candidates[0].title;
+    fireEvent.click(screen.getByRole('button', { name: /Edit/ }));
+    fireEvent.change(screen.getByLabelText('Current Role'), { target: { value: 'zzz' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(useStore.getState().candidates[0].title).toBe(before);
+    expect(screen.getByLabelText('Current Role')).toHaveValue(before);
+  });
+
+  it('?edit=1 opens in edit mode', () => {
+    renderAt(`/candidates/${id}?edit=1`);
+    expect(screen.getByLabelText('Current Role')).not.toHaveAttribute('readonly');
+  });
+
+  it('Used in lists each application with a link to the job pipeline', () => {
+    const { jobs } = useStore.getState();
+    const open = jobs.filter((j) => j.status === 'open');
+    const s = useStore.getState();
+    s.addToPipeline(id, open[0].id, { via: 'careers', source: 'LinkedIn Ad', ...ME });
+    s.addToPipeline(id, open[1].id, { via: 'talent_pool', source: 'Talent Pool', ...ME });
+    s.moveStage(useStore.getState().applications[0].id, 'screening', 'u-admin');
+    renderAt(`/candidates/${id}`);
+    const row = screen.getByTestId(`used-in-${open[0].id}`);
+    expect(within(row).getByRole('link', { name: open[0].title })).toHaveAttribute('href', `/pipeline/${open[0].id}`);
+    expect(within(row).getByText('Screening')).toBeInTheDocument();
+    expect(within(row).getByText('LinkedIn Ad')).toBeInTheDocument();
+    expect(within(row).getByText('Careers site')).toBeInTheDocument();
+    expect(within(row).getByText('Super Admin')).toBeInTheDocument();
+    expect(screen.getByTestId(`used-in-${open[1].id}`)).toHaveTextContent('Talent Pool');
+  });
+
+  it('Used in shows an empty state when there are no applications', () => {
+    renderAt(`/candidates/${id}`);
+    expect(screen.getByText('Not used in any job pipeline yet')).toBeInTheDocument();
+  });
+
+  it('Add to Pipeline button opens the modal for this candidate', () => {
+    renderAt(`/candidates/${id}`);
+    fireEvent.click(screen.getByRole('button', { name: /Add to Pipeline/ }));
+    const dialog = screen.getByRole('dialog', { name: 'Add to Pipeline' });
+    expect(within(dialog).getAllByRole('listitem')).toHaveLength(1);
+  });
+
+  it('mockup fixture renders the first candidate fully and hides the new UI', () => {
+    useStore.setState(buildMockupFixture());
+    window.history.pushState({}, '', '/?fixture=mockup');
+    try {
+      renderAt('/candidates/cand-mock-01?fixture=mockup');
+      expect(screen.getByLabelText('Full Name')).toHaveValue('PHAM MINH KHOA');
+      expect(screen.getAllByDisplayValue('Nova Payments (demo)')).toHaveLength(1);
+      expect(screen.getByDisplayValue('MBA in Marketing')).toBeInTheDocument();
+      expect(screen.getByText('Sales Strategy')).toBeInTheDocument();
+      expect(screen.getByText(/Sample CV/)).toBeInTheDocument();
+      expect(screen.queryByText('Used in')).toBeNull();
+      expect(screen.queryByRole('button', { name: /Add to Pipeline/ })).toBeNull();
+    } finally {
+      window.history.pushState({}, '', '/');
+    }
+  });
+});
