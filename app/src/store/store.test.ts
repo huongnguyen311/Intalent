@@ -21,6 +21,8 @@ const NOW = '2026-11-16T10:00:00.000Z';
 
 function setup() {
   const store = createDemoStore(memoryStorage(), () => NOW);
+  // These tests exercise actions from an empty slate, not the demo seed.
+  store.setState({ candidates: [], applications: [], notes: [], activities: [] });
   const a = store
     .getState()
     .upsertCandidate({ name: 'Khoa Pham', email: 'khoa.pham@example.com', phone: '0901234567' }, ctx);
@@ -194,7 +196,7 @@ describe('persistence', () => {
     store.getState().upsertCandidate({ name: 'A', email: 'a@example.com' }, ctx);
     const saved = JSON.parse(storage.getItem('intalent-demo')!);
     expect(saved.version).toBe(1);
-    expect(saved.state.candidates).toHaveLength(1);
+    expect(saved.state.candidates).toHaveLength(buildSeed().candidates.length + 1);
     store.getState().resetDemo();
     expect(store.getState().candidates).toEqual(buildSeed().candidates);
   });

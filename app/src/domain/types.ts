@@ -116,27 +116,38 @@ export interface User {
   email: string;
   role: string;
   status: string;
+  createdAt: string;
 }
 
 export interface Jd {
   id: string;
+  /** Human-facing code, e.g. JD-2026-004. */
+  code: string;
   title: string;
+  client: string;
+  domains: string[];
   body: string;
   skills: string[];
+  status: string;
   createdAt: string;
+  updatedAt: string;
 }
 
 export interface TaxonomyItem {
   id: string;
-  kind: string;
+  kind: 'english' | 'domain' | 'seniority';
   label: string;
   active: boolean;
+  usage: number;
+  updatedAt: string;
 }
 
 export interface Prompt {
   id: string;
   name: string;
+  description: string;
   text: string;
+  updatedAt: string;
 }
 
 export interface ChatMessage {
@@ -148,6 +159,43 @@ export interface ChatMessage {
 export interface UiState {
   lang: Lang;
   piiUnlocked: boolean;
+}
+
+export interface TaRow {
+  name: string;
+  newCv: number;
+  duplicateUploads: number;
+  parseFailed: number;
+  processing: number;
+  received: number;
+  transferredOut: number;
+  total: number;
+}
+
+export interface Labeled {
+  label: string;
+}
+
+/** Mockup-only figures that 10 candidate rows cannot produce; absent from the regular seed. */
+export interface MockupTotals {
+  dashboard: {
+    totalCandidates: number;
+    activeCandidates: number;
+    parsing: { ok: number; of: number };
+    missingEmail: number;
+    topStacks: Array<Labeled & { pct: number; color: string }>;
+    seniority: Array<Labeled & { count: number }>;
+    contributors: Array<{ name: string; total: number; newCv: number }>;
+    availableStacks: Array<Labeled & { count: number; pct: number }>;
+    english: Array<Labeled & { count: number; color: string }>;
+    domains: Array<Labeled & { pct: number }>;
+  };
+  users: { total: number; superAdmins: number; admins: number; users: number };
+  taContribution: { rows: TaRow[]; totals: TaRow };
+}
+
+export interface DemoMeta {
+  totals?: MockupTotals;
 }
 
 export interface DemoState {
@@ -163,6 +211,8 @@ export interface DemoState {
   prompts: Prompt[];
   chats: ChatMessage[];
   ui: UiState;
+  /** Fixture-only overrides; undefined for the regular seed. */
+  meta?: DemoMeta;
 }
 
 export type CandidateInput = Partial<Omit<Candidate, 'id' | 'createdAt' | 'inTalentPool' | 'source'>> & {
