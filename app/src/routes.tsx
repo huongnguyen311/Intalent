@@ -5,6 +5,8 @@ import { CandidatePoolPage } from './features/candidates/CandidatePoolPage';
 import { CandidateProfilePage } from './features/candidates/CandidateProfilePage';
 import { DashboardPage } from './features/dashboard/DashboardPage';
 import { NotesPage } from './features/notes/NotesPage';
+import { UltraUploadPage } from './features/upload/UltraUploadPage';
+import { UploadPage } from './features/upload/UploadPage';
 
 function Placeholder({ title }: { title: string }) {
   return <div className="p-8 max-w-[1400px] mx-auto text-[#896a61]">{title}</div>;
@@ -50,7 +52,9 @@ export function AppRoutes() {
       <Route path="/candidates" element={<CandidatePoolPage />} />
       <Route path="/candidates/:id" element={<CandidateProfilePage />} />
       <Route path="/notes" element={<NotesPage />} />
-      {INTERNAL.filter(({ path }) => !['/', '/candidates', '/candidates/:id', '/notes'].includes(path)).map(({ path, title }) => (
+      <Route path="/upload" element={<UploadPage />} />
+      <Route path="/upload-ultra" element={<UltraUploadPage />} />
+      {INTERNAL.filter(({ path }) => !['/', '/candidates', '/candidates/:id', '/notes', '/upload', '/upload-ultra'].includes(path)).map(({ path, title }) => (
         <Route
           key={path}
           path={path}
