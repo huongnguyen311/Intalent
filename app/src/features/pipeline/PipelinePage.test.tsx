@@ -83,10 +83,25 @@ describe('PipelinePage', () => {
     const src = st.applications.find((a) => a.jobId === 'job-1')!.source;
     renderAt('/pipeline/job-1');
     fireEvent.change(screen.getByLabelText('All sources'), { target: { value: src } });
+    fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'zzz' } });
     fireEvent.click(screen.getByRole('button', { name: /^Job: / }));
     fireEvent.click(screen.getByRole('menuitem', { name: other.title }));
     expect(screen.getByLabelText('All sources')).toHaveValue('');
+    expect(screen.getByRole('searchbox')).toHaveValue('');
     expect(screen.getAllByTestId(/^card-/)).toHaveLength(st.applications.filter((a) => a.jobId === other.id).length);
+  });
+
+  it('ignores a source the current job does not have', () => {
+    renderAt('/pipeline/job-1');
+    const total = useStore.getState().applications.filter((a) => a.jobId === 'job-1').length;
+    // Stored filter for a source absent from the job: simulate via a select option that exists only elsewhere.
+    const select = screen.getByLabelText('All sources') as HTMLSelectElement;
+    const opt = document.createElement('option');
+    opt.value = 'Nowhere';
+    select.appendChild(opt);
+    fireEvent.change(select, { target: { value: 'Nowhere' } });
+    expect(screen.getAllByTestId(/^card-/)).toHaveLength(total);
+    expect(screen.getByLabelText('All sources')).toHaveValue('');
   });
 
   it('view toggle switches state', () => {

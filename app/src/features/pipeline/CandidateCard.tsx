@@ -56,10 +56,10 @@ export function CardBody({ app, candidate, job, menu }: BodyProps) {
     <>
       <div className="flex items-start gap-2 min-w-0">
         <Avatar name={name} tone={toneFor(name)} small />
-        <span className="font-bold text-sm text-slate-800 dark:text-white break-words leading-tight min-w-0" title={name}>{name}</span>
+        <span className="font-bold text-sm text-slate-800 dark:text-white break-words leading-tight min-w-0 pr-6 line-clamp-2" title={name}>{name}</span>
       </div>
       {menu && (
-        <div className="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100 bg-white dark:bg-[#1e1e1e] rounded-full">{menu}</div>
+        <div className="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100 has-[[role=menu]]:opacity-100 bg-white dark:bg-[#1e1e1e] rounded-full">{menu}</div>
       )}
       <div className="text-xs text-[#896a61] truncate" title={candidate?.title}>{candidate?.title}</div>
       <div className="flex items-center gap-1.5 text-[11px] text-gray-400 min-w-0">
