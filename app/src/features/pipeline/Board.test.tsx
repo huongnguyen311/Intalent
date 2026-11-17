@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { buildSeed } from '../../data/seed';
@@ -170,6 +170,32 @@ describe('Board', () => {
       expect(screen.getByTestId('column-rejected')).toHaveClass('w-12');
     });
 
+    it('collapse default is frozen at mount: moving a card does not flip the strips', () => {
+      busy();
+      renderBoard();
+      expect(screen.getByTestId('column-hired')).toHaveClass('w-12');
+      // 5 active -> 3 active: a per-render default would now flip the strips open
+      act(() => { commitMove('a1', 'hired', ''); commitMove('a2', 'hired', ''); });
+      expect(screen.getByTestId('column-hired')).toHaveClass('w-12');
+      expect(screen.getByTestId('column-rejected')).toHaveClass('w-12');
+    });
+
+    it('a text filter auto-expands a collapsed strip that holds matches, with the filtered count', () => {
+      busy();
+      const cs = buildSeed().candidates;
+      useStore.setState({ applications: [...useStore.getState().applications, app('h1', cs[5].id, 'hired', 1)] });
+      const hiredName = cs[5].name;
+      const { rerender } = render(<MemoryRouter><Board job={job()} filter={{ text: '' }} /></MemoryRouter>);
+      expect(screen.getByTestId('column-hired')).toHaveClass('w-12');
+      rerender(<MemoryRouter><Board job={job()} filter={{ text: hiredName }} /></MemoryRouter>);
+      const hired = screen.getByTestId('column-hired');
+      expect(hired).not.toHaveClass('w-12');
+      expect(within(hired).getByTestId('column-count')).toHaveTextContent('1');
+      expect(screen.getAllByText(hiredName).length).toBeGreaterThan(0);
+      rerender(<MemoryRouter><Board job={job()} filter={{ text: '' }} /></MemoryRouter>);
+      expect(screen.getByTestId('column-hired')).toHaveClass('w-12');
+    });
+
     it('collapsed hired strip accepts move', () => {
       busy();
       renderBoard();
@@ -206,5 +232,22 @@ describe('Board', () => {
     renderBoard('job-2');
     expect(screen.getByText('No candidates in this pipeline yet')).toBeInTheDocument();
     expect(screen.queryByTestId('column-new')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Add from Talent Pool/ })).not.toBeInTheDocument();
+  });
+
+  it('Escape closes the move dialog and leaves the stage unchanged', () => {
+    renderBoard();
+    fireEvent.click(within(card(names[0])).getByRole('button', { name: 'Move to…' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Interview' }));
+    expect(screen.getByRole('dialog', { name: 'Move to Interview' })).toBeInTheDocument();
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(stageOf('a1')).toBe('screening');
+  });
+
+  it('card days are localized', () => {
+    useStore.setState((s) => ({ ui: { ...s.ui, lang: 'vi' } }));
+    renderBoard();
+    expect(within(card(names[1])).getByText('1n')).toBeInTheDocument();
   });
 });

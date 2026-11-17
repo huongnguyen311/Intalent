@@ -17,7 +17,6 @@ import { STAGES, stageLabel } from '../../domain/stages';
 import type { Job, Stage } from '../../domain/types';
 import { useLang, useT } from '../../i18n/i18n';
 import { useStore } from '../../store/store';
-import { AddFromPoolButton } from './AddFromPoolModal';
 import { ApplicationDrawer } from './ApplicationDrawer';
 import { OverlayCard } from './CandidateCard';
 import { Column } from './Column';
@@ -92,8 +91,13 @@ export function Board({ job, filter, view = 'kanban' }: { job: Job; filter?: { t
     useSensor(KeyboardSensor, { coordinateGetter: columnKeyboardCoordinates, keyboardCodes: KEYBOARD_CODES }),
   );
 
-  const activeCount = jobApps.filter((a) => !END_STAGES.includes(a.stage)).length;
-  const isCollapsed = (stage: Stage) => collapseOverride[stage] ?? (END_STAGES.includes(stage) && activeCount > BUSY_ACTIVE);
+  // Frozen at mount so moving a card never flips the end strips open or shut by itself.
+  const [busyAtMount] = useState(() => jobApps.filter((a) => !END_STAGES.includes(a.stage)).length > BUSY_ACTIVE);
+  const filtering = !!(filter?.text?.trim() || filter?.source);
+  // While a filter is on, a strip that holds matches opens so they are not hidden.
+  const isCollapsed = (stage: Stage) =>
+    collapseOverride[stage] ??
+    (END_STAGES.includes(stage) && busyAtMount && !(filtering && apps.some((a) => a.stage === stage)));
 
   const move = (appId: string, to: Stage | null) => {
     if (to && handleDrop(appId, to) === 'needs_note') setPending({ appId, to });
@@ -131,7 +135,6 @@ export function Board({ job, filter, view = 'kanban' }: { job: Job; filter?: { t
         </span>
         <h3 className="font-bold text-lg text-slate-800 dark:text-white">{t('pipeline.empty.title')}</h3>
         <p className="text-sm text-[#896a61] max-w-md">{t('pipeline.empty.desc')}</p>
-        <AddFromPoolButton jobId={job.id} />
       </div>
     );
   }
