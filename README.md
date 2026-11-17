@@ -35,7 +35,7 @@ Raw production captures (`reference/dom`, screenshots) are not committed because
 
 `app/` re-implements the 15 mockup screens in React and adds recruitment features (jobs, pipeline kanban, campaigns, public careers site). Vite + React 18 + TypeScript; all data is fake and lives in the browser (localStorage).
 
-Prerequisites: Node 18+.
+Prerequisites: Node 20+.
 
 ```bash
 cd app

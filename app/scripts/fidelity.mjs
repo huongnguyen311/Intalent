@@ -34,6 +34,13 @@ async function launch() {
   catch { return await chromium.launch(); }
 }
 
+for (const [url, hint] of [[MOCK, 'cd mockup && python -m http.server 5181'], [APP, 'cd app && npm run dev']]) {
+  try { await fetch(url); } catch {
+    console.error(`Server not reachable at ${url}. Start it with: ${hint}`);
+    process.exit(1);
+  }
+}
+
 fs.mkdirSync(OUT, { recursive: true });
 const browser = await launch();
 const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
@@ -41,6 +48,7 @@ const a = await ctx.newPage();
 const b = await ctx.newPage();
 const rows = [];
 let failed = false;
+try {
 for (const [name, route] of PAIRS) {
   await a.goto(`${MOCK}${name}.html`);
   await b.goto(APP + route);
@@ -58,7 +66,9 @@ for (const [name, route] of PAIRS) {
   if (!ok) failed = true;
   rows.push({ page: name, 'diff %': pct.toFixed(2), result: excluded ? 'excluded' : ok ? 'ok' : 'FAIL' });
 }
-await browser.close();
+} finally {
+  await browser.close();
+}
 console.table(rows);
 console.log(failed ? `FAIL: pages above ${LIMIT}%` : `OK: all pages <= ${LIMIT}%`);
 process.exit(failed ? 1 : 0);
