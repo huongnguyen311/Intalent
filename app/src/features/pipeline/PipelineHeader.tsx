@@ -44,10 +44,10 @@ export function PipelineHeader({ job, switchable, onSwitch, summary, sources, qu
       {switchable && onSwitch && <Popover
         align="left"
         trigger={({ toggle: open }) => (
-          <button onClick={open} className={`${FIELD} px-4 font-bold flex items-center gap-2 hover:border-primary/50 transition-colors max-w-[240px]`}>
-            <span aria-hidden="true" className="material-symbols-outlined text-[18px] text-[#896a61]">work</span>
+          <button onClick={open} className={`${FIELD} px-4 font-bold flex items-center gap-2 hover:border-primary/50 transition-colors max-w-[170px]`}>
+            <span aria-hidden="true" className="material-symbols-outlined text-[18px] text-[#896a61] shrink-0">work</span>
             <span className="truncate">{t('pipeline.job', { title: job.title })}</span>
-            <span aria-hidden="true" className="material-symbols-outlined text-[18px]">expand_more</span>
+            <span aria-hidden="true" className="material-symbols-outlined text-[18px] shrink-0">expand_more</span>
           </button>
         )}
       >

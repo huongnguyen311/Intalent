@@ -565,7 +565,7 @@ export const en = {
   'jobs.preview.apply': 'Apply now',
   'jobs.preview.noJd': 'No description available.',
   'pipeline.summary': '{total} candidates · {overdue} overdue · Open {days} days',
-  'pipeline.search': 'Search name or title',
+  'pipeline.search': 'Search name',
   'pipeline.allSources': 'All sources',
   'pipeline.viewKanban': 'Kanban view',
   'pipeline.viewList': 'List view',
