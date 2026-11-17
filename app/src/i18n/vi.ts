@@ -540,6 +540,7 @@ export const vi: Record<TKey, string> = {
   'pipeline.noOpenJobs': 'Chưa có vị trí đang mở. Hãy đăng một vị trí để bắt đầu pipeline.',
   'pipeline.notFound': 'Không tìm thấy vị trí',
   'pipeline.addFromPool': 'Thêm từ Talent Pool',
+  'pipeline.jobNotOpen': 'Vị trí này không còn nhận ứng viên mới',
   'pipeline.empty.title': 'Pipeline này chưa có ứng viên',
   'pipeline.empty.desc': 'Thêm người từ Talent Pool, hoặc chờ hồ sơ ứng tuyển từ trang tuyển dụng.',
   'pipeline.dropHere': 'Thả vào đây',

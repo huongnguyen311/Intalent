@@ -1,11 +1,14 @@
 import { useState } from 'react';
 import { useT } from '../../i18n/i18n';
+import { useStore } from '../../store/store';
 import { AddToPipelineModal } from '../candidates/AddToPipelineModal';
 
 /** Header / empty-state action: search the Talent Pool, multi-select, confirm source → Applications in New. */
 export function AddFromPoolButton({ jobId }: { jobId: string }) {
   const t = useT();
   const [open, setOpen] = useState(false);
+  const isOpen = useStore((s) => s.jobs.find((j) => j.id === jobId)?.status === 'open');
+  if (!isOpen) return null;
   return (
     <>
       <button

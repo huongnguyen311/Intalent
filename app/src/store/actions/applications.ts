@@ -8,6 +8,8 @@ export function applicationActions(
 ): Pick<DemoActions, 'addToPipeline' | 'moveStage' | 'addComment' | 'rateApplication'> {
   return {
     addToPipeline(candidateId, jobId, ctx) {
+      const job = get().jobs.find((j) => j.id === jobId);
+      if (!job || job.status !== 'open') return { ok: false, reason: 'job_not_open' };
       const dup = get().applications.find((a) => a.candidateId === candidateId && a.jobId === jobId);
       if (dup) return { ok: false, reason: 'duplicate', stage: dup.stage };
       const at = env.now();
@@ -44,8 +46,10 @@ export function applicationActions(
       const trimmed = reason?.trim();
       if (to === 'rejected' && !trimmed) return false;
       const at = env.now();
+      // A reason only belongs to the rejection it was given for.
+      const { rejectedReason: _gone, ...kept } = app;
       const next: Application = {
-        ...app,
+        ...kept,
         stage: to,
         stageEnteredAt: at,
         history: [...app.history, { stage: to, at, by }],

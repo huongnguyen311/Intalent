@@ -1,4 +1,5 @@
 import type { Activity, DemoState } from './types';
+import { CAREERS_ACTOR } from './sources';
 import { userName } from './users';
 
 export type Period = 'day' | 'week' | '3m' | '6m' | 'all';
@@ -44,6 +45,8 @@ export function taContribution(
   };
   for (const a of state.activities) {
     if (!inPeriod(a, period, now)) continue;
+    // Self-service applicants are not CVs a TA uploaded.
+    if ('by' in a && a.by === CAREERS_ACTOR) continue;
     if (a.type === 'candidate_created') row(a.by).newCv++;
     else if (a.type === 'candidate_merged') row(a.by).duplicate++;
     else if (a.type === 'owner_transferred') {

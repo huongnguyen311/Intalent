@@ -67,6 +67,14 @@ export function emailForName(name: string): string {
   return words.length > 1 ? `${fold(words[words.length - 1])}.${family}@example.com` : `${family}@example.com`;
 }
 
+/**
+ * Simulated CV parse for forms an applicant or TA is filling in. The fake email is withheld (a made-up address
+ * could match an existing profile and merge two people) and the name is kept only when the file name yields one.
+ */
+export function cvPrefill(file: FileLike, rng: Rng): CandidateInput {
+  return { ...parseCvFile(file, rng), name: nameFromFileName(file.name), email: '' };
+}
+
 /** Stable 32-bit hash, used to seed an rng per file so re-parsing a file gives the same result. */
 export function hashString(s: string): number {
   let h = 2166136261;

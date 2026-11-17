@@ -51,7 +51,9 @@ export interface DemoActions {
     candidateId: string,
     jobId: string,
     ctx: { via: Via; source: string; campaignId?: string; by: string },
-  ): { ok: true; application: Application } | { ok: false; reason: 'duplicate'; stage: Stage };
+  ): { ok: true; application: Application } | { ok: false; reason: 'duplicate'; stage: Stage }
+    | { ok: false; reason: 'job_not_open' };
+  /** Moving out of `rejected` clears the rejection reason. */
   moveStage(appId: string, to: Stage, by: string, reason?: string): boolean;
   /** Refuses blank text and unknown applications. */
   addComment(appId: string, text: string, by: string): boolean;

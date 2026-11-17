@@ -101,7 +101,7 @@ function DrawerBody({ app, job, name, title, onMove }: BodyProps) {
             </div>
           ))}
         </dl>
-        {app.rejectedReason && (
+        {app.stage === 'rejected' && app.rejectedReason && (
           <p className="mt-3 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-300 px-3 py-2">
             <span className="font-bold">{t('pipeline.drawer.reason')}:</span> {app.rejectedReason}
           </p>

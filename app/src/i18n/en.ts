@@ -539,6 +539,7 @@ export const en = {
   'pipeline.noOpenJobs': 'No open jobs yet. Publish a job to start a pipeline.',
   'pipeline.notFound': 'Job not found',
   'pipeline.addFromPool': 'Add from Talent Pool',
+  'pipeline.jobNotOpen': 'This job is not open for new candidates',
   'pipeline.empty.title': 'No candidates in this pipeline yet',
   'pipeline.empty.desc': 'Add people from the Talent Pool, or wait for applications from the careers site.',
   'pipeline.dropHere': 'Drop here',

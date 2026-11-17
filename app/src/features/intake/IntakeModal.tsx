@@ -97,7 +97,7 @@ export function IntakeModal({ open, onClose, initialMode }: Props) {
     toast(t(created ? 'intake.toast.created' : 'intake.toast.merged'), created ? 'success' : 'info');
     if (pool.jobId) {
       const res = store.addToPipeline(candidate.id, pool.jobId, { via: 'manual', source: 'Manual', by: CURRENT_USER_ID });
-      if (!res.ok) toast(t('intake.toast.alreadyInJob', { stage: stageLabel(res.stage, lang) }), 'error');
+      if (!res.ok) toast(res.reason === 'duplicate' ? t('intake.toast.alreadyInJob', { stage: stageLabel(res.stage, lang) }) : t('pipeline.jobNotOpen'), 'error');
     }
     finish();
   };

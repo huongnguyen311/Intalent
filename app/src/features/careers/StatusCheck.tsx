@@ -17,7 +17,7 @@ export function StatusCheck() {
     setSearched(normalizeEmail(email));
   };
   const cand = searched ? candidates.find((c) => normalizeEmail(c.email) === searched) : undefined;
-  const rows = cand ? applications.filter((a) => a.candidateId === cand.id) : [];
+  const rows = cand ? applications.filter((a) => a.candidateId === cand.id && (a.via === 'careers' || a.via === 'campaign')) : [];
   const fmt = (iso: string) => new Date(iso).toLocaleDateString(lang === 'vi' ? 'vi-VN' : 'en-GB');
   return (
     <div className="max-w-xl mx-auto bg-white rounded-3xl border border-[#e6dddb] p-6 sm:p-10">

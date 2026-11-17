@@ -1,8 +1,9 @@
 import { useState, type FormEvent, type ReactNode } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { mulberry32 } from '../../data/seed';
-import { hashString, parseCvFile, UPLOAD_LIMITS, validateFiles } from '../../domain/parseCv';
+import { cvPrefill, hashString, UPLOAD_LIMITS, validateFiles } from '../../domain/parseCv';
 import { useT, type TKey } from '../../i18n/i18n';
+import type { CandidateInput } from '../../domain/types';
 import { useStore } from '../../store/store';
 import { JobUnavailable } from './JobBits';
 
@@ -33,6 +34,7 @@ export function ApplyForm() {
   const apply = useStore((s) => s.applyFromCareers);
   const [form, setForm] = useState({ name: '', email: '', phone: '', linkedin: '' });
   const [cv, setCv] = useState<File | null>(null);
+  const [parsed, setParsed] = useState<CandidateInput | null>(null);
   const [consent, setConsent] = useState(false);
   const [errors, setErrors] = useState<Errors>({});
   if (!job || job.status !== 'open') return <JobUnavailable />;
@@ -40,17 +42,14 @@ export function ApplyForm() {
   const set = (k: keyof typeof form) => (e: { target: { value: string } }) => setForm({ ...form, [k]: e.target.value });
   const pickCv = (file: File | undefined) => {
     setCv(null);
+    setParsed(null);
     const { accepted, rejected } = validateFiles(file ? [file] : [], CV_LIMITS);
     if (accepted.length) {
       setCv(accepted[0]);
       // Simulated parse: only fills what is still empty, never what the applicant typed.
-      const parsed = parseCvFile(accepted[0], mulberry32(hashString(accepted[0].name)));
-      setForm((f) => ({
-        ...f,
-        name: f.name || parsed.name,
-        email: f.email || parsed.email || '',
-        phone: f.phone || parsed.phone || '',
-      }));
+      const p = cvPrefill(accepted[0], mulberry32(hashString(accepted[0].name)));
+      setParsed(p);
+      setForm((f) => ({ ...f, name: f.name || p.name, phone: f.phone || p.phone || '' }));
     }
     const bad = rejected[0]?.reason;
     setErrors((e) => ({ ...e, cv: bad ? (bad === 'size' ? 'careers.apply.err.size' : 'careers.apply.err.type') : undefined }));
@@ -70,7 +69,13 @@ export function ApplyForm() {
     if (!consent) next.consent = 'careers.apply.err.consent';
     setErrors(next);
     if (Object.keys(next).length) return;
-    const r = apply({ name, email, phone, ...(linkedin ? { linkedin } : {}) }, job.id, params.get('src') ?? undefined);
+    const { title, seniority, english, skills, domains, cv: cvText } = parsed ?? {};
+    const input: CandidateInput = {
+      ...(parsed ? { title, seniority, english, skills, domains, cv: cvText } : {}),
+      name, email, phone,
+      ...(linkedin ? { linkedin } : {}),
+    };
+    const r = apply(input, job.id, params.get('src') ?? undefined);
     if (!r.ok && r.reason === 'unavailable') return navigate('/careers');
     const q = new URLSearchParams({ job: job.id });
     if (!r.ok) {

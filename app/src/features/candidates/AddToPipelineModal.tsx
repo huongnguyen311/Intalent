@@ -17,7 +17,7 @@ type Props = {
   jobId?: string;
 };
 
-type Result = { ok: true } | { ok: false; stage: Stage };
+type Result = { ok: true } | { ok: false; stage: Stage } | { ok: false; closed: true };
 
 const DEFAULT_SOURCE = SOURCE_TALENT_POOL;
 const FIELD =
@@ -61,7 +61,7 @@ export function AddToPipelineModal({ open, onClose, candidateIds: fixedIds, jobI
         source: source.trim() || DEFAULT_SOURCE,
         by: CURRENT_USER_ID,
       });
-      next[id] = res.ok ? { ok: true } : { ok: false, stage: res.stage };
+      next[id] = res.ok ? { ok: true } : res.reason === 'duplicate' ? { ok: false, stage: res.stage } : { ok: false, closed: true };
     }
     setResults(next);
   };
@@ -112,7 +112,7 @@ export function AddToPipelineModal({ open, onClose, candidateIds: fixedIds, jobI
                   <span className="font-medium">{p.name}</span>
                   {r && (
                     <span className={`text-xs font-medium ${r.ok ? 'text-green-700 dark:text-green-300' : 'text-amber-700 dark:text-amber-300'}`}>
-                      {r.ok ? t('atp.added') : t('intake.toast.alreadyInJob', { stage: stageLabel(r.stage, lang) })}
+                      {r.ok ? t('atp.added') : 'stage' in r ? t('intake.toast.alreadyInJob', { stage: stageLabel(r.stage, lang) }) : t('pipeline.jobNotOpen')}
                     </span>
                   )}
                 </li>

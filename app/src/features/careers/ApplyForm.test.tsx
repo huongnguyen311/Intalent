@@ -131,8 +131,44 @@ describe('Careers site', () => {
     fireEvent.change(screen.getByLabelText('Full name'), { target: { value: 'Typed Name' } });
     fireEvent.change(screen.getByLabelText(/^CV/), { target: { files: [new File(['x'], 'Tran_Van_Binh_CV.pdf')] } });
     expect(screen.getByLabelText('Full name')).toHaveValue('Typed Name');
-    expect((screen.getByLabelText('Email') as HTMLInputElement).value).not.toBe('');
     expect((screen.getByLabelText('Phone') as HTMLInputElement).value).not.toBe('');
+  });
+
+  it('a picked CV never fills the email, so it cannot collide with an existing profile', () => {
+    renderAt(`/careers/${jobId}/apply`);
+    fireEvent.change(screen.getByLabelText(/^CV/), { target: { files: [new File(['x'], 'CV.pdf')] } });
+    expect(screen.getByLabelText('Email')).toHaveValue('');
+    fireEvent.change(screen.getByLabelText(/^CV/), { target: { files: [new File(['x'], 'Tran_Van_Binh_CV.pdf')] } });
+    const email = (screen.getByLabelText('Email') as HTMLInputElement).value;
+    expect(email).toBe('');
+    expect(useStore.getState().candidates.some((c) => c.email === email && email !== '')).toBe(false);
+  });
+
+  it('keeps the parsed CV details on the new candidate; typed values win', () => {
+    renderAt(`/careers/${jobId}/apply`);
+    fill('Typed Name', 'typed.name@example.com');
+    fireEvent.change(screen.getByLabelText(/^CV/), { target: { files: [new File(['x'], 'Tran_Van_Binh_CV.pdf')] } });
+    expect(screen.getByLabelText('Full name')).toHaveValue('Typed Name');
+    consent();
+    submit();
+    const c = useStore.getState().candidates.find((x) => x.email === 'typed.name@example.com')!;
+    expect(c.name).toBe('Typed Name');
+    expect(c.title).not.toBe('');
+    expect(c.skills.length).toBeGreaterThan(0);
+    expect(c.seniority).not.toBe('');
+    expect(c.cv).toBe('Tran_Van_Binh_CV.pdf');
+  });
+
+  it('status check shows only careers and campaign applications', () => {
+    const s = useStore.getState();
+    const r = s.applyFromCareers({ name: 'Pham Thi Test', email: 'pham.test@example.com' }, jobId);
+    const other = s.jobs.filter((j) => j.status === 'open').find((j) => j.id !== jobId)!;
+    if (!r.ok) throw new Error('expected ok');
+    s.addToPipeline(r.application.candidateId, other.id, { via: 'manual', source: 'Manual', by: 'u-admin' });
+    renderAt('/careers/status');
+    fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'pham.test@example.com' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Check status' }));
+    expect(screen.getByTestId('careers-status-list').children).toHaveLength(1);
   });
 
   it('language toggle switches the careers scope to Vietnamese', () => {

@@ -59,3 +59,26 @@ describe('rateApplication', () => {
     expect(find().ratings ?? []).toEqual([]);
   });
 });
+
+describe('moveStage rejectedReason', () => {
+  it('drops the rejection reason when an application leaves rejected', () => {
+    const { store, id, find } = withApp();
+    expect(store.getState().moveStage(id, 'rejected', 'u-thu', 'Salary mismatch')).toBe(true);
+    expect(find().rejectedReason).toBe('Salary mismatch');
+    expect(store.getState().moveStage(id, 'screening', 'u-thu')).toBe(true);
+    expect(find().stage).toBe('screening');
+    expect(find().rejectedReason).toBeUndefined();
+  });
+});
+
+describe('addToPipeline job status', () => {
+  it('refuses draft and closed jobs with a typed reason', () => {
+    const { store, find: _f } = withApp();
+    const candidateId = store.getState().candidates[1].id;
+    const pc = { via: 'manual' as const, source: 'Manual', by: 'u-admin' };
+    for (const jobId of ['job-5', 'job-6', 'job-missing']) {
+      expect(store.getState().addToPipeline(candidateId, jobId, pc)).toEqual({ ok: false, reason: 'job_not_open' });
+    }
+    expect(store.getState().applications.filter((a) => a.candidateId === candidateId)).toHaveLength(0);
+  });
+});

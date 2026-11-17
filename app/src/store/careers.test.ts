@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { taContribution, UNATTRIBUTED } from '../domain/taContribution';
 import { createDemoStore } from './store';
 
 const memoryStorage = (): Storage => {
@@ -43,6 +44,22 @@ describe('applyFromCareers', () => {
     const r = s.getState().applyFromCareers(applicant, openJob.id, 'nope-facebook');
     expect(r.ok && r.application).toMatchObject({ via: 'careers', source: 'Careers page' });
     expect(r.ok && r.application.campaignId).toBeUndefined();
+  });
+
+  it('credits a campaign only for jobs it covers', () => {
+    const { s, campaign } = setup();
+    const other = s.getState().jobs.find((j) => j.status === 'open' && !campaign.jobIds.includes(j.id))!;
+    const r = s.getState().applyFromCareers(applicant, other.id, `${campaign.id}-linkedin`);
+    expect(r.ok && r.application).toMatchObject({ via: 'careers', source: 'Careers page' });
+    expect(r.ok && r.application.campaignId).toBeUndefined();
+  });
+
+  it('careers-created profiles have no CV owner and do not count as TA uploads', () => {
+    const { s, openJob } = setup();
+    const r = s.getState().applyFromCareers(applicant, openJob.id);
+    const cand = s.getState().candidates.find((c) => c.id === (r.ok && r.application.candidateId))!;
+    expect(cand.cvOwner).toBe('');
+    expect(taContribution(s.getState(), 'all').rows.some((row) => row.ta === UNATTRIBUTED)).toBe(false);
   });
 
   it('closed job cannot be applied to', () => {
