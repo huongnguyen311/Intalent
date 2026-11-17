@@ -10,7 +10,7 @@ export const vi: Record<TKey, string> = {
   'nav.jobs': 'Vị trí tuyển dụng',
   'nav.pipeline': 'Quy trình tuyển dụng',
   'nav.campaigns': 'Chiến dịch',
-  'nav.candidatePool': 'Kho ứng viên',
+  'nav.candidatePool': 'Ứng viên',
   'nav.uploadCvs': 'Tải lên CV',
   'nav.ultraUpload': 'Tải lên nhanh',
   'nav.aiSearch': 'Tìm kiếm AI',

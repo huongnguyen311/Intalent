@@ -103,25 +103,27 @@ export function Sidebar() {
 
   return (
     <aside className={`${rail ? 'w-[72px]' : 'w-64'} bg-sidebar-dark flex flex-col h-full flex-shrink-0 border-r border-border-dark z-30 shadow-2xl`}>
-      <div className={`h-16 flex items-center border-b border-border-dark ${rail ? 'justify-center px-3' : 'px-6'}`}>
-        <Link to={{ pathname: '/', search }} title={rail ? 'InApps Talent Pool' : undefined} className="flex items-center gap-3 cursor-pointer">
-          <div className="size-9 rounded-full bg-primary flex items-center justify-center text-white shadow-sm shrink-0">
-            <span className="material-symbols-outlined icon-filled text-[22px]">hub</span>
-          </div>
-          {!rail && <h1 className="text-white text-lg font-bold tracking-tight">InApps Talent Pool</h1>}
-        </Link>
-      </div>
-      <div className="flex-1 overflow-y-auto custom-scrollbar py-6 px-3 flex flex-col gap-6">
+      <div className={`h-16 flex items-center border-b border-border-dark ${rail ? 'justify-center px-3' : showNew ? 'px-4' : 'px-6'}`}>
+        {!rail && (
+          <Link to={{ pathname: '/', search }} className="flex items-center gap-3 cursor-pointer">
+            <div className="size-9 rounded-full bg-primary flex items-center justify-center text-white shadow-sm shrink-0">
+              <span className="material-symbols-outlined icon-filled text-[22px]">hub</span>
+            </div>
+            <h1 className={`text-white font-bold tracking-tight ${showNew ? 'text-base whitespace-nowrap' : 'text-lg'}`}>InApps Talent Pool</h1>
+          </Link>
+        )}
         {showNew && (
           <button
             onClick={() => update({ ...nav, rail: !nav.rail })}
             title={t(rail ? 'nav.expand' : 'nav.collapse')}
             aria-label={t(rail ? 'nav.expand' : 'nav.collapse')}
-            className={`flex items-center px-3 py-1 rounded-lg text-[#896a61] hover:bg-white/5 hover:text-white ${rail ? 'justify-center' : 'justify-end'}`}
+            className={`flex items-center p-1 rounded-lg text-[#896a61] hover:bg-white/5 hover:text-white ${rail ? '' : 'ml-auto'}`}
           >
             <span className="material-symbols-outlined text-[20px]">{rail ? 'keyboard_double_arrow_right' : 'keyboard_double_arrow_left'}</span>
           </button>
         )}
+      </div>
+      <div className={`flex-1 overflow-y-auto custom-scrollbar px-3 flex flex-col ${showNew ? 'py-4 gap-4' : 'py-6 gap-6'}`}>
         {groups.map((g) => {
           const foldable = showNew && !g.flat && !rail;
           const open = !foldable || isGroupOpen(g.title, nav, g.items.some((it) => isActive(pathname, it)));
