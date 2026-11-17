@@ -1,6 +1,10 @@
 import type { StoreApi } from 'zustand';
 import type {
   Application,
+  Campaign,
+  CampaignInput,
+  CampaignPatch,
+  CampaignStatus,
   Candidate,
   CandidateInput,
   CandidatePatch,
@@ -65,6 +69,11 @@ export interface DemoActions {
   updateJob(id: string, patch: JobPatch): boolean;
   /** Re-opening a draft or closed job restarts its days-open clock. */
   setJobStatus(id: string, status: Job['status']): boolean;
+  /** New campaigns start active (`id` lets the wizard preview final links beforehand); tracking links are generated from the current origin. */
+  createCampaign(input: CampaignInput, id?: string): Campaign;
+  /** Regenerates the tracking links. */
+  updateCampaign(id: string, patch: CampaignPatch): boolean;
+  setCampaignStatus(id: string, status: CampaignStatus): boolean;
   /** Answers `text` with a ranked candidate search; starts a new conversation when `sessionId` is null. Returns the session id. */
   sendChat(sessionId: string | null, text: string): string;
   deleteChat(sessionId: string): void;

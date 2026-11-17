@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware';
 import { buildMockupFixture, isFixtureMode } from '../data/fixtureMockup';
 import { buildSeed } from '../data/seed';
 import { applicationActions } from './actions/applications';
+import { campaignActions } from './actions/campaigns';
 import { candidateActions } from './actions/candidates';
 import { chatActions } from './actions/chats';
 import { jdActions } from './actions/jds';
@@ -34,6 +35,7 @@ export function createDemoStore(
     ...noteActions(set, get, env),
     ...jdActions(set, get, env),
     ...jobActions(set, get, env),
+    ...campaignActions(set, get, env),
     ...chatActions(set, get, env),
     ...taxonomyActions(set, get, env),
     ...userActions(set, get, env),

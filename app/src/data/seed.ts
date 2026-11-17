@@ -2,6 +2,7 @@ import type {
   Activity, Application, ApplicationComment, ApplicationRating, Campaign, Candidate, DemoState, Job, Jd, Note,
   Prompt, Stage, StageHistoryEntry, TaxonomyItem, User, Via,
 } from '../domain/types';
+import { campaignLinks, CHANNEL_SOURCE, DEMO_ORIGIN, type Channel } from '../domain/campaigns';
 import { STAGES } from '../domain/stages';
 import { normalizeEmail } from '../domain/normalize';
 import {
@@ -175,26 +176,23 @@ function buildJobs(clock: Clock): Job[] {
 }
 
 function buildCampaigns(clock: Clock): Campaign[] {
-  const link = (campaign: string, channel: string, job: string) => ({
-    channel,
-    url: `https://careers.company.demo/jobs/${job}?utm_source=${fold(channel)}&utm_campaign=${campaign}`,
+  const make = (c: Omit<Campaign, 'links'>): Campaign => ({
+    ...c,
+    links: campaignLinks(c, DEMO_ORIGIN).map(({ channel, url }) => ({ channel, url })),
   });
   return [
-    {
-      id: 'camp-1', name: 'Frontend Summer Push', jobIds: ['job-1', 'job-2'], channels: ['LinkedIn', 'Facebook'],
-      goal: 40, start: clock.daysAgo(40), end: clock.daysAgo(-20), status: 'active',
-      links: [link('camp-1', 'LinkedIn', 'job-1'), link('camp-1', 'Facebook', 'job-1')], stats: { views: 1240 },
-    },
-    {
-      id: 'camp-2', name: 'Mobile Talent Hunt', jobIds: ['job-3'], channels: ['LinkedIn', 'Zalo'],
-      goal: 25, start: clock.daysAgo(25), end: clock.daysAgo(-35), status: 'active',
-      links: [link('camp-2', 'LinkedIn', 'job-3'), link('camp-2', 'Zalo', 'job-3')], stats: { views: 860 },
-    },
-    {
-      id: 'camp-3', name: 'Growth Marketing Referral', jobIds: ['job-4', 'job-6'], channels: ['Referral'],
-      goal: 15, start: clock.daysAgo(70), end: clock.daysAgo(10), status: 'ended',
-      links: [link('camp-3', 'Referral', 'job-4')], stats: { views: 410 },
-    },
+    make({
+      id: 'camp-1', name: 'Frontend Summer Push', jobIds: ['job-1', 'job-2'], channels: ['linkedin', 'facebook'],
+      goal: 40, start: clock.daysAgo(40), end: clock.daysAgo(-20), status: 'active', stats: { views: 1240 },
+    }),
+    make({
+      id: 'camp-2', name: 'Mobile Talent Hunt', jobIds: ['job-3'], channels: ['linkedin', 'topcv'],
+      goal: 25, start: clock.daysAgo(25), end: clock.daysAgo(-35), status: 'active', stats: { views: 860 },
+    }),
+    make({
+      id: 'camp-3', name: 'Growth Marketing Referral', jobIds: ['job-4', 'job-6'], channels: ['referral'],
+      goal: 15, start: clock.daysAgo(70), end: clock.daysAgo(10), status: 'ended', stats: { views: 410 },
+    }),
   ];
 }
 
@@ -290,7 +288,7 @@ function buildApplications(rng: Rng, candidates: Candidate[], jobs: Job[], campa
     const source =
       via === 'careers' ? 'Careers site'
       : via === 'talent_pool' ? 'Talent Pool'
-      : campaign ? pick(rng, campaign.channels)
+      : campaign ? CHANNEL_SOURCE[pick(rng, campaign.channels) as Channel]
       : 'Manual';
     const addedBy = pick(rng, STAFF);
 

@@ -4,6 +4,7 @@ import { stageLabel } from '../../domain/stages';
 import type { Application, Campaign, Job, Jd } from '../../domain/types';
 import { useLang, useT } from '../../i18n/i18n';
 import { useStore } from '../../store/store';
+import { useChannelLabel } from '../campaigns/CampaignBits';
 import { fullDate } from '../jds/format';
 
 const TH = 'px-6 py-4 text-xs font-bold text-[#896a61] uppercase tracking-wider border-b border-[#e6dddb] dark:border-[#2a2423]';
@@ -55,6 +56,7 @@ export function CandidatesTab({ job }: { job: Job }) {
 
 export function CampaignsTab({ job }: { job: Job }) {
   const t = useT();
+  const channelLabel = useChannelLabel();
   const campaigns = useStore((s) => s.campaigns).filter((c: Campaign) => c.jobIds.includes(job.id));
   return (
     <div className="bg-white dark:bg-surface-dark rounded-[1.5rem] shadow-sm border border-gray-100 dark:border-white/10 overflow-hidden">
@@ -72,7 +74,7 @@ export function CampaignsTab({ job }: { job: Job }) {
               <td className={TD}>
                 <Link to={`/campaigns/${c.id}`} className="font-bold text-slate-800 dark:text-gray-200 hover:text-primary transition-colors">{c.name}</Link>
               </td>
-              <td className={TD}><div className="flex gap-1.5 flex-wrap">{c.channels.map((ch) => <Chip key={ch}>{ch}</Chip>)}</div></td>
+              <td className={TD}><div className="flex gap-1.5 flex-wrap">{c.channels.map((ch) => <Chip key={ch}>{channelLabel(ch)}</Chip>)}</div></td>
               <td className={TD}>{fullDate(c.start)} – {fullDate(c.end)}</td>
               <td className={`${TD} capitalize`}>{c.status}</td>
             </tr>

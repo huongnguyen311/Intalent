@@ -2,6 +2,8 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import { AppLayout } from './components/AppLayout';
 import { AssistantPage } from './features/assistant/AssistantPage';
 import { LoginPage } from './features/auth/LoginPage';
+import { CampaignDetailPage } from './features/campaigns/CampaignDetailPage';
+import { CampaignsPage } from './features/campaigns/CampaignsPage';
 import { CandidatePoolPage } from './features/candidates/CandidatePoolPage';
 import { CandidateProfilePage } from './features/candidates/CandidateProfilePage';
 import { DashboardPage } from './features/dashboard/DashboardPage';
@@ -75,9 +77,11 @@ export function AppRoutes() {
       <Route path="/ta-contribution" element={<TaContributionPage />} />
       <Route path="/jobs" element={<JobsPage />} />
       <Route path="/jobs/:id" element={<JobDetailPage />} />
+      <Route path="/campaigns" element={<CampaignsPage />} />
+      <Route path="/campaigns/:id" element={<CampaignDetailPage />} />
       <Route path="/pipeline" element={<PipelinePage />} />
       <Route path="/pipeline/:jobId" element={<PipelinePage />} />
-      {INTERNAL.filter(({ path }) => !['/', '/candidates', '/candidates/:id', '/notes', '/upload', '/upload-ultra', '/assistant', '/jds', '/jds/:id', '/jd-matching', '/taxonomy', '/system-config', '/users', '/ta-contribution', '/jobs', '/jobs/:id', '/pipeline', '/pipeline/:jobId'].includes(path)).map(({ path, title }) => (
+      {INTERNAL.filter(({ path }) => !['/', '/candidates', '/candidates/:id', '/notes', '/upload', '/upload-ultra', '/assistant', '/jds', '/jds/:id', '/jd-matching', '/taxonomy', '/system-config', '/users', '/ta-contribution', '/jobs', '/jobs/:id', '/pipeline', '/pipeline/:jobId', '/campaigns', '/campaigns/:id'].includes(path)).map(({ path, title }) => (
         <Route
           key={path}
           path={path}

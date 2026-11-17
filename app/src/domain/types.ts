@@ -111,10 +111,15 @@ export interface Campaign {
   goal: number;
   start: string;
   end: string;
-  status: string;
+  status: CampaignStatus;
   links: CampaignLink[];
+  /** `views` is 0 for campaigns without recorded traffic; campaignStats then simulates it. */
   stats: { views: number };
 }
+
+export type CampaignStatus = 'active' | 'paused' | 'ended';
+export type CampaignInput = Pick<Campaign, 'name' | 'jobIds' | 'channels' | 'goal' | 'start' | 'end'>;
+export type CampaignPatch = Partial<CampaignInput>;
 
 export interface Note {
   id: string;
