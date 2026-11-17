@@ -54,7 +54,7 @@ describe('taContribution', () => {
     const fromBefore = get(before, from)!.total;
     const toBefore = get(before, to)?.total ?? 0;
 
-    expect(store.getState().transferOwner(cand.id, to, 'u-admin')).toBe(true);
+    expect(store.getState().transferOwner(cand.id, to, 'u-admin')).toEqual({ ok: true });
 
     const after = taContribution(store.getState(), 'all', NOW);
     expect(get(after, from)!.total).toBe(fromBefore - 1);
@@ -71,7 +71,23 @@ describe('taContribution', () => {
       { getItem: () => null, setItem: () => {}, removeItem: () => {}, clear: () => {}, key: () => null, length: 0 },
     );
     const c = store.getState().candidates[0];
-    expect(store.getState().transferOwner(c.id, c.cvOwner, 'u-admin')).toBe(false);
-    expect(store.getState().transferOwner('nope', 'u-thu', 'u-admin')).toBe(false);
+    expect(store.getState().transferOwner(c.id, c.cvOwner, 'u-admin')).toEqual({ ok: false, reason: 'same_owner' });
+    expect(store.getState().transferOwner('nope', 'u-thu', 'u-admin')).toEqual({ ok: false, reason: 'not_found' });
+  });
+
+  it('refuses an inactive or Candidate-role target', () => {
+    const store = createDemoStore(
+      { getItem: () => null, setItem: () => {}, removeItem: () => {}, clear: () => {}, key: () => null, length: 0 },
+    );
+    const s = store.getState();
+    const c = s.candidates[0];
+    const [a, b] = s.users.filter((u) => u.id !== c.cvOwner);
+    store.setState({
+      users: s.users.map((u) => (u.id === a.id ? { ...u, status: 'Inactive' } : u.id === b.id ? { ...u, role: 'Candidate' } : u)),
+    });
+    expect(store.getState().transferOwner(c.id, a.id, 'u-admin')).toEqual({ ok: false, reason: 'not_assignable' });
+    expect(store.getState().transferOwner(c.id, b.id, 'u-admin')).toEqual({ ok: false, reason: 'not_assignable' });
+    expect(store.getState().candidates[0].cvOwner).toBe(c.cvOwner);
+    expect(store.getState().activities.some((x) => x.type === 'owner_transferred')).toBe(false);
   });
 });

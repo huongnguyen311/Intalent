@@ -25,8 +25,8 @@ export function TransfersTab({ period }: { period: Period }) {
   const candidateName = (id?: string) => candidates.find((c) => c.id === id)?.name ?? '-';
 
   const transfer = () => {
-    const ok = useStore.getState().transferOwner(candidateId, toId, CURRENT_USER_ID);
-    if (ok) {
+    const res = useStore.getState().transferOwner(candidateId, toId, CURRENT_USER_ID);
+    if (res.ok) {
       toast(t('ta.transferred'));
       setCandidateId('');
       setToId('');

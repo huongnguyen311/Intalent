@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Modal } from '../../components/Modal';
 import { toast } from '../../components/Toast';
 import type { User } from '../../domain/types';
-import { ROLES, type Role } from '../../domain/users';
+import { CURRENT_USER_ID, ROLES, type Role } from '../../domain/users';
 import { useT, type TKey } from '../../i18n/i18n';
 import { useStore } from '../../store/store';
 
@@ -26,6 +26,8 @@ export function UserDialog({ user, onClose }: { user?: User; onClose: () => void
 
   const submit = () => {
     const { addUser, updateUser, setUserRole } = useStore.getState();
+    // All-or-nothing: refuse a protected role change before anything is saved.
+    if (user?.id === CURRENT_USER_ID && role !== 'Super Admin') return setError(REASONS.protected);
     const res = user ? updateUser(user.id, { name, email }) : addUser({ name, email, role });
     if (!res.ok) return setError(REASONS[res.reason]);
     if (user && role !== user.role) {

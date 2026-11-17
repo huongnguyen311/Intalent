@@ -32,6 +32,8 @@ export type UserResult =
   | { ok: true; user: User }
   | { ok: false; reason: 'invalid' | 'duplicate' | 'not_found' | 'protected' };
 
+export type TransferResult = { ok: true } | { ok: false; reason: 'not_found' | 'same_owner' | 'not_assignable' };
+
 export interface DemoActions {
   upsertCandidate(
     input: CandidateInput,
@@ -65,8 +67,8 @@ export interface DemoActions {
   setUserActive(id: string, active: boolean): UserResult;
   /** Saved only; prompts and email templates are never executed. */
   updatePrompt(id: string, patch: Partial<Pick<Prompt, 'description' | 'text'>>): boolean;
-  /** Moves a CV to another TA and logs an owner_transferred activity; false for an unknown candidate/user or a no-op. */
-  transferOwner(candidateId: string, toUserId: string, by: string): boolean;
+  /** Moves a CV to another TA and logs an owner_transferred activity; refuses unknown candidates, no-ops and targets that are inactive or Candidate-role. */
+  transferOwner(candidateId: string, toUserId: string, by: string): TransferResult;
   resetDemo(): void;
 }
 

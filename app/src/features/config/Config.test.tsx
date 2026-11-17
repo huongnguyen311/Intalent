@@ -99,6 +99,20 @@ describe('UsersPage', () => {
     expect(useStore.getState().users.find((u) => u.name === 'Tester Nguyen')?.role).toBe('User');
   });
 
+  it('editing the demo admin with a role downgrade changes nothing and shows the error', () => {
+    page(<UsersPage />);
+    const row = () => screen.getByText('admin@company.demo').closest('tr')!;
+    fireEvent.click(within(row()).getByRole('button', { name: 'Actions' }));
+    menu('Edit');
+    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Renamed Admin' } });
+    fireEvent.change(screen.getByLabelText('Role'), { target: { value: 'User' } });
+    click('Save');
+    expect(screen.getByRole('alert')).toHaveTextContent('Super Admin');
+    const u = useStore.getState().users.find((x) => x.id === 'u-admin')!;
+    expect(u.name).toBe('Super Admin');
+    expect(u.role).toBe('Super Admin');
+  });
+
   it('never lets the demo user be deactivated', () => {
     expect(useStore.getState().setUserActive('u-admin', false)).toEqual({ ok: false, reason: 'protected' });
     expect(useStore.getState().setUserRole('u-admin', 'User')).toEqual({ ok: false, reason: 'protected' });
@@ -170,7 +184,10 @@ describe('TaContributionPage', () => {
     page(<TaContributionPage />);
     fireEvent.click(screen.getByTestId('ta-contribution-export-button'));
     expect(names).toEqual(['cv-theo-ta.csv']);
-    const text = await blob!.text();
+    const raw = await blob!.arrayBuffer();
+    expect(Array.from(new Uint8Array(raw).slice(0, 3))).toEqual([0xef, 0xbb, 0xbf]);
+    const text = new TextDecoder('utf-8', { ignoreBOM: true }).decode(raw).slice(1);
+    expect(text).toContain('CV mới');
     expect(text.split('\r\n')[0]).toBe('TA,CV mới,Upload trùng,Parse lỗi,Đang xử lý,Nhận chuyển giao,Chuyển đi,Tổng');
     const lines = text.split('\r\n');
     expect(lines[lines.length - 1].startsWith('Tổng,')).toBe(true);

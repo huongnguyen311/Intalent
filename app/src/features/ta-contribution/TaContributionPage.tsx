@@ -29,7 +29,8 @@ const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(
 function download(csv: string) {
   if (typeof URL.createObjectURL !== 'function') return;
   const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+  // BOM so Excel reads the Vietnamese text as UTF-8.
+  a.href = URL.createObjectURL(new Blob(['﻿', csv], { type: 'text/csv;charset=utf-8' }));
   a.download = 'cv-theo-ta.csv';
   document.body.appendChild(a);
   a.click();
