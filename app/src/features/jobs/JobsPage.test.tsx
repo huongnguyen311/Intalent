@@ -24,6 +24,34 @@ beforeEach(() => {
   useStore.setState({ ...buildSeed() });
 });
 
+describe('JobDrawer validation', () => {
+  it('blocks save for empty, fractional or sub-1 SLA values with a per-field error', () => {
+    renderAt('/jobs?fromJd=jd-2026-002');
+    const drawer = screen.getByRole('dialog');
+    const before = useStore.getState().jobs.length;
+    fireEvent.change(within(drawer).getByLabelText('Screening'), { target: { value: '' } });
+    fireEvent.change(within(drawer).getByLabelText('Interview'), { target: { value: '2.5' } });
+    fireEvent.change(within(drawer).getByLabelText('Offer'), { target: { value: '-1' } });
+    fireEvent.click(within(drawer).getByRole('button', { name: 'Save' }));
+    expect(within(drawer).getAllByText('Enter a whole number of days (1 or more)')).toHaveLength(3);
+    expect(useStore.getState().jobs).toHaveLength(before);
+    fireEvent.change(within(drawer).getByLabelText('Screening'), { target: { value: '4' } });
+    fireEvent.change(within(drawer).getByLabelText('Interview'), { target: { value: '6' } });
+    fireEvent.change(within(drawer).getByLabelText('Offer'), { target: { value: '3' } });
+    fireEvent.click(within(drawer).getByRole('button', { name: 'Save' }));
+    expect(useStore.getState().jobs[0].stageSla).toEqual({ new: 2, screening: 4, interview: 6, offer: 3 });
+  });
+
+  it('shows the missing-JD error under the JD select', () => {
+    renderAt('/jobs');
+    fireEvent.click(screen.getByRole('button', { name: /Create Job/ }));
+    const drawer = screen.getByRole('dialog');
+    fireEvent.click(within(drawer).getByRole('button', { name: 'Save' }));
+    const err = within(drawer).getByText('Select a JD');
+    expect(err.previousElementSibling).toBe(within(drawer).getByLabelText('Job description'));
+  });
+});
+
 describe('JobDrawer', () => {
   it('creating from JD prefills title and stack', () => {
     const jd = useStore.getState().jds.find((j) => j.id === 'jd-2026-002')!;
@@ -76,6 +104,11 @@ describe('JobsPage', () => {
     fireEvent.click(screen.getByRole('menuitem', { name: 'Draft' }));
     expect(screen.getByText('Mobile Engineer (Flutter)')).toBeInTheDocument();
     expect(screen.queryByText('Senior Frontend Developer')).toBeNull();
+  });
+
+  it('job title is a link to the detail page', () => {
+    renderAt('/jobs');
+    expect(screen.getByRole('link', { name: 'Senior Frontend Developer' })).toHaveAttribute('href', '/jobs/job-1');
   });
 });
 

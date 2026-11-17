@@ -505,6 +505,7 @@ export const vi: Record<TKey, string> = {
   'jobs.drawer.sla': 'SLA theo giai đoạn (ngày)',
   'jobs.drawer.publish': 'Đăng lên trang tuyển dụng',
   'jobs.drawer.err.title': 'Vui lòng nhập tên vị trí',
+  'jobs.drawer.err.sla': 'Nhập số ngày nguyên từ 1 trở lên',
   'jobs.drawer.err.jd': 'Vui lòng chọn JD',
   'jobs.drawer.save': 'Lưu',
   'jobs.detail.notFound': 'Không tìm thấy vị trí',

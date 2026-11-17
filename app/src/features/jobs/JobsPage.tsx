@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { AppLayout } from '../../components/AppLayout';
 import { Pagination } from '../../components/Pagination';
 import { MenuItem, Popover } from '../../components/Popover';
@@ -132,7 +132,7 @@ export function JobsPage() {
                         <div className="size-10 rounded-xl flex items-center justify-center flex-shrink-0 bg-orange-50 text-orange-500">
                           <span className="material-symbols-outlined">work</span>
                         </div>
-                        <div onClick={() => navigate(`/jobs/${job.id}`)} className="font-bold text-sm text-slate-800 dark:text-gray-200 group-hover:text-primary transition-colors cursor-pointer">{job.title}</div>
+                        <Link to={`/jobs/${job.id}`} className="font-bold text-sm text-slate-800 dark:text-gray-200 group-hover:text-primary transition-colors">{job.title}</Link>
                       </div>
                     </td>
                     <td className={`${TD} text-sm font-semibold text-slate-600 dark:text-gray-400`}>{job.department}</td>

@@ -14,6 +14,9 @@ const BTN_PRIMARY = 'px-4 py-2 text-sm font-medium bg-primary hover:bg-primary-h
 const BTN_GHOST =
   'px-4 py-2 text-sm font-medium border border-[#e6dddb] dark:border-[#3a3433] text-[#181211] dark:text-white rounded-lg hover:border-primary/50 transition-colors';
 
+const slaText = (v: Job['stageSla']): Record<string, string> =>
+  Object.fromEntries(SLA_STAGES.map((s) => [s, String(v[s] ?? '')]));
+
 function Field({ id, label, error, children }: { id: string; label: string; error?: string; children: ReactNode }) {
   return (
     <div className="flex flex-col gap-1">
@@ -40,7 +43,9 @@ export function JobDrawer({ open, jdId, job, onClose, onSaved }: Props) {
   const [level, setLevel] = useState('');
   const [employment, setEmployment] = useState(EMPLOYMENTS[0]);
   const [manager, setManager] = useState(CURRENT_USER_ID);
-  const [sla, setSla] = useState<Job['stageSla']>(DEFAULT_SLA);
+  const [sla, setSla] = useState<Record<string, string>>(slaText(DEFAULT_SLA));
+  const [jdError, setJdError] = useState('');
+  const [slaErrors, setSlaErrors] = useState<Record<string, string>>({});
   const [publish, setPublish] = useState(false);
   const [error, setError] = useState('');
 
@@ -51,19 +56,22 @@ export function JobDrawer({ open, jdId, job, onClose, onSaved }: Props) {
     setTitle(picked.title);
     setLevel(inferLevel(picked.title));
     setError('');
+    setJdError('');
   };
 
   useEffect(() => {
     if (!open) return;
     setError('');
+    setJdError('');
+    setSlaErrors({});
     if (job) {
       setJd(job.jdId); setTitle(job.title); setDepartment(job.department); setLocation(job.location);
       setLevel(job.level); setEmployment(job.employment); setManager(job.hiringManager);
-      setSla({ ...DEFAULT_SLA, ...job.stageSla }); setPublish(job.status === 'open');
+      setSla(slaText({ ...DEFAULT_SLA, ...job.stageSla })); setPublish(job.status === 'open');
       return;
     }
     setJd(''); setTitle(''); setDepartment(''); setLocation(''); setLevel('');
-    setEmployment(EMPLOYMENTS[0]); setManager(CURRENT_USER_ID); setSla(DEFAULT_SLA); setPublish(false);
+    setEmployment(EMPLOYMENTS[0]); setManager(CURRENT_USER_ID); setSla(slaText(DEFAULT_SLA)); setPublish(false);
     if (jdId) pickJd(jdId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, jdId, job]);
@@ -74,9 +82,15 @@ export function JobDrawer({ open, jdId, job, onClose, onSaved }: Props) {
   const locations = [...new Set(jobs.map((j) => j.location))];
 
   const save = () => {
-    if (!jd) return setError(t('jobs.drawer.err.jd'));
-    if (!title.trim()) return setError(t('jobs.drawer.err.title'));
-    const fields = { jdId: jd, title, department, location, level, employment, hiringManager: manager, stageSla: sla };
+    const errs = Object.fromEntries(
+      SLA_STAGES.filter((s) => !/^[1-9]\d*$/.test(sla[s].trim())).map((s) => [s, t('jobs.drawer.err.sla')]),
+    );
+    setJdError(jd ? '' : t('jobs.drawer.err.jd'));
+    setError(title.trim() ? '' : t('jobs.drawer.err.title'));
+    setSlaErrors(errs);
+    if (!jd || !title.trim() || Object.keys(errs).length > 0) return;
+    const stageSla = Object.fromEntries(SLA_STAGES.map((s) => [s, Number(sla[s])])) as Job['stageSla'];
+    const fields = { jdId: jd, title, department, location, level, employment, hiringManager: manager, stageSla };
     const { createJob, updateJob, setJobStatus } = useStore.getState();
     const status: Job['status'] = publish ? 'open' : job?.status === 'open' ? 'draft' : (job?.status ?? 'draft');
     if (job) {
@@ -95,7 +109,7 @@ export function JobDrawer({ open, jdId, job, onClose, onSaved }: Props) {
   return (
     <Drawer open={open} title={t(job ? 'jobs.drawer.edit' : 'jobs.drawer.create')} onClose={onClose}>
       <div className="flex flex-col gap-4">
-        <Field id="job-jd" label={t('jobs.drawer.jd')}>
+        <Field id="job-jd" label={t('jobs.drawer.jd')} error={jdError}>
           <select id="job-jd" className={FIELD} value={jd} onChange={(e) => pickJd(e.target.value)}>
             <option value="">{t('jobs.drawer.jdNone')}</option>
             {jds.map((j) => <option key={j.id} value={j.id}>{j.title}</option>)}
@@ -144,10 +158,10 @@ export function JobDrawer({ open, jdId, job, onClose, onSaved }: Props) {
           <legend className="text-xs font-semibold text-[#896a61] mb-1">{t('jobs.drawer.sla')}</legend>
           <div className="grid grid-cols-4 gap-3">
             {SLA_STAGES.map((s) => (
-              <Field key={s} id={`job-sla-${s}`} label={stageLabel(s, lang)}>
+              <Field key={s} id={`job-sla-${s}`} label={stageLabel(s, lang)} error={slaErrors[s]}>
                 <input
-                  id={`job-sla-${s}`} type="number" min={1} className={FIELD} value={sla[s] ?? ''}
-                  onChange={(e) => setSla({ ...sla, [s]: Number(e.target.value) })}
+                  id={`job-sla-${s}`} type="number" min={1} step={1} className={FIELD} value={sla[s]}
+                  onChange={(e) => { setSla({ ...sla, [s]: e.target.value }); setSlaErrors({ ...slaErrors, [s]: '' }); }}
                 />
               </Field>
             ))}

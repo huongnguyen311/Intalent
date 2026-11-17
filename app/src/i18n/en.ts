@@ -504,6 +504,7 @@ export const en = {
   'jobs.drawer.sla': 'Stage SLA (days)',
   'jobs.drawer.publish': 'Publish to careers site',
   'jobs.drawer.err.title': 'Title is required',
+  'jobs.drawer.err.sla': 'Enter a whole number of days (1 or more)',
   'jobs.drawer.err.jd': 'Select a JD',
   'jobs.drawer.save': 'Save',
   'jobs.detail.notFound': 'Job not found',
