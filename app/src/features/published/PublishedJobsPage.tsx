@@ -11,8 +11,8 @@ import { useT } from '../../i18n/i18n';
 import { useStore } from '../../store/store';
 
 const PAGE_SIZE = 20;
-const TH = 'px-6 py-4 text-xs font-bold text-[#896a61] uppercase tracking-wider border-b border-[#e6dddb] dark:border-[#2a2423]  ';
-const TD = 'px-6 py-4 whitespace-nowrap ';
+const TH = 'px-4 py-4 text-xs font-bold text-[#896a61] uppercase tracking-wider border-b border-[#e6dddb] dark:border-[#2a2423]  ';
+const TD = 'px-4 py-4 whitespace-nowrap ';
 const ITEM =
   'w-full text-left flex items-center gap-2 px-3 py-2 text-sm text-[#181211] dark:text-white hover:bg-[#f8f6f6] dark:hover:bg-white/5';
 
@@ -56,7 +56,7 @@ export function PublishedJobsPage() {
                   {(['jobs.col.title', 'jobs.col.department', 'jobs.col.location', 'jobs.col.level', 'published.col.published', 'published.col.applied'] as const).map((k) => (
                     <th key={k} className={TH}>{t(k)}</th>
                   ))}
-                  <th className="px-6 py-4 border-b border-[#e6dddb] dark:border-[#2a2423] text-xs font-bold text-[#896a61] uppercase tracking-wider text-center">{t('jobs.col.actions')}</th>
+                  <th className="px-4 py-4 border-b border-[#e6dddb] dark:border-[#2a2423] text-xs font-bold text-[#896a61] uppercase tracking-wider text-center">{t('jobs.col.actions')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#f4f1f0] dark:divide-[#2a2423]">
@@ -80,7 +80,7 @@ export function PublishedJobsPage() {
                     >
                       {careersApplicants + campaignApplicants}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-center">
+                    <td className="px-4 py-4 whitespace-nowrap text-center">
                       <div className="inline-flex items-center gap-2">
                       <Link to={`/careers/${job.id}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold text-primary hover:bg-orange-50 dark:hover:bg-white/5 transition-colors">
                         <span aria-hidden="true" className="material-symbols-outlined text-[16px]">open_in_new</span>{t('published.menu.view')}
