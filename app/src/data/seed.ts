@@ -80,6 +80,21 @@ export function buildJds(): Jd[] {
   }));
 }
 
+/** Email templates live beside the prompts (id prefix `email-`); the System Config page splits them by that prefix. */
+export function buildEmailTemplates(): Prompt[] {
+  const row = (id: string, name: string, description: string, text: string): Prompt =>
+    ({ id: `email-${id}`, name, description, text, updatedAt: '2026-03-10T09:00:00' });
+  const sign = '\n\nThe InApps Talent team';
+  return [
+    row('application-received', 'Application Received', 'Sent when a candidate applies on the careers site',
+      `Hi {{name}},\n\nThanks for applying for {{job}}. We received your application and will be in touch soon.${sign}`),
+    row('interview-invite', 'Interview Invitation', 'Sent when a candidate moves to Interview',
+      `Hi {{name}},\n\nWe would like to invite you to an interview for {{job}}. Please reply with a time that suits you.${sign}`),
+    row('rejection', 'Rejection', 'Sent when a candidate is moved to Rejected',
+      `Hi {{name}},\n\nThank you for your interest in {{job}}. We will not move forward this time, but we will keep your profile on file.${sign}`),
+  ];
+}
+
 export function buildPrompts(): Prompt[] {
   const row = (id: string, name: string, description: string, updatedAt: string, text: string): Prompt =>
     ({ id, name, description, text, updatedAt });
@@ -346,7 +361,7 @@ export function buildSeed(rng: Rng = mulberry32(20261116)): DemoState {
     users: buildUsers(),
     jds: buildJds(),
     taxonomy: buildTaxonomy(candidates),
-    prompts: buildPrompts(),
+    prompts: [...buildPrompts(), ...buildEmailTemplates()],
     chats: [],
     ui: { lang: 'en', careersLang: 'vi', piiUnlocked: false },
   };

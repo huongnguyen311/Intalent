@@ -29,7 +29,7 @@ describe('seed', () => {
     expect(s.taxonomy.filter((t) => t.kind === 'english').map((t) => t.label)).toEqual([
       'Advanced', 'Intermediate', 'Basic', 'Fluent',
     ]);
-    expect(s.prompts.map((p) => p.name)).toEqual([
+    expect(s.prompts.filter((p) => !p.id.startsWith('email-')).map((p) => p.name)).toEqual([
       'Candidate Evaluation', 'Jd Matching', 'Jd Generation', 'Cv Extraction Batch',
     ]);
     expect(s.meta).toBeUndefined();

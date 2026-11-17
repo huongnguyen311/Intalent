@@ -7,6 +7,10 @@ import { candidateActions } from './actions/candidates';
 import { chatActions } from './actions/chats';
 import { jdActions } from './actions/jds';
 import { noteActions } from './actions/notes';
+import { ownerActions } from './actions/owners';
+import { promptActions } from './actions/prompts';
+import { taxonomyActions } from './actions/taxonomy';
+import { userActions } from './actions/users';
 import type { DemoStore, Env } from './actions/types';
 import { persistOptions } from './persist';
 
@@ -28,6 +32,10 @@ export function createDemoStore(
     ...noteActions(set, get, env),
     ...jdActions(set, get, env),
     ...chatActions(set, get, env),
+    ...taxonomyActions(set, get, env),
+    ...userActions(set, get, env),
+    ...promptActions(set, get, env),
+    ...ownerActions(set, get, env),
     resetDemo: () => set(initial()),
   });
   return opts.fixture

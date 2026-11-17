@@ -125,7 +125,8 @@ export type ActivityType =
   | 'added_to_pipeline'
   | 'stage_changed'
   | 'note_added'
-  | 'note_converted';
+  | 'note_converted'
+  | 'owner_transferred';
 
 export interface Activity {
   type: ActivityType;
@@ -135,6 +136,9 @@ export interface Activity {
   by: string;
   at: string;
   detail: string;
+  /** owner_transferred only: previous and new CV owner (user ids; the fixture may hold display names). */
+  from?: string;
+  to?: string;
 }
 
 export interface User {

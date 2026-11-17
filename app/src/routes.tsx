@@ -9,8 +9,12 @@ import { JdDetailPage } from './features/jds/JdDetailPage';
 import { JdListPage } from './features/jds/JdListPage';
 import { JdMatchingPage } from './features/matching/JdMatchingPage';
 import { NotesPage } from './features/notes/NotesPage';
+import { SystemConfigPage } from './features/system-config/SystemConfigPage';
+import { TaContributionPage } from './features/ta-contribution/TaContributionPage';
+import { TaxonomyPage } from './features/taxonomy/TaxonomyPage';
 import { UltraUploadPage } from './features/upload/UltraUploadPage';
 import { UploadPage } from './features/upload/UploadPage';
+import { UsersPage } from './features/users/UsersPage';
 
 function Placeholder({ title }: { title: string }) {
   return <div className="p-8 max-w-[1400px] mx-auto text-[#896a61]">{title}</div>;
@@ -62,7 +66,11 @@ export function AppRoutes() {
       <Route path="/jd-matching" element={<JdMatchingPage />} />
       <Route path="/upload" element={<UploadPage />} />
       <Route path="/upload-ultra" element={<UltraUploadPage />} />
-      {INTERNAL.filter(({ path }) => !['/', '/candidates', '/candidates/:id', '/notes', '/upload', '/upload-ultra', '/assistant', '/jds', '/jds/:id', '/jd-matching'].includes(path)).map(({ path, title }) => (
+      <Route path="/taxonomy" element={<TaxonomyPage />} />
+      <Route path="/system-config" element={<SystemConfigPage />} />
+      <Route path="/users" element={<UsersPage />} />
+      <Route path="/ta-contribution" element={<TaContributionPage />} />
+      {INTERNAL.filter(({ path }) => !['/', '/candidates', '/candidates/:id', '/notes', '/upload', '/upload-ultra', '/assistant', '/jds', '/jds/:id', '/jd-matching', '/taxonomy', '/system-config', '/users', '/ta-contribution'].includes(path)).map(({ path, title }) => (
         <Route
           key={path}
           path={path}

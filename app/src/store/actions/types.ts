@@ -10,9 +10,13 @@ import type {
   JdPatch,
   Note,
   NoteInput,
+  Prompt,
   Stage,
+  TaxonomyItem,
+  User,
   Via,
 } from '../../domain/types';
+import type { Role } from '../../domain/users';
 
 export type UpdateCandidateResult =
   | { ok: true; candidate: Candidate }
@@ -20,6 +24,13 @@ export type UpdateCandidateResult =
   | { ok: false; reason: 'duplicate'; conflictId: string };
 
 export type DeleteJdResult = { ok: true } | { ok: false; reason: 'not_found' } | { ok: false; reason: 'in_use'; jobs: number };
+
+export type TaxonomyResult =
+  | { ok: true; item: TaxonomyItem }
+  | { ok: false; reason: 'empty' | 'duplicate' | 'not_found' };
+export type UserResult =
+  | { ok: true; user: User }
+  | { ok: false; reason: 'invalid' | 'duplicate' | 'not_found' | 'protected' };
 
 export interface DemoActions {
   upsertCandidate(
@@ -43,6 +54,19 @@ export interface DemoActions {
   /** Answers `text` with a ranked candidate search; starts a new conversation when `sessionId` is null. Returns the session id. */
   sendChat(sessionId: string | null, text: string): string;
   deleteChat(sessionId: string): void;
+  addTaxonomy(kind: TaxonomyItem['kind'], label: string): TaxonomyResult;
+  /** Also rewrites the label on every candidate using it. */
+  renameTaxonomy(id: string, label: string): TaxonomyResult;
+  setTaxonomyActive(id: string, active: boolean): boolean;
+  addUser(input: { name: string; email: string; role: Role }): UserResult;
+  updateUser(id: string, patch: { name: string; email: string }): UserResult;
+  /** The demo user cannot leave Super Admin or be deactivated ('protected'). */
+  setUserRole(id: string, role: Role): UserResult;
+  setUserActive(id: string, active: boolean): UserResult;
+  /** Saved only; prompts and email templates are never executed. */
+  updatePrompt(id: string, patch: Partial<Pick<Prompt, 'description' | 'text'>>): boolean;
+  /** Moves a CV to another TA and logs an owner_transferred activity; false for an unknown candidate/user or a no-op. */
+  transferOwner(candidateId: string, toUserId: string, by: string): boolean;
   resetDemo(): void;
 }
 
