@@ -1,4 +1,16 @@
-type Props = { page: number; pageSize: number; total: number; noun?: string; onPage: (page: number) => void };
+import { useT } from '../i18n/i18n';
+
+/** Words around the numbers; the default is today's English so ported screens keep their pixels. */
+export type PaginationLabels = { showing: string; of: string; prev: string; next: string };
+const EN_LABELS: PaginationLabels = { showing: 'Showing', of: 'of', prev: 'Previous page', next: 'Next page' };
+
+/** Translated labels for screens added after the mockup. */
+export function usePaginationLabels(): PaginationLabels {
+  const t = useT();
+  return { showing: t('pagination.showing'), of: t('pagination.of'), prev: t('pagination.prev'), next: t('pagination.next') };
+}
+
+type Props = { page: number; pageSize: number; total: number; noun?: string; labels?: PaginationLabels; onPage: (page: number) => void };
 
 const NAV = 'size-8 flex items-center justify-center rounded-lg border border-[#e6dddb] dark:border-[#3a3433] text-[#896a61] disabled:opacity-50 disabled:cursor-not-allowed';
 const NEXT = `${NAV} bg-white dark:bg-[#251f1e] text-[#181211] dark:text-white hover:border-primary transition-colors`;
@@ -19,7 +31,7 @@ export function pageItems(page: number, pages: number): (number | '...')[] {
   return out;
 }
 
-export function Pagination({ page, pageSize, total, noun = 'results', onPage }: Props) {
+export function Pagination({ page, pageSize, total, noun = 'results', labels = EN_LABELS, onPage }: Props) {
   const pages = Math.max(1, Math.ceil(total / pageSize));
   const from = total === 0 ? 0 : (page - 1) * pageSize + 1;
   const to = Math.min(page * pageSize, total);
@@ -27,10 +39,10 @@ export function Pagination({ page, pageSize, total, noun = 'results', onPage }: 
   return (
     <div className="px-6 py-4 border-t border-[#f4f1f0] dark:border-[#2a2423] flex items-center justify-between">
       <span className="text-xs text-[#896a61]">
-        Showing <span className={strong}>{from}-{to}</span> of <span className={strong}>{total}</span> {noun}
+        {labels.showing} <span className={strong}>{from}-{to}</span> {labels.of} <span className={strong}>{total}</span> {noun}
       </span>
       <div className="flex items-center gap-2">
-        <button aria-label="Previous page" disabled={page <= 1} onClick={() => onPage(page - 1)} className={NAV}>
+        <button aria-label={labels.prev} disabled={page <= 1} onClick={() => onPage(page - 1)} className={NAV}>
           <span className="material-symbols-outlined text-[18px]">chevron_left</span>
         </button>
         {pageItems(page, pages).map((p, i) =>
@@ -40,7 +52,7 @@ export function Pagination({ page, pageSize, total, noun = 'results', onPage }: 
             <button key={p} onClick={() => onPage(p)} className={p === page ? NUM_ON : NUM_OFF}>{p}</button>
           ),
         )}
-        <button aria-label="Next page" disabled={page >= pages} onClick={() => onPage(page + 1)} className={NEXT}>
+        <button aria-label={labels.next} disabled={page >= pages} onClick={() => onPage(page + 1)} className={NEXT}>
           <span className="material-symbols-outlined text-[18px]">chevron_right</span>
         </button>
       </div>

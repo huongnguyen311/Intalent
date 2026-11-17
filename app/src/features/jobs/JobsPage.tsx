@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { AppLayout } from '../../components/AppLayout';
-import { Pagination } from '../../components/Pagination';
+import { Pagination, usePaginationLabels } from '../../components/Pagination';
 import { MenuItem, Popover } from '../../components/Popover';
 import { toast } from '../../components/Toast';
 import type { Job } from '../../domain/types';
@@ -35,6 +35,7 @@ function FilterButton({ icon, label, onClick }: { icon: string; label: string; o
 
 export function JobsPage() {
   const t = useT();
+  const paginationLabels = usePaginationLabels();
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const { jobs, jds, applications, users } = useStore();
@@ -171,7 +172,7 @@ export function JobsPage() {
               </tbody>
             </table>
           </div>
-          <Pagination page={page} pageSize={PAGE_SIZE} total={filtered.length} noun={t('jobs.noun')} onPage={setPage} />
+          <Pagination labels={paginationLabels} page={page} pageSize={PAGE_SIZE} total={filtered.length} noun={t('jobs.noun')} onPage={setPage} />
         </div>
       </div>
       <JobDrawer open={editor !== null} jdId={editor?.jdId} job={editor?.job} onClose={closeEditor} />

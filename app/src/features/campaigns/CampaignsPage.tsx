@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { AppLayout } from '../../components/AppLayout';
-import { Pagination } from '../../components/Pagination';
+import { Pagination, usePaginationLabels } from '../../components/Pagination';
 import { MenuItem, Popover } from '../../components/Popover';
 import { campaignStats } from '../../domain/campaigns';
 import type { Campaign, CampaignStatus } from '../../domain/types';
@@ -22,6 +22,7 @@ const STATUSES: CampaignStatus[] = ['active', 'paused', 'ended'];
 
 export function CampaignsPage() {
   const t = useT();
+  const paginationLabels = usePaginationLabels();
   const { campaigns, applications, jobs } = useStore();
   const [q, setQ] = useState('');
   const [status, setStatus] = useState<CampaignStatus | ''>('');
@@ -113,7 +114,7 @@ export function CampaignsPage() {
               </tbody>
             </table>
           </div>
-          <Pagination page={page} pageSize={PAGE_SIZE} total={filtered.length} noun={t('campaigns.noun')} onPage={setPage} />
+          <Pagination labels={paginationLabels} page={page} pageSize={PAGE_SIZE} total={filtered.length} noun={t('campaigns.noun')} onPage={setPage} />
         </div>
       </div>
       <CampaignWizard open={creating} onClose={() => setCreating(false)} />

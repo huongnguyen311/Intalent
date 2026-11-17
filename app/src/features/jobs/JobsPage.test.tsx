@@ -140,3 +140,13 @@ describe('JobDetailPage', () => {
     expect(useStore.getState().jobs.find((j) => j.id === 'job-1')!.status).toBe('closed');
   });
 });
+
+describe('Jobs pagination language', () => {
+  it('shows Vietnamese pagination wording in vi', () => {
+    useStore.setState({ ui: { ...useStore.getState().ui, lang: 'vi' } });
+    renderAt('/jobs');
+    expect(screen.getByText(/Hiển thị/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Trang trước' })).toBeInTheDocument();
+    expect(screen.queryByText(/Showing/)).toBeNull();
+  });
+});
