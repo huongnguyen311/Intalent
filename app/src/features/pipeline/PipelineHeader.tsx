@@ -8,8 +8,9 @@ export type PipelineQuery = { text: string; source: string };
 
 type Props = {
   job: Job;
-  switchable: Job[];
-  onSwitch: (jobId: string) => void;
+  /** Omit inside a job's own page, where the job is fixed. */
+  switchable?: Job[];
+  onSwitch?: (jobId: string) => void;
   summary: { total: number; overdue: number; daysOpen: number };
   sources: string[];
   query: PipelineQuery;
@@ -37,7 +38,7 @@ export function PipelineHeader({ job, switchable, onSwitch, summary, sources, qu
   );
   return (
     <div className="flex items-center gap-2 flex-wrap mb-3">
-      <Popover
+      {switchable && onSwitch && <Popover
         align="left"
         trigger={({ toggle: open }) => (
           <button onClick={open} className={`${FIELD} px-4 font-bold flex items-center gap-2 hover:border-primary/50 transition-colors max-w-[240px]`}>
@@ -54,7 +55,7 @@ export function PipelineHeader({ job, switchable, onSwitch, summary, sources, qu
             </MenuItem>
           ))
         }
-      </Popover>
+      </Popover>}
       <span className="text-sm text-[#896a61] whitespace-nowrap">{t('pipeline.summary', { total: summary.total, overdue: summary.overdue, days: summary.daysOpen })}</span>
       <input
         type="search"

@@ -5,7 +5,7 @@ import { buildSeed } from '../../data/seed';
 import type { Application, Stage } from '../../domain/types';
 import { useStore } from '../../store/store';
 import { Board } from './Board';
-import { handleDrop } from './moves';
+import { commitMove, handleDrop } from './moves';
 
 vi.mock('../../components/Toast', () => ({ toast: vi.fn(), Toaster: () => null }));
 
@@ -54,8 +54,10 @@ describe('Board', () => {
     expect(after.activities).toBe(before.activities);
   });
 
-  it('drop on another column moves the card and records it', () => {
-    expect(handleDrop('a1', 'interview')).toBe('moved');
+  it('drop on another column asks for a note, then commits and records it', () => {
+    expect(handleDrop('a1', 'interview')).toBe('needs_note');
+    expect(stageOf('a1')).toBe('screening');
+    expect(commitMove('a1', 'interview', '')).toBe(true);
     const moved = useStore.getState().applications.find((a) => a.id === 'a1')!;
     expect(moved.stage).toBe('interview');
     expect(moved.history).toHaveLength(2);
@@ -63,7 +65,7 @@ describe('Board', () => {
   });
 
   it('drop on rejected asks reason and cancel keeps stage', () => {
-    expect(handleDrop('a1', 'rejected')).toBe('needs_reason');
+    expect(handleDrop('a1', 'rejected')).toBe('needs_note');
     expect(stageOf('a1')).toBe('screening');
 
     renderBoard();
@@ -86,6 +88,97 @@ describe('Board', () => {
     fireEvent.click(within(dialog).getByRole('button', { name: 'Reject' }));
     expect(useStore.getState().applications.find((a) => a.id === 'a1')).toMatchObject({ stage: 'rejected', rejectedReason: 'Salary mismatch' });
     expect(within(screen.getByTestId('column-rejected')).getByText(names[0])).toBeInTheDocument();
+  });
+
+  it('every move opens note dialog and cancel keeps stage', () => {
+    renderBoard();
+    fireEvent.click(within(card(names[2])).getByRole('button', { name: 'Move to…' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Screening' }));
+    const dialog = screen.getByRole('dialog', { name: 'Move to Screening' });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(stageOf('a3')).toBe('new');
+    expect(useStore.getState().applications.find((a) => a.id === 'a3')!.history).toHaveLength(1);
+  });
+
+  it('move with empty note allowed except rejected', () => {
+    renderBoard();
+    fireEvent.click(within(card(names[2])).getByRole('button', { name: 'Move to…' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Screening' }));
+    const dialog = screen.getByRole('dialog', { name: 'Move to Screening' });
+    const ok = within(dialog).getByRole('button', { name: 'Move' });
+    expect(ok).toBeEnabled();
+    fireEvent.click(ok);
+    const a = useStore.getState().applications.find((x) => x.id === 'a3')!;
+    expect(a.stage).toBe('screening');
+    expect(a.history[a.history.length - 1].note).toBeUndefined();
+  });
+
+  it('optional note saved on history entry and shown in the drawer', () => {
+    renderBoard();
+    fireEvent.click(within(card(names[2])).getByRole('button', { name: 'Move to…' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Screening' }));
+    const dialog = screen.getByRole('dialog', { name: 'Move to Screening' });
+    fireEvent.change(within(dialog).getByLabelText('Note'), { target: { value: 'Hẹn PV thứ 5' } });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Move' }));
+    const a = useStore.getState().applications.find((x) => x.id === 'a3')!;
+    expect(a.history[a.history.length - 1]).toMatchObject({ stage: 'screening', note: 'Hẹn PV thứ 5' });
+    fireEvent.click(card(names[2]));
+    expect(within(screen.getByRole('dialog')).getByText('Hẹn PV thứ 5')).toBeInTheDocument();
+  });
+
+  it('drawer Move to… also asks for a note', () => {
+    renderBoard();
+    fireEvent.click(card(names[2]));
+    const drawer = screen.getByRole('dialog');
+    fireEvent.click(within(drawer).getByRole('button', { name: /^Move to…/ }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Offer' }));
+    expect(screen.getByRole('dialog', { name: 'Move to Offer' })).toBeInTheDocument();
+  });
+
+  describe('collapsible end columns', () => {
+    const busy = () => {
+      const cs = buildSeed().candidates;
+      useStore.setState({
+        applications: [...useStore.getState().applications, app('a4', cs[3].id, 'interview', 1), app('a5', cs[4].id, 'offer', 1)],
+      });
+    };
+
+    it('end columns collapsed by default when busy', () => {
+      busy();
+      renderBoard();
+      expect(screen.getByTestId('column-rejected')).toHaveClass('w-12');
+      expect(screen.getByTestId('column-hired')).toHaveClass('w-12');
+      expect(screen.getByTestId('column-new')).not.toHaveClass('w-12');
+      fireEvent.click(within(screen.getByTestId('column-rejected')).getByRole('button', { name: 'Expand Rejected' }));
+      expect(screen.getByTestId('column-rejected')).not.toHaveClass('w-12');
+    });
+
+    it('end columns stay open when the pipeline is quiet', () => {
+      renderBoard();
+      expect(screen.getByTestId('column-rejected')).not.toHaveClass('w-12');
+    });
+
+    it('collapsed rejected strip still requires reason', () => {
+      busy();
+      renderBoard();
+      expect(handleDrop('a1', 'rejected')).toBe('needs_note');
+      fireEvent.click(within(card(names[0])).getByRole('button', { name: 'Move to…' }));
+      fireEvent.click(screen.getByRole('menuitem', { name: 'Rejected' }));
+      const dialog = screen.getByRole('dialog', { name: 'Reject candidate' });
+      expect(within(dialog).getByRole('button', { name: 'Reject' })).toBeDisabled();
+      expect(screen.getByTestId('column-rejected')).toHaveClass('w-12');
+    });
+
+    it('collapsed hired strip accepts move', () => {
+      busy();
+      renderBoard();
+      fireEvent.click(within(card(names[0])).getByRole('button', { name: 'Move to…' }));
+      fireEvent.click(screen.getByRole('menuitem', { name: 'Hired' }));
+      fireEvent.click(within(screen.getByRole('dialog', { name: 'Move to Hired' })).getByRole('button', { name: 'Move' }));
+      expect(stageOf('a1')).toBe('hired');
+      expect(within(screen.getByTestId('column-hired')).getByTestId('column-count')).toHaveTextContent('1');
+    });
   });
 
   it('card shows one source label and no duplicate talent pool chip', () => {

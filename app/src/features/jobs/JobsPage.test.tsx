@@ -131,7 +131,8 @@ describe('JobDetailPage', () => {
     const inJob = useStore.getState().applications.filter((a) => a.jobId === 'job-1');
     const column = screen.getByTestId('column-new');
     expect(within(column).getByTestId('column-count')).toHaveTextContent(String(inJob.filter((a) => a.stage === 'new').length));
-    expect(screen.getAllByTestId(/^card-/)).toHaveLength(inJob.length);
+    // Hired/Rejected start collapsed on a busy board, so their cards are not rendered.
+    expect(screen.getAllByTestId(/^card-/)).toHaveLength(inJob.filter((a) => a.stage !== 'hired' && a.stage !== 'rejected').length);
   });
 
   it('closing a job from the header updates its status', () => {

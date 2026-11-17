@@ -40,10 +40,12 @@ export function applicationActions(
       return { ok: true, application };
     },
 
-    moveStage(appId, to, by, reason) {
+    moveStage(appId, to, by, reason, note) {
       const app = get().applications.find((a) => a.id === appId);
       if (!app || app.stage === to) return false;
-      const trimmed = reason?.trim();
+      const trimmedNote = note?.trim() || undefined;
+      // Rejecting needs a reason; the move note doubles as that reason.
+      const trimmed = reason?.trim() || (to === 'rejected' ? trimmedNote : undefined);
       if (to === 'rejected' && !trimmed) return false;
       const at = env.now();
       // A reason only belongs to the rejection it was given for.
@@ -52,7 +54,7 @@ export function applicationActions(
         ...kept,
         stage: to,
         stageEnteredAt: at,
-        history: [...app.history, { stage: to, at, by }],
+        history: [...app.history, { stage: to, at, by, ...(trimmedNote ? { note: trimmedNote } : {}) }],
         ...(to === 'rejected' ? { rejectedReason: trimmed } : {}),
       };
       const activity: Activity = {
@@ -62,7 +64,7 @@ export function applicationActions(
         jobId: app.jobId,
         by,
         at,
-        detail: `${app.stage} to ${to}${trimmed ? `: ${trimmed}` : ''}`,
+        detail: `${app.stage} to ${to}${trimmed || trimmedNote ? `: ${trimmed || trimmedNote}` : ''}`,
       };
       set((s) => ({
         applications: s.applications.map((a) => (a.id === appId ? next : a)),

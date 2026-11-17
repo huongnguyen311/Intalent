@@ -21,6 +21,9 @@ beforeEach(() => {
   useStore.setState({ ...buildSeed(), activities: [] });
 });
 
+/** Hired/Rejected are collapsed on a busy board, so their cards are not rendered. */
+const visibleApps = (jobId: string) => useStore.getState().applications.filter((a) => a.jobId === jobId && a.stage !== 'hired' && a.stage !== 'rejected');
+
 const firstOpen = () => useStore.getState().jobs.find((j) => j.status === 'open')!;
 
 describe('PipelinePage', () => {
@@ -61,11 +64,11 @@ describe('PipelinePage', () => {
     const total = useStore.getState().applications.filter((a) => a.jobId === 'job-1').length;
     expect(screen.getByText(new RegExp(`^${total} candidates · [0-9]+ overdue · Open [0-9]+ days$`))).toBeInTheDocument();
     const cards = () => screen.getAllByTestId(/^card-/);
-    expect(cards()).toHaveLength(total);
+    expect(cards()).toHaveLength(visibleApps('job-1').length);
     const { candidates, applications } = useStore.getState();
     const first = candidates.find((c) => c.id === applications.find((a) => a.jobId === 'job-1')!.candidateId)!;
     fireEvent.change(screen.getByRole('searchbox'), { target: { value: first.name } });
-    expect(cards().length).toBeLessThan(total);
+    expect(cards().length).toBeLessThan(visibleApps('job-1').length);
     expect(within(cards()[0]).getByText(first.name)).toBeInTheDocument();
   });
 
@@ -88,12 +91,12 @@ describe('PipelinePage', () => {
     fireEvent.click(screen.getByRole('menuitem', { name: other.title }));
     expect(screen.getByLabelText('All sources')).toHaveValue('');
     expect(screen.getByRole('searchbox')).toHaveValue('');
-    expect(screen.getAllByTestId(/^card-/)).toHaveLength(st.applications.filter((a) => a.jobId === other.id).length);
+    expect(screen.getAllByTestId(/^card-/)).toHaveLength(visibleApps(other.id).length);
   });
 
   it('ignores a source the current job does not have', () => {
     renderAt('/pipeline/job-1');
-    const total = useStore.getState().applications.filter((a) => a.jobId === 'job-1').length;
+    const total = visibleApps('job-1').length;
     // Stored filter for a source absent from the job: simulate via a select option that exists only elsewhere.
     const select = screen.getByLabelText('All sources') as HTMLSelectElement;
     const opt = document.createElement('option');

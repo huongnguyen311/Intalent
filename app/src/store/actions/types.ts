@@ -54,7 +54,7 @@ export interface DemoActions {
   ): { ok: true; application: Application } | { ok: false; reason: 'duplicate'; stage: Stage }
     | { ok: false; reason: 'job_not_open' };
   /** Moving out of `rejected` clears the rejection reason. */
-  moveStage(appId: string, to: Stage, by: string, reason?: string): boolean;
+  moveStage(appId: string, to: Stage, by: string, reason?: string, note?: string): boolean;
   /** Refuses blank text and unknown applications. */
   addComment(appId: string, text: string, by: string): boolean;
   /** Integer 1-5; a reviewer rating again replaces their earlier score. */

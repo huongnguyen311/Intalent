@@ -53,6 +53,8 @@ export interface StageHistoryEntry {
   stage: Stage;
   at: string;
   by: string;
+  /** Optional note typed when the card was moved here. */
+  note?: string;
 }
 
 export interface ApplicationComment {

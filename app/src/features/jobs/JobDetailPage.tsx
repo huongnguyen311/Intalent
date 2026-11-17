@@ -8,7 +8,7 @@ import { useStore } from '../../store/store';
 import { fullDate } from '../jds/format';
 import { JobStatusBadge } from './JobBits';
 import { JobDrawer } from './JobDrawer';
-import { Board } from '../pipeline/Board';
+import { PipelineWorkspace } from '../pipeline/PipelineWorkspace';
 import { CampaignsTab, CandidatesTab, CareersPreviewTab } from './JobTabs';
 
 const SECONDARY =
@@ -91,7 +91,7 @@ export function JobDetailPage() {
             ))}
           </div>
 
-          {tab === 'pipeline' && <Board job={job} />}
+          {tab === 'pipeline' && <PipelineWorkspace job={job} />}
           {tab === 'candidates' && <CandidatesTab job={job} />}
           {tab === 'campaigns' && <CampaignsTab job={job} />}
           {tab === 'careers' && <CareersPreviewTab job={job} jd={jd} />}

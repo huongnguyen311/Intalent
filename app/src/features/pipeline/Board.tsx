@@ -15,15 +15,16 @@ import { toast } from '../../components/Toast';
 import { filterApplications } from '../../domain/pipelineFilter';
 import { STAGES, stageLabel } from '../../domain/stages';
 import type { Job, Stage } from '../../domain/types';
-import { CURRENT_USER_ID } from '../../domain/users';
 import { useLang, useT } from '../../i18n/i18n';
 import { useStore } from '../../store/store';
 import { AddFromPoolButton } from './AddFromPoolModal';
 import { ApplicationDrawer } from './ApplicationDrawer';
 import { OverlayCard } from './CandidateCard';
 import { Column } from './Column';
-import { handleDrop } from './moves';
-import { RejectDialog } from './RejectDialog';
+import { MoveDialog } from './MoveDialog';
+import { commitMove, handleDrop } from './moves';
+import type { PipelineView } from './PipelineHeader';
+import { PipelineList } from './PipelineList';
 
 const isStage = (id: UniqueIdentifier | undefined): id is Stage => STAGES.includes(id as Stage);
 
@@ -53,14 +54,22 @@ const columnKeyboardCoordinates: KeyboardCoordinateGetter = (event, { active, co
 
 const KEYBOARD_CODES = { start: ['Space'], cancel: ['Escape'], end: ['Space', 'Enter'] };
 
-/** Per-job Kanban: drag (pointer or keyboard) or "Move to…" between stages; Rejected asks for a reason first. */
-export function Board({ job, filter }: { job: Job; filter?: { text?: string; source?: string } }) {
+const END_STAGES: Stage[] = ['hired', 'rejected'];
+/** Hired/Rejected start collapsed once the open stages hold more than this many applications. */
+const BUSY_ACTIVE = 3;
+
+/**
+ * Per-job Kanban (or list): drag (pointer or keyboard) or "Move to…" between stages.
+ * Every move asks for a note first (required for Rejected); Cancel leaves the card where it was.
+ */
+export function Board({ job, filter, view = 'kanban' }: { job: Job; filter?: { text?: string; source?: string }; view?: PipelineView }) {
   const t = useT();
   const [lang] = useLang();
   const allApps = useStore((s) => s.applications);
   const allCandidates = useStore((s) => s.candidates);
   const [openId, setOpenId] = useState<string | null>(null);
-  const [rejectingId, setRejectingId] = useState<string | null>(null);
+  const [pending, setPending] = useState<{ appId: string; to: Stage } | null>(null);
+  const [collapseOverride, setCollapseOverride] = useState<Partial<Record<Stage, boolean>>>({});
   const [activeId, setActiveId] = useState<string | null>(null);
 
   const jobApps = useMemo(
@@ -73,7 +82,7 @@ export function Board({ job, filter }: { job: Job; filter?: { text?: string; sou
   );
   const candidates = useMemo(() => new Map(allCandidates.map((c) => [c.id, c])), [allCandidates]);
   const nameOf = (appId: UniqueIdentifier) => {
-    const app = apps.find((a) => a.id === appId);
+    const app = jobApps.find((a) => a.id === appId);
     return (app && candidates.get(app.candidateId)?.name) ?? String(appId);
   };
   const stageName = (id: UniqueIdentifier | undefined) => (isStage(id) ? stageLabel(id, lang) : '');
@@ -83,10 +92,11 @@ export function Board({ job, filter }: { job: Job; filter?: { text?: string; sou
     useSensor(KeyboardSensor, { coordinateGetter: columnKeyboardCoordinates, keyboardCodes: KEYBOARD_CODES }),
   );
 
+  const activeCount = jobApps.filter((a) => !END_STAGES.includes(a.stage)).length;
+  const isCollapsed = (stage: Stage) => collapseOverride[stage] ?? (END_STAGES.includes(stage) && activeCount > BUSY_ACTIVE);
+
   const move = (appId: string, to: Stage | null) => {
-    const outcome = handleDrop(appId, to);
-    if (outcome === 'needs_reason') setRejectingId(appId);
-    if (outcome === 'moved' && to) toast(t('pipeline.toast.moved', { name: nameOf(appId), stage: stageLabel(to, lang) }));
+    if (to && handleDrop(appId, to) === 'needs_note') setPending({ appId, to });
   };
 
   const onDragEnd = ({ active, over }: DragEndEvent) => {
@@ -94,12 +104,13 @@ export function Board({ job, filter }: { job: Job; filter?: { text?: string; sou
     move(String(active.id), isStage(over?.id) ? over.id : null);
   };
 
-  const confirmReject = (reason: string) => {
-    if (!rejectingId) return;
-    if (useStore.getState().moveStage(rejectingId, 'rejected', CURRENT_USER_ID, reason)) {
-      toast(t('pipeline.toast.rejected', { name: nameOf(rejectingId) }));
+  const confirmMove = (note: string) => {
+    if (!pending) return;
+    const { appId, to } = pending;
+    if (commitMove(appId, to, note)) {
+      toast(to === 'rejected' ? t('pipeline.toast.rejected', { name: nameOf(appId) }) : t('pipeline.toast.moved', { name: nameOf(appId), stage: stageLabel(to, lang) }));
     }
-    setRejectingId(null);
+    setPending(null);
   };
 
   const announcements: Announcements = {
@@ -126,10 +137,17 @@ export function Board({ job, filter }: { job: Job; filter?: { text?: string; sou
   }
 
   const active = activeId ? apps.find((a) => a.id === activeId) : undefined;
-  const rejecting = rejectingId ? apps.find((a) => a.id === rejectingId) : undefined;
 
+  const noMatch = apps.length === 0;
   return (
     <>
+      {noMatch ? (
+        <div className="bg-white dark:bg-[#1e1e1e] rounded-2xl border border-gray-100 dark:border-white/10 shadow-sm p-12 text-center text-sm text-[#896a61]">
+          {t('pipeline.filter.noMatch')}
+        </div>
+      ) : view === 'list' ? (
+        <PipelineList job={job} apps={apps} candidates={candidates} onOpen={setOpenId} onMove={move} />
+      ) : (
       <DndContext
         sensors={sensors}
         accessibility={{ announcements, screenReaderInstructions: { draggable: t('pipeline.a11y.instructions') } }}
@@ -147,6 +165,8 @@ export function Board({ job, filter }: { job: Job; filter?: { text?: string; sou
               job={job}
               onOpen={setOpenId}
               onMove={move}
+              collapsed={isCollapsed(stage)}
+              onToggleCollapse={END_STAGES.includes(stage) ? () => setCollapseOverride((o) => ({ ...o, [stage]: !isCollapsed(stage) })) : undefined}
             />
           ))}
         </div>
@@ -154,12 +174,14 @@ export function Board({ job, filter }: { job: Job; filter?: { text?: string; sou
           {active && <OverlayCard app={active} candidate={candidates.get(active.candidateId)} job={job} />}
         </DragOverlay>
       </DndContext>
+      )}
       <ApplicationDrawer appId={openId} job={job} onClose={() => setOpenId(null)} onMove={move} />
-      <RejectDialog
-        open={!!rejecting}
-        name={rejecting ? nameOf(rejecting.id) : ''}
-        onCancel={() => setRejectingId(null)}
-        onConfirm={confirmReject}
+      <MoveDialog
+        open={!!pending}
+        name={nameOf(pending?.appId ?? '')}
+        to={pending?.to ?? 'new'}
+        onCancel={() => setPending(null)}
+        onConfirm={confirmMove}
       />
     </>
   );

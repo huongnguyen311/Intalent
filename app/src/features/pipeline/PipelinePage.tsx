@@ -1,11 +1,8 @@
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
 import { AppLayout } from '../../components/AppLayout';
-import { useMemo, useState } from 'react';
-import { pipelineSummary } from '../../domain/pipelineFilter';
 import { useT } from '../../i18n/i18n';
 import { useStore } from '../../store/store';
-import { Board } from './Board';
-import { PipelineHeader, type PipelineQuery, type PipelineView } from './PipelineHeader';
+import { PipelineWorkspace } from './PipelineWorkspace';
 
 /** `/pipeline/:jobId`; bare `/pipeline` redirects to the first open job. */
 export function PipelinePage() {
@@ -14,17 +11,7 @@ export function PipelinePage() {
   const { jobId } = useParams();
   const jobs = useStore((s) => s.jobs);
   const openJobs = jobs.filter((j) => j.status === 'open');
-  const applications = useStore((s) => s.applications);
   const job = jobs.find((j) => j.id === jobId);
-
-  const [stored, setStored] = useState<PipelineQuery & { jobId?: string }>({ text: '', source: '' });
-  const [view, setView] = useState<PipelineView>('kanban');
-  const jobApps = useMemo(() => applications.filter((a) => a.jobId === jobId), [applications, jobId]);
-  const sources = useMemo(() => [...new Set(jobApps.map((a) => a.source))].sort(), [jobApps]);
-  // Filters belong to one job: switching jobs starts clean, and a source this job doesn't have is ignored.
-  const query: PipelineQuery = stored.jobId === jobId ? { text: stored.text, source: sources.includes(stored.source) ? stored.source : '' } : { text: '', source: '' };
-  const setQuery = (q: PipelineQuery) => setStored({ ...q, jobId });
-  const summary = useMemo(() => (job ? pipelineSummary(jobApps, job, Date.now()) : { total: 0, overdue: 0, daysOpen: 0 }), [jobApps, job]);
 
   if (!jobId && openJobs[0]) return <Navigate to={`/pipeline/${openJobs[0].id}`} replace />;
 
@@ -34,20 +21,7 @@ export function PipelinePage() {
     <AppLayout title={t('nav.pipeline')} subtitle={t('pipeline.subtitle')}>
       <div className="p-4 max-w-[1600px] mx-auto min-h-full">
         {job ? (
-          <>
-            <PipelineHeader
-              job={job}
-              switchable={switchable}
-              onSwitch={(id) => navigate(`/pipeline/${id}`)}
-              summary={summary}
-              sources={sources}
-              query={query}
-              onQuery={setQuery}
-              view={view}
-              onView={setView}
-            />
-            <Board key={job.id} job={job} filter={query} />
-          </>
+          <PipelineWorkspace key={job.id} job={job} switchable={switchable} onSwitch={(id) => navigate(`/pipeline/${id}`)} />
         ) : (
           <p className="text-[#896a61]">{t(jobId ? 'pipeline.notFound' : 'pipeline.noOpenJobs')}</p>
         )}

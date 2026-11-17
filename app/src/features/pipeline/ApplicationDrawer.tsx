@@ -148,6 +148,7 @@ function DrawerBody({ app, job, name, title, onMove }: BodyProps) {
             <li key={`${h.at}-${i}`}>
               <div className="font-bold">{stageLabel(h.stage, lang)}</div>
               <div className="text-xs text-[#896a61]">{fullDate(h.at)} · {who(h.by)}</div>
+              {h.note && <div className="text-sm mt-1 whitespace-pre-wrap">{h.note}</div>}
             </li>
           ))}
         </ol>
