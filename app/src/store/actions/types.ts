@@ -8,6 +8,9 @@ import type {
   Jd,
   JdInput,
   JdPatch,
+  Job,
+  JobInput,
+  JobPatch,
   Note,
   NoteInput,
   Prompt,
@@ -53,6 +56,11 @@ export interface DemoActions {
   setJdStatus(id: string, status: 'Published' | 'Draft'): boolean;
   /** Refuses while a job still points at the JD. */
   deleteJd(id: string): DeleteJdResult;
+  /** Created jobs get `openedAt` = now; `status: 'open'` makes them public on the careers site. */
+  createJob(input: JobInput): Job;
+  updateJob(id: string, patch: JobPatch): boolean;
+  /** Re-opening a draft or closed job restarts its days-open clock. */
+  setJobStatus(id: string, status: Job['status']): boolean;
   /** Answers `text` with a ranked candidate search; starts a new conversation when `sessionId` is null. Returns the session id. */
   sendChat(sessionId: string | null, text: string): string;
   deleteChat(sessionId: string): void;

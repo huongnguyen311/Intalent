@@ -5,6 +5,8 @@ import { LoginPage } from './features/auth/LoginPage';
 import { CandidatePoolPage } from './features/candidates/CandidatePoolPage';
 import { CandidateProfilePage } from './features/candidates/CandidateProfilePage';
 import { DashboardPage } from './features/dashboard/DashboardPage';
+import { JobDetailPage } from './features/jobs/JobDetailPage';
+import { JobsPage } from './features/jobs/JobsPage';
 import { JdDetailPage } from './features/jds/JdDetailPage';
 import { JdListPage } from './features/jds/JdListPage';
 import { JdMatchingPage } from './features/matching/JdMatchingPage';
@@ -70,7 +72,9 @@ export function AppRoutes() {
       <Route path="/system-config" element={<SystemConfigPage />} />
       <Route path="/users" element={<UsersPage />} />
       <Route path="/ta-contribution" element={<TaContributionPage />} />
-      {INTERNAL.filter(({ path }) => !['/', '/candidates', '/candidates/:id', '/notes', '/upload', '/upload-ultra', '/assistant', '/jds', '/jds/:id', '/jd-matching', '/taxonomy', '/system-config', '/users', '/ta-contribution'].includes(path)).map(({ path, title }) => (
+      <Route path="/jobs" element={<JobsPage />} />
+      <Route path="/jobs/:id" element={<JobDetailPage />} />
+      {INTERNAL.filter(({ path }) => !['/', '/candidates', '/candidates/:id', '/notes', '/upload', '/upload-ultra', '/assistant', '/jds', '/jds/:id', '/jd-matching', '/taxonomy', '/system-config', '/users', '/ta-contribution', '/jobs', '/jobs/:id'].includes(path)).map(({ path, title }) => (
         <Route
           key={path}
           path={path}

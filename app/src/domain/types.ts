@@ -306,6 +306,9 @@ export interface JdInput {
 
 export type JdPatch = Partial<Omit<JdInput, 'status'>>;
 
+export type JobInput = Omit<Job, 'id' | 'openedAt'>;
+export type JobPatch = Partial<Omit<Job, 'id' | 'openedAt'>>;
+
 export interface NoteInput {
   name: string;
   contact: string;

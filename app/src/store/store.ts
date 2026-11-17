@@ -6,6 +6,7 @@ import { applicationActions } from './actions/applications';
 import { candidateActions } from './actions/candidates';
 import { chatActions } from './actions/chats';
 import { jdActions } from './actions/jds';
+import { jobActions } from './actions/jobs';
 import { noteActions } from './actions/notes';
 import { ownerActions } from './actions/owners';
 import { promptActions } from './actions/prompts';
@@ -31,6 +32,7 @@ export function createDemoStore(
     ...applicationActions(set, get, env),
     ...noteActions(set, get, env),
     ...jdActions(set, get, env),
+    ...jobActions(set, get, env),
     ...chatActions(set, get, env),
     ...taxonomyActions(set, get, env),
     ...userActions(set, get, env),
