@@ -108,7 +108,12 @@ export function PipelineList({ job, apps, candidates, onOpen, onMove }: Props) {
                     <div className="flex items-center gap-2 min-w-0">
                       <Avatar name={n} tone={toneFor(n)} small />
                       <div className="min-w-0">
-                        <div className="font-bold text-slate-800 dark:text-white truncate">{n}</div>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); onOpen(a.id); }}
+                          className="block max-w-full text-left font-bold text-slate-800 dark:text-white truncate hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 rounded"
+                        >
+                          {n}
+                        </button>
                         <div className="text-xs text-[#896a61] truncate">{c?.title}</div>
                       </div>
                     </div>

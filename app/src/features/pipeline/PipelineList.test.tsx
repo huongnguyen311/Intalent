@@ -67,6 +67,23 @@ describe('PipelineList', () => {
     expect(screen.getByRole('dialog')).toBeInTheDocument();
   });
 
+  it('candidate name is a keyboard-reachable button that opens the drawer', () => {
+    renderList();
+    const btn = within(screen.getByTestId('row-a1')).getByRole('button', { name: names[0] });
+    expect(btn.tagName).toBe('BUTTON');
+    expect(btn).not.toHaveAttribute('tabindex', '-1');
+    btn.focus();
+    expect(btn).toHaveFocus();
+    fireEvent.click(btn); // Enter/Space on a focused button dispatch click
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+  });
+
+  it('row menu does not open the drawer', () => {
+    renderList();
+    fireEvent.click(within(screen.getByTestId('row-a1')).getByRole('button', { name: 'Move to…' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
   it('pages at 20 rows', () => {
     const cs = buildSeed().candidates;
     useStore.setState({ applications: cs.slice(0, 25).map((c, i) => app(`p${i}`, c.id, 'new', i)) });

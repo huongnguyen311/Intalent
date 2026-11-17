@@ -9,8 +9,7 @@ export type DropOutcome = 'none' | 'needs_note';
  * What a drop (or a "Move to…" pick) does. Dropping outside any column or back on the card's own column
  * changes nothing; any real move waits for the note dialog and is applied by `commitMove`.
  */
-export function handleDrop(appId: string, over: Stage | null, by: string = CURRENT_USER_ID): DropOutcome {
-  void by;
+export function handleDrop(appId: string, over: Stage | null): DropOutcome {
   const app = useStore.getState().applications.find((a) => a.id === appId);
   if (!app || !over || over === app.stage) return 'none';
   return 'needs_note';
