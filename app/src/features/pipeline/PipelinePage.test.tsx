@@ -117,4 +117,29 @@ describe('PipelinePage', () => {
     renderAt('/pipeline/nope');
     expect(screen.getByText('Job not found')).toBeInTheDocument();
   });
+  it('an empty job shows one Add button and no search, source filter or view toggle', () => {
+    useStore.setState((s) => ({ applications: s.applications.filter((a) => a.jobId !== 'job-2') }));
+    renderAt('/pipeline/job-2');
+    expect(screen.getAllByRole('button', { name: /Add from Talent Pool/ })).toHaveLength(1);
+    expect(screen.queryByRole('searchbox')).not.toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: 'All sources' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Kanban view' })).not.toBeInTheDocument();
+    expect(screen.getByText('No candidates in this pipeline yet')).toBeInTheDocument();
+  });
+
+  it('view toggle shows short text labels', () => {
+    renderAt('/pipeline/job-1');
+    expect(screen.getByRole('button', { name: 'Kanban view' })).toHaveTextContent('Kanban');
+    expect(screen.getByRole('button', { name: 'List view' })).toHaveTextContent('List');
+  });
+
+  it('a rejection reason appears once in the drawer', () => {
+    const st = useStore.getState();
+    const a = st.applications.find((x) => x.jobId === 'job-1' && x.stage !== 'rejected')!;
+    st.moveStage(a.id, 'rejected', 'u-admin', 'Salary mismatch', 'Salary mismatch');
+    renderAt('/pipeline/job-1');
+    fireEvent.click(screen.getByRole('button', { name: /Expand Rejected/ }));
+    fireEvent.click(screen.getByTestId(`card-${a.id}`));
+    expect(within(screen.getByRole('dialog')).getAllByText(/Salary mismatch/)).toHaveLength(1);
+  });
 });

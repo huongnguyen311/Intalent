@@ -19,7 +19,7 @@ export function PipelineWorkspace({ job, switchable, onSwitch }: Props) {
   const summary = useMemo(() => pipelineSummary(jobApps, job, Date.now()), [jobApps, job]);
   return (
     <>
-      <PipelineHeader job={job} switchable={switchable} onSwitch={onSwitch} summary={summary} sources={sources} query={query} onQuery={setStored} view={view} onView={setView} />
+      <PipelineHeader job={job} switchable={switchable} onSwitch={onSwitch} summary={summary} sources={sources} query={query} onQuery={setStored} view={view} onView={setView} empty={jobApps.length === 0} />
       <Board job={job} filter={query} view={view} />
     </>
   );
