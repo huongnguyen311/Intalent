@@ -11,8 +11,8 @@ export function UploadModeSwitch({ mode, dark }: { mode: 'normal' | 'ultra'; dar
     { id: 'ultra', to: '/upload-ultra', label: t('upload.mode.ultra') },
   ] as const;
   const wrap = dark ? 'inline-flex items-center gap-1 bg-white/5 border border-white/20 rounded-2xl p-1' : 'flex items-center gap-1 bg-white border border-gray-100 rounded-2xl p-1 shadow-sm';
-  return (
-    <nav className={wrap} aria-label="Upload mode">
+  const nav = (
+    <nav className={wrap} aria-label={t('upload.mode.label')}>
       {items.map((i) => {
         const active = i.id === mode;
         const cls = active ? (dark ? 'bg-white text-slate-900' : 'bg-slate-900 text-white') : dark ? 'text-gray-300 hover:text-white' : 'text-gray-400 hover:text-slate-700';
@@ -24,4 +24,5 @@ export function UploadModeSwitch({ mode, dark }: { mode: 'normal' | 'ultra'; dar
       })}
     </nav>
   );
+  return dark ? <div className="flex justify-center mb-6">{nav}</div> : nav;
 }

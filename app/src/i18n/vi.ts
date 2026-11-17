@@ -100,6 +100,7 @@ export const vi: Record<TKey, string> = {
   'intake.toast.merged': 'Đã cập nhật hồ sơ hiện có',
   'intake.toast.note': 'Chưa thêm vào Kho nhân tài',
   'intake.toast.alreadyInJob': 'Đã có trong pipeline của vị trí này (giai đoạn {stage})',
+  'upload.mode.label': 'Chế độ tải lên',
   'upload.mode.normal': 'Thường',
   'upload.mode.ultra': 'Hàng loạt (Ultra)',
   'pool.tab.profiles': 'Hồ sơ',

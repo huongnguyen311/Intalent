@@ -62,9 +62,7 @@ export function UltraUploadPage() {
         </div>
         <div className="relative z-10 container mx-auto px-6 py-12">
           <div className="text-center mb-16">
-            <div className="flex justify-center mb-6">
-              <UploadModeSwitch mode="ultra" dark />
-            </div>
+            <UploadModeSwitch mode="ultra" dark />
             <div className="inline-flex items-center gap-4 mb-6 bg-white/5 backdrop-blur-xl rounded-full px-8 py-3 border border-white/20">
               <LucideIcon name="cpu" className="w-6 h-6 text-gray-300" />
               <LucideIcon name="sparkles" className="w-6 h-6 text-orange-400" />

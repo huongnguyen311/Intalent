@@ -99,6 +99,7 @@ export const en = {
   'intake.toast.merged': 'Existing profile updated',
   'intake.toast.note': 'Not added to Talent Pool',
   'intake.toast.alreadyInJob': "Already in this job's pipeline (stage {stage})",
+  'upload.mode.label': 'Upload mode',
   'upload.mode.normal': 'Standard',
   'upload.mode.ultra': 'Bulk (Ultra)',
   'pool.tab.profiles': 'Profiles',

@@ -163,4 +163,11 @@ describe('Upload mode switch', () => {
     renderAt('/upload');
     expect(screen.queryByRole('link', { name: 'Bulk (Ultra)' })).toBeNull();
   });
+
+  it('ultra fixture mode renders no switch or wrapper', () => {
+    window.history.pushState({}, '', '/?fixture=mockup');
+    const { container } = renderAt('/upload-ultra');
+    expect(screen.queryByRole('navigation', { name: 'Upload mode' })).toBeNull();
+    expect(container.querySelector('.text-center.mb-16')?.firstElementChild?.className).not.toContain('justify-center');
+  });
 });
