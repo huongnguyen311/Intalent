@@ -10,11 +10,20 @@ import { IntakeModal } from '../intake/IntakeModal';
 const TH = 'px-6 py-4 text-xs font-bold text-[#896a61] uppercase tracking-wider border-b border-[#e6dddb] dark:border-[#2a2423]';
 const TD = 'px-6 py-4 text-sm text-[#181211] dark:text-white';
 
-export function NotesPage() {
+type PanelProps = {
+  /** When set, the parent owns the Add Note button and modal (the legacy full page). */
+  addOpen?: boolean;
+  onAddClose?: () => void;
+};
+
+export function NotesPanel({ addOpen: ctrlOpen, onAddClose }: PanelProps) {
   const t = useT();
   const notes = useStore((s) => s.notes);
   const users = useStore((s) => s.users);
-  const [addOpen, setAddOpen] = useState(false);
+  const [ownOpen, setOwnOpen] = useState(false);
+  const controlled = ctrlOpen !== undefined;
+  const addOpen = controlled ? ctrlOpen : ownOpen;
+  const closeAdd = () => (controlled ? onAddClose?.() : setOwnOpen(false));
 
   const convert = (id: string) => {
     const { created } = useStore.getState().convertNote(id, CURRENT_USER_ID);
@@ -24,19 +33,18 @@ export function NotesPage() {
   const sorted = [...notes].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 
   return (
-    <AppLayout
-      title={t('notes.title')}
-      subtitle={t('notes.subtitle')}
-      actions={
-        <button
-          onClick={() => setAddOpen(true)}
-          className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-primary hover:bg-primary-hover text-white rounded-lg shadow-sm transition-colors"
-        >
-          <span className="material-symbols-outlined text-[20px]">add</span>
-          {t('notes.add')}
-        </button>
-      }
-    >
+    <>
+      {!controlled && (
+        <div className="flex justify-end bg-[#f8f6f6] dark:bg-[#221410] px-4 md:px-6 pt-4">
+          <button
+            onClick={() => setOwnOpen(true)}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-primary hover:bg-primary-hover text-white rounded-lg shadow-sm transition-colors"
+          >
+            <span className="material-symbols-outlined text-[20px]">add</span>
+            {t('notes.add')}
+          </button>
+        </div>
+      )}
       <div className="bg-[#f8f6f6] dark:bg-[#221410] p-4 md:p-6">
         <div className="bg-white dark:bg-[#1e1e1e] rounded-xl border border-[#e6dddb] dark:border-[#2a2423] shadow-sm overflow-hidden">
           {sorted.length === 0 ? (
@@ -85,7 +93,26 @@ export function NotesPage() {
           )}
         </div>
       </div>
-      <IntakeModal open={addOpen} initialMode="note" onClose={() => setAddOpen(false)} />
+      <IntakeModal open={addOpen} initialMode="note" onClose={closeAdd} />
+    </>
+  );
+}
+
+export function NotesPage() {
+  const t = useT();
+  const [addOpen, setAddOpen] = useState(false);
+  return (
+    <AppLayout
+      title={t('notes.title')}
+      subtitle={t('notes.subtitle')}
+      actions={
+        <button onClick={() => setAddOpen(true)} className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-primary hover:bg-primary-hover text-white rounded-lg shadow-sm transition-colors">
+          <span className="material-symbols-outlined text-[20px]">add</span>
+          {t('notes.add')}
+        </button>
+      }
+    >
+      <NotesPanel addOpen={addOpen} onAddClose={() => setAddOpen(false)} />
     </AppLayout>
   );
 }

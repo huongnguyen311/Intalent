@@ -3,6 +3,7 @@ import { AppLayout } from '../../components/AppLayout';
 import { UPLOAD_LIMITS } from '../../domain/parseCv';
 import { SOURCE_CV_UPLOAD } from '../../domain/sources';
 import { useT } from '../../i18n/i18n';
+import { UploadModeSwitch } from './UploadModeSwitch';
 import { QueueRows } from './QueueRows';
 import { useUploadQueue } from './useUploadQueue';
 
@@ -32,6 +33,7 @@ export function UploadPage() {
               <h1 className="text-3xl font-black tracking-tight text-[#181211] dark:text-white mb-2">{t('upload.title')}</h1>
               <p className="text-[#896a61] text-sm">{t('upload.subtitle')}</p>
             </div>
+            <UploadModeSwitch mode="normal" />
           </div>
           <div className="w-full">
             <div

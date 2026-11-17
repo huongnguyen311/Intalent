@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { AppLayout } from '../../components/AppLayout';
 import { Avatar, toneFor } from '../../components/Avatar';
 import { MenuItem, Popover } from '../../components/Popover';
@@ -11,6 +11,7 @@ import { userName } from '../../domain/users';
 import { useShowNew } from '../../hooks';
 import { useT, type TKey } from '../../i18n/i18n';
 import { useStore } from '../../store/store';
+import { NotesPanel } from '../notes/NotesPage';
 import { IntakeModal } from '../intake/IntakeModal';
 import { AddToPipelineModal } from './AddToPipelineModal';
 
@@ -89,10 +90,36 @@ function FilterMenu({ icon, label, wide, options, value, onChange, anyLabel, tes
 
 const distinct = (vals: string[]) => [...new Set(vals.filter(Boolean))];
 
+function PoolTabs({ notes, onChange }: { notes: boolean; onChange: (notes: boolean) => void }) {
+  const t = useT();
+  const items = [
+    { notes: false, label: t('pool.tab.profiles') },
+    { notes: true, label: t('pool.tab.notes') },
+  ];
+  return (
+    <div className="px-4 pt-4 bg-white dark:bg-[#1e1e1e]">
+      <div className="inline-flex items-center gap-1 bg-white border border-gray-100 rounded-2xl p-1 shadow-sm">
+        {items.map((i) => (
+          <button
+            key={i.label}
+            onClick={() => onChange(i.notes)}
+            aria-pressed={notes === i.notes}
+            className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-colors ${notes === i.notes ? 'bg-slate-900 text-white' : 'text-gray-400 hover:text-slate-700'}`}
+          >
+            {i.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function CandidatePoolPage() {
   const t = useT();
   const navigate = useNavigate();
   const showNew = useShowNew();
+  const [params, setParams] = useSearchParams();
+  const notesTab = showNew && params.get('tab') === 'notes';
   const candidates = useStore((s) => s.candidates);
   const users = useStore((s) => s.users);
   const piiUnlocked = useStore((s) => s.ui.piiUnlocked);
@@ -158,9 +185,23 @@ export function CandidatePoolPage() {
     label: t(`candidates.sort.${k}` as TKey),
   }));
 
+  if (notesTab) {
+    return (
+      <AppLayout title={t('nav.candidatePool')}>
+        <div className="flex flex-col h-full bg-background-light dark:bg-background-dark overflow-hidden">
+          <PoolTabs notes onChange={(v: boolean) => setParams(v ? { tab: 'notes' } : {}, { replace: true })} />
+          <div className="flex-1 overflow-y-auto custom-scrollbar">
+            <NotesPanel />
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
+
   return (
     <AppLayout title={t('nav.candidatePool')}>
       <div className="flex flex-col h-full bg-background-light dark:bg-background-dark overflow-hidden">
+        {showNew && <PoolTabs notes={false} onChange={(v: boolean) => setParams(v ? { tab: 'notes' } : {}, { replace: true })} />}
         <div className="bg-white dark:bg-[#1e1e1e] border-b border-[#e6dddb] dark:border-[#2a2423] p-4 flex flex-col gap-4 z-10 shadow-soft">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4 w-full">
             <div className="relative w-full md:w-64 group">

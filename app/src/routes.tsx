@@ -17,7 +17,7 @@ import { JobsPage } from './features/jobs/JobsPage';
 import { JdDetailPage } from './features/jds/JdDetailPage';
 import { JdListPage } from './features/jds/JdListPage';
 import { JdMatchingPage } from './features/matching/JdMatchingPage';
-import { NotesPage } from './features/notes/NotesPage';
+import { NotesRoute } from './features/notes/NotesRoute';
 import { PipelinePage } from './features/pipeline/PipelinePage';
 import { SystemConfigPage } from './features/system-config/SystemConfigPage';
 import { TaContributionPage } from './features/ta-contribution/TaContributionPage';
@@ -33,7 +33,7 @@ export function AppRoutes() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/candidates" element={<CandidatePoolPage />} />
       <Route path="/candidates/:id" element={<CandidateProfilePage />} />
-      <Route path="/notes" element={<NotesPage />} />
+      <Route path="/notes" element={<NotesRoute />} />
       <Route path="/assistant" element={<AssistantPage />} />
       <Route path="/jds" element={<JdListPage />} />
       <Route path="/jds/:id" element={<JdDetailPage />} />

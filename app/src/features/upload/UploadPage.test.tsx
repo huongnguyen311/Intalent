@@ -6,8 +6,12 @@ import { parseCvFile } from '../../domain/parseCv';
 import { useStore } from '../../store/store';
 import { UltraUploadPage } from './UltraUploadPage';
 import { UploadPage } from './UploadPage';
+import { AppRoutes } from '../../routes';
 
-vi.mock('../../components/Toast', () => ({ toast: vi.fn(), Toaster: () => null }));
+vi.mock('../../components/Toast', () => ({
+  toast: vi.fn(),
+  Toaster: () => null,
+}));
 
 const MB = 1024 * 1024;
 const mk = (name: string, size = 1000) => {
@@ -27,7 +31,10 @@ beforeEach(() => {
   vi.useFakeTimers();
   useStore.setState(buildSeed());
 });
-afterEach(() => vi.useRealTimers());
+afterEach(() => {
+  vi.useRealTimers();
+  window.history.pushState({}, '', '/');
+});
 
 describe('UploadPage', () => {
   it('renders the empty queue like the mockup', () => {
@@ -49,7 +56,10 @@ describe('UploadPage', () => {
 
   it('batch over 10 files rejects extras', () => {
     const { container } = renderPage(<UploadPage />);
-    pick(container, Array.from({ length: 12 }, (_, i) => mk(`Tran_Van_Cv${String.fromCharCode(97 + i)}.pdf`)));
+    pick(
+      container,
+      Array.from({ length: 12 }, (_, i) => mk(`Tran_Van_Cv${String.fromCharCode(97 + i)}.pdf`)),
+    );
     expect(screen.getAllByText('Batch limit exceeded (max 10 files)')).toHaveLength(2);
     advance(60_000);
     expect(screen.getAllByText('Added to Talent Pool')).toHaveLength(10);
@@ -73,9 +83,7 @@ describe('UploadPage', () => {
 
   it('parsed duplicate merges instead of creating', () => {
     const fileFor = (name: string) => `${name.replace(/ /g, '_')}_CV.pdf`;
-    const existing = useStore
-      .getState()
-      .candidates.find((c) => parseCvFile({ name: fileFor(c.name), size: 1 }, mulberry32(1)).email === c.email)!;
+    const existing = useStore.getState().candidates.find((c) => parseCvFile({ name: fileFor(c.name), size: 1 }, mulberry32(1)).email === c.email)!;
     const { container } = renderPage(<UploadPage />);
     const before = useStore.getState().candidates.length;
     pick(container, [mk(fileFor(existing.name))]);
@@ -130,5 +138,29 @@ describe('UltraUploadPage', () => {
     expect(vi.getTimerCount()).toBe(baseline);
     expect(screen.getByText('No files selected yet')).toBeInTheDocument();
     expect(within(document.body).queryByText('Queued')).toBeNull();
+  });
+});
+
+describe('Upload mode switch', () => {
+  const renderAt = (url: string) =>
+    render(
+      <MemoryRouter initialEntries={[url]}>
+        <AppRoutes />
+      </MemoryRouter>,
+    );
+
+  it('upload mode switch navigates to ultra and back', () => {
+    renderAt('/upload');
+    expect(screen.getByText('Upload Resumes')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('link', { name: 'Bulk (Ultra)' }));
+    expect(screen.queryByText('Upload Resumes')).toBeNull();
+    fireEvent.click(screen.getByRole('link', { name: 'Standard' }));
+    expect(screen.getByText('Upload Resumes')).toBeInTheDocument();
+  });
+
+  it('fixture mode shows no tabs or switch', () => {
+    window.history.pushState({}, '', '/?fixture=mockup');
+    renderAt('/upload');
+    expect(screen.queryByRole('link', { name: 'Bulk (Ultra)' })).toBeNull();
   });
 });
