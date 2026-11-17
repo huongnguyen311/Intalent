@@ -1,9 +1,13 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { AppLayout } from './components/AppLayout';
+import { AssistantPage } from './features/assistant/AssistantPage';
 import { LoginPage } from './features/auth/LoginPage';
 import { CandidatePoolPage } from './features/candidates/CandidatePoolPage';
 import { CandidateProfilePage } from './features/candidates/CandidateProfilePage';
 import { DashboardPage } from './features/dashboard/DashboardPage';
+import { JdDetailPage } from './features/jds/JdDetailPage';
+import { JdListPage } from './features/jds/JdListPage';
+import { JdMatchingPage } from './features/matching/JdMatchingPage';
 import { NotesPage } from './features/notes/NotesPage';
 import { UltraUploadPage } from './features/upload/UltraUploadPage';
 import { UploadPage } from './features/upload/UploadPage';
@@ -52,9 +56,13 @@ export function AppRoutes() {
       <Route path="/candidates" element={<CandidatePoolPage />} />
       <Route path="/candidates/:id" element={<CandidateProfilePage />} />
       <Route path="/notes" element={<NotesPage />} />
+      <Route path="/assistant" element={<AssistantPage />} />
+      <Route path="/jds" element={<JdListPage />} />
+      <Route path="/jds/:id" element={<JdDetailPage />} />
+      <Route path="/jd-matching" element={<JdMatchingPage />} />
       <Route path="/upload" element={<UploadPage />} />
       <Route path="/upload-ultra" element={<UltraUploadPage />} />
-      {INTERNAL.filter(({ path }) => !['/', '/candidates', '/candidates/:id', '/notes', '/upload', '/upload-ultra'].includes(path)).map(({ path, title }) => (
+      {INTERNAL.filter(({ path }) => !['/', '/candidates', '/candidates/:id', '/notes', '/upload', '/upload-ultra', '/assistant', '/jds', '/jds/:id', '/jd-matching'].includes(path)).map(({ path, title }) => (
         <Route
           key={path}
           path={path}

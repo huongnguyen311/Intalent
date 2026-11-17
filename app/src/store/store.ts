@@ -4,6 +4,8 @@ import { buildMockupFixture, isFixtureMode } from '../data/fixtureMockup';
 import { buildSeed } from '../data/seed';
 import { applicationActions } from './actions/applications';
 import { candidateActions } from './actions/candidates';
+import { chatActions } from './actions/chats';
+import { jdActions } from './actions/jds';
 import { noteActions } from './actions/notes';
 import type { DemoStore, Env } from './actions/types';
 import { persistOptions } from './persist';
@@ -24,6 +26,8 @@ export function createDemoStore(
     ...candidateActions(set, get, env),
     ...applicationActions(set, get, env),
     ...noteActions(set, get, env),
+    ...jdActions(set, get, env),
+    ...chatActions(set, get, env),
     resetDemo: () => set(initial()),
   });
   return opts.fixture

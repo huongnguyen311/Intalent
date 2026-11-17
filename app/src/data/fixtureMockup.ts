@@ -1,4 +1,5 @@
 import type { Candidate, DemoState, MockupTotals, TaRow, User } from '../domain/types';
+import { MOCKUP_CHATS, MOCKUP_MATCHING, withMockupJdDetail } from './fixtureJds';
 import { buildEnglishTaxonomy, buildJds, buildPrompts } from './seed';
 
 /** True when the URL query asks for the static-mockup fixture (`?fixture=mockup`). */
@@ -190,12 +191,12 @@ export function buildMockupFixture(): DemoState {
     notes: [],
     activities: [],
     users,
-    jds: buildJds(),
+    jds: withMockupJdDetail(buildJds()),
     taxonomy: buildEnglishTaxonomy(),
     prompts: buildPrompts(),
-    chats: [],
+    chats: MOCKUP_CHATS,
     // The mockup's candidate list shows contact details unlocked.
     ui: { lang: 'en', careersLang: 'vi', piiUnlocked: true },
-    meta: { totals: buildTotals() },
+    meta: { totals: buildTotals(), matching: MOCKUP_MATCHING },
   };
 }

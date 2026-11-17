@@ -155,7 +155,10 @@ export interface Jd {
   domains: string[];
   body: string;
   skills: string[];
+  /** 'Published' or 'Draft'. */
   status: string;
+  /** Bullet requirements shown on JD Detail; derived from the body when absent. */
+  mustHave?: string[];
   createdAt: string;
   updatedAt: string;
 }
@@ -177,10 +180,20 @@ export interface Prompt {
   updatedAt: string;
 }
 
+/** One ranked candidate in an AI Search answer. */
+export interface ChatResult {
+  candidateId: string;
+  score: number;
+  reason: string;
+}
+
 export interface ChatMessage {
+  /** Messages sharing a sessionId form one conversation in the history sidebar. */
+  sessionId: string;
   role: 'user' | 'assistant';
   text: string;
   at: string;
+  results?: ChatResult[];
 }
 
 export interface UiState {
@@ -223,8 +236,34 @@ export interface MockupTotals {
   taContribution: { rows: TaRow[]; totals: TaRow };
 }
 
+/** The fixed JD Matching run the mockup shows (its 8 rows are fictional people, not store candidates). */
+export interface MockupMatching {
+  jdId: string;
+  /** English requirement as the mockup words it. */
+  english: string;
+  scanned: number;
+  strong: number;
+  partial: number;
+  lastRun: { time: string; date: string };
+  rows: MatchRow[];
+}
+
+export interface MatchRow {
+  candidateId: string;
+  name: string;
+  title: string;
+  score: number;
+  seniority: string;
+  years: number;
+  english: string;
+  have: string[];
+  miss: string[];
+  reason: string;
+}
+
 export interface DemoMeta {
   totals?: MockupTotals;
+  matching?: MockupMatching;
 }
 
 export interface DemoState {
@@ -250,6 +289,18 @@ export type CandidatePatch = Partial<Omit<Candidate, 'id' | 'createdAt' | 'inTal
 export type CandidateInput = Partial<Omit<Candidate, 'id' | 'createdAt' | 'inTalentPool' | 'source'>> & {
   name: string;
 };
+
+export interface JdInput {
+  title: string;
+  client?: string;
+  domains: string[];
+  skills: string[];
+  body: string;
+  status?: string;
+  mustHave?: string[];
+}
+
+export type JdPatch = Partial<Omit<JdInput, 'status'>>;
 
 export interface NoteInput {
   name: string;
