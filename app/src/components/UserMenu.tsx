@@ -7,7 +7,7 @@ import { toast } from './Toast';
 
 const ITEM = 'w-full text-left px-3 py-2 rounded-md text-sm text-[#e6dddb] hover:bg-white/5 hover:text-white';
 
-export function UserMenu() {
+export function UserMenu({ rail = false }: { rail?: boolean }) {
   const [open, setOpen] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [lang, setLang] = useLang();
@@ -21,9 +21,9 @@ export function UserMenu() {
   };
 
   return (
-    <div className="p-4 border-t border-border-dark relative">
+    <div className={`${rail ? 'p-3' : 'p-4'} border-t border-border-dark relative`}>
       {open && (
-        <div className="absolute bottom-full left-4 right-4 mb-2 p-2 bg-sidebar-dark border border-border-dark rounded-lg shadow-2xl flex flex-col gap-1">
+        <div className={`absolute bottom-full left-4 ${rail ? 'w-48' : 'right-4'} mb-2 p-2 bg-sidebar-dark border border-border-dark rounded-lg shadow-2xl flex flex-col gap-1`}>
           <div className="flex gap-1 p-1">
             {(['en', 'vi'] as const).map((l) => (
               <button
@@ -39,15 +39,19 @@ export function UserMenu() {
           <button className={ITEM} onClick={() => navigate('/login')}>Log out</button>
         </div>
       )}
-      <button onClick={() => setOpen((o) => !o)} className="flex items-center gap-3 w-full p-2 rounded-lg transition-colors text-left group hover:bg-white/5">
+      <button onClick={() => setOpen((o) => !o)} aria-label="Super Admin" className={`flex items-center gap-3 w-full p-2 rounded-lg transition-colors text-left group hover:bg-white/5 ${rail ? 'justify-center' : ''}`}>
         <div className="size-9 rounded-full bg-cover bg-center border border-[#3a3433] bg-gradient-to-br from-primary to-orange-400 group-hover:border-primary transition-colors flex items-center justify-center">
           <span className="text-white text-sm font-bold">SA</span>
         </div>
-        <div className="flex flex-col overflow-hidden">
-          <span className="text-sm font-medium truncate text-white">Super Admin</span>
-          <span className="text-xs truncate text-[#896a61]">SuperAdmin</span>
-        </div>
-        <span className="material-symbols-outlined ml-auto text-lg text-[#896a61]">expand_more</span>
+        {!rail && (
+          <>
+            <div className="flex flex-col overflow-hidden">
+              <span className="text-sm font-medium truncate text-white">Super Admin</span>
+              <span className="text-xs truncate text-[#896a61]">SuperAdmin</span>
+            </div>
+            <span className="material-symbols-outlined ml-auto text-lg text-[#896a61]">expand_more</span>
+          </>
+        )}
       </button>
       <Modal
         open={confirming}
