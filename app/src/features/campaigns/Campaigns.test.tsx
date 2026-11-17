@@ -52,6 +52,17 @@ describe('CampaignsPage', () => {
     expect(screen.getByText('No campaigns found')).toBeInTheDocument();
   });
 
+  it('wizard only offers open jobs', () => {
+    renderAt('/campaigns');
+    fireEvent.click(screen.getByRole('button', { name: /New Campaign/ }));
+    const dlg = screen.getByRole('dialog');
+    const jobs = useStore.getState().jobs;
+    for (const j of jobs) {
+      const el = within(dlg).queryByRole('checkbox', { name: j.title });
+      expect(Boolean(el)).toBe(j.status === 'open');
+    }
+  });
+
   it('creates a campaign through the 3-step wizard with tracking links and post previews', () => {
     renderAt('/campaigns');
     fireEvent.click(screen.getByRole('button', { name: /New Campaign/ }));

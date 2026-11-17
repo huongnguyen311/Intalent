@@ -54,7 +54,7 @@ export function CampaignWizard({ open, campaign, onClose, onSaved }: Props) {
     setChannels(campaign?.channels ?? []);
   }, [open, campaign]);
 
-  const selectableJobs = jobs.filter((j) => j.status !== 'closed' || jobIds.includes(j.id));
+  const selectableJobs = jobs.filter((j) => j.status === 'open' || jobIds.includes(j.id));
   const id = campaign?.id ?? draftId;
   const origin = typeof location === 'undefined' ? '' : location.origin;
   const draft = useMemo(() => ({ id, jobIds, channels }), [id, jobIds, channels]);

@@ -36,20 +36,21 @@ const ranked = (counts: Map<string, number>) => [...counts].sort((a, b) => b[1] 
 
 const toRecord = (values: string[]): Record<string, number> => Object.fromEntries(tally(values));
 
-function recruitment(state: DemoState): DashboardMetrics['recruitment'] {
+/** `cutoff` (epoch ms) scopes hires (stage entered `hired` since) and top sources (added since); stage counts stay current. */
+function recruitment(state: DemoState, cutoff = -Infinity): DashboardMetrics['recruitment'] {
   const byStage = Object.fromEntries(STAGES.map((s) => [s, 0])) as Record<Stage, number>;
   for (const a of state.applications) byStage[a.stage] += 1;
   return {
     openJobs: state.jobs.filter((j) => j.status === 'open').length,
     byStage,
-    hires: byStage.hired,
-    topSources: ranked(tally(state.applications.map((a) => a.source)))
+    hires: state.applications.filter((a) => a.history.some((h) => h.stage === 'hired' && Date.parse(h.at) >= cutoff)).length,
+    topSources: ranked(tally(state.applications.filter((a) => Date.parse(a.addedAt) >= cutoff).map((a) => a.source)))
       .slice(0, 5)
       .map(([source, count]) => ({ source, count })),
   };
 }
 
-function fromTotals(state: DemoState): DashboardMetrics | undefined {
+function fromTotals(state: DemoState, cutoff: number): DashboardMetrics | undefined {
   const d = state.meta?.totals?.dashboard;
   if (!d) return undefined;
   return {
@@ -63,17 +64,17 @@ function fromTotals(state: DemoState): DashboardMetrics | undefined {
     availableStacks: d.availableStacks.map((s) => ({ name: s.label, count: s.count, pct: s.pct })),
     english: Object.fromEntries(d.english.map((e) => [e.label, e.count])),
     domains: d.domains.map((x) => ({ name: x.label, pct: x.pct })),
-    recruitment: recruitment(state),
+    recruitment: recruitment(state, cutoff),
   };
 }
 
 export function dashboardMetrics(state: DemoState, period: Period, now: Date): DashboardMetrics {
-  const overrides = fromTotals(state);
+  const cutoff = period === 'all' ? -Infinity : now.getTime() - PERIOD_DAYS[period] * DAY_MS;
+  const overrides = fromTotals(state, cutoff);
   if (overrides) return overrides;
 
   let candidates: Candidate[] = state.candidates;
   if (period !== 'all') {
-    const cutoff = now.getTime() - PERIOD_DAYS[period] * DAY_MS;
     candidates = candidates.filter((c) => Date.parse(c.createdAt) >= cutoff);
   }
   const total = candidates.length;
@@ -98,6 +99,6 @@ export function dashboardMetrics(state: DemoState, period: Period, now: Date): D
     domains: ranked(tally(candidates.flatMap((c) => c.domains)))
       .slice(0, 5)
       .map(([name, n]) => ({ name, pct: Math.round(pct(n, total)) })),
-    recruitment: recruitment(state),
+    recruitment: recruitment(state, cutoff),
   };
 }

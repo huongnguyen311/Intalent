@@ -46,6 +46,26 @@ describe('dashboardMetrics', () => {
     expect(dashboardMetrics(s, 'all', NOW).total).toBe(4);
   });
 
+  it('period filter scopes hires and top sources', () => {
+    const s = buildSeed();
+    const app = s.applications[0];
+    const hire = (id: string, at: string, source: string, addedAt: string) => ({
+      ...app, id, stage: 'hired' as const, source, addedAt,
+      history: [{ stage: 'new' as const, at: addedAt, by: 'u-admin' }, { stage: 'hired' as const, at, by: 'u-admin' }],
+    });
+    const state = {
+      ...s,
+      applications: [
+        hire('recent', daysAgo(2), 'Fresh Source', daysAgo(10)),
+        hire('old', daysAgo(200), 'Old Source', daysAgo(220)),
+      ],
+    };
+    expect(dashboardMetrics(state, 'week', NOW).recruitment.hires).toBe(1);
+    expect(dashboardMetrics(state, 'all', NOW).recruitment.hires).toBe(2);
+    expect(dashboardMetrics(state, '3m', NOW).recruitment.topSources.map((x) => x.source)).toEqual(['Fresh Source']);
+    expect(dashboardMetrics(state, 'all', NOW).recruitment.topSources).toHaveLength(2);
+  });
+
   it('recruitment byStage counts applications', () => {
     const s = buildSeed();
     const m = dashboardMetrics(s, 'all', NOW);
