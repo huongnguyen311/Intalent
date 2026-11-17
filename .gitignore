@@ -16,3 +16,4 @@ reference/private/
 # App
 app/node_modules/
 app/dist/
+app/fidelity-out/
