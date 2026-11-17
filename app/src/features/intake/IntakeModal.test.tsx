@@ -66,6 +66,43 @@ describe('IntakeModal', () => {
     expect(screen.getByText('Add an email or a phone number')).toBeInTheDocument();
   });
 
+  it('saves the chosen source and tags on the profile and the application', () => {
+    const job = useStore.getState().jobs.find((j) => j.status === 'open')!;
+    render(<IntakeModal open onClose={() => {}} />);
+    fireEvent.click(screen.getByRole('button', { name: /Add to Talent Pool/ }));
+    expect(screen.getByLabelText('Source')).toHaveValue('Manual');
+    type(/Full name/, 'Mai Le');
+    type(/^Email/, 'mai@example.com');
+    type(/^Source/, 'Meetup');
+    type(/^Tags/, 'referral, vip');
+    type(/Also add to job/, job.id);
+    fireEvent.click(screen.getByRole('button', { name: 'Add candidate' }));
+    const s = useStore.getState();
+    expect(s.candidates[0]).toMatchObject({ source: 'Meetup', tags: ['referral', 'vip'] });
+    expect(s.applications[0]).toMatchObject({ source: 'Meetup', via: 'manual' });
+  });
+
+  it('a picked CV prefills empty fields only and never the email', () => {
+    render(<IntakeModal open onClose={() => {}} />);
+    fireEvent.click(screen.getByRole('button', { name: /Add to Talent Pool/ }));
+    type(/Full name/, 'Typed Name');
+    fireEvent.change(screen.getByLabelText(/^CV file/), { target: { files: [new File(['x'], 'Tran_Van_Binh_CV.pdf')] } });
+    expect(screen.getByLabelText(/Full name/)).toHaveValue('Typed Name');
+    expect(screen.getByLabelText(/^Email/)).toHaveValue('');
+    expect((screen.getByLabelText(/^Phone/) as HTMLInputElement).value).not.toBe('');
+    expect((screen.getByLabelText(/^Title/) as HTMLInputElement).value).not.toBe('');
+    expect((screen.getByLabelText(/^Skills/) as HTMLInputElement).value).not.toBe('');
+    fireEvent.click(screen.getByRole('button', { name: 'Add candidate' }));
+    expect(useStore.getState().candidates[0].cv).toBe('Tran_Van_Binh_CV.pdf');
+  });
+
+  it('rejects a CV of the wrong type', () => {
+    render(<IntakeModal open onClose={() => {}} />);
+    fireEvent.click(screen.getByRole('button', { name: /Add to Talent Pool/ }));
+    fireEvent.change(screen.getByLabelText(/^CV file/), { target: { files: [new File(['x'], 'cv.exe')] } });
+    expect(screen.getByText('Only PDF, DOCX or TXT files are accepted')).toBeInTheDocument();
+  });
+
   it('optionally adds the new candidate to a job', () => {
     const job = useStore.getState().jobs.find((j) => j.status === 'open')!;
     render(<IntakeModal open onClose={() => {}} />);

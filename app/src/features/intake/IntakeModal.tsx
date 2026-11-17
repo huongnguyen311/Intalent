@@ -1,6 +1,9 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { Modal } from '../../components/Modal';
 import { toast } from '../../components/Toast';
+import { mulberry32 } from '../../data/seed';
+import { cvPrefill, hashString, UPLOAD_LIMITS, validateFiles } from '../../domain/parseCv';
+import { SOURCE_MANUAL } from '../../domain/sources';
 import { stageLabel } from '../../domain/stages';
 import { CURRENT_USER_ID } from '../../domain/users';
 import { useLang, useT, type TKey } from '../../i18n/i18n';
@@ -46,7 +49,8 @@ function Choice({ icon, title, desc, onClick }: { icon: string; title: string; d
   );
 }
 
-const EMPTY_POOL = { name: '', email: '', phone: '', title: '', seniority: '', english: '', skills: '', jobId: '' };
+const EMPTY_POOL = { name: '', email: '', phone: '', title: '', seniority: '', english: '', skills: '', tags: '', source: SOURCE_MANUAL, cv: '', jobId: '' };
+const list = (v: string) => v.split(',').map((s) => s.trim()).filter(Boolean);
 const EMPTY_NOTE = { name: '', contact: '', text: '' };
 
 export function IntakeModal({ open, onClose, initialMode }: Props) {
@@ -81,6 +85,7 @@ export function IntakeModal({ open, onClose, initialMode }: Props) {
     if (!pool.email.trim() && !pool.phone.trim()) next.contact = 'intake.err.contact';
     setErrors(next);
     if (Object.keys(next).length) return;
+    const source = pool.source.trim() || SOURCE_MANUAL;
     const store = useStore.getState();
     const { candidate, created } = store.upsertCandidate(
       {
@@ -90,13 +95,15 @@ export function IntakeModal({ open, onClose, initialMode }: Props) {
         title: pool.title.trim(),
         seniority: pool.seniority,
         english: pool.english,
-        skills: pool.skills.split(',').map((s) => s.trim()).filter(Boolean),
+        skills: list(pool.skills),
+        tags: list(pool.tags),
+        ...(pool.cv ? { cv: pool.cv } : {}),
       },
-      { source: 'Manual', by: CURRENT_USER_ID },
+      { source, by: CURRENT_USER_ID },
     );
     toast(t(created ? 'intake.toast.created' : 'intake.toast.merged'), created ? 'success' : 'info');
     if (pool.jobId) {
-      const res = store.addToPipeline(candidate.id, pool.jobId, { via: 'manual', source: 'Manual', by: CURRENT_USER_ID });
+      const res = store.addToPipeline(candidate.id, pool.jobId, { via: 'manual', source, by: CURRENT_USER_ID });
       if (!res.ok) toast(res.reason === 'duplicate' ? t('intake.toast.alreadyInJob', { stage: stageLabel(res.stage, lang) }) : t('pipeline.jobNotOpen'), 'error');
     }
     finish();
@@ -121,6 +128,25 @@ export function IntakeModal({ open, onClose, initialMode }: Props) {
     setPool((p) => ({ ...p, [k]: e.target.value }));
   const setN = (k: keyof typeof EMPTY_NOTE) => (e: { target: { value: string } }) =>
     setNote((p) => ({ ...p, [k]: e.target.value }));
+  /** Simulated CV pick: type and size are checked, nothing is uploaded; only empty fields are prefilled (never the email). */
+  const pickCv = (file: File | undefined) => {
+    const { accepted, rejected } = validateFiles(file ? [file] : [], UPLOAD_LIMITS);
+    const bad = rejected[0]?.reason;
+    setErrors((e) => ({ ...e, cv: bad ? (bad === 'size' ? 'intake.err.cvSize' : 'intake.err.cvType') : undefined }));
+    if (!accepted.length) return;
+    const p = cvPrefill(accepted[0], mulberry32(hashString(accepted[0].name)));
+    const known = (kind: 'english' | 'seniority', v?: string) => (v && taxonomy.some((x) => x.kind === kind && x.active && x.label === v) ? v : '');
+    setPool((f) => ({
+      ...f,
+      name: f.name || p.name,
+      phone: f.phone || p.phone || '',
+      title: f.title || p.title || '',
+      seniority: f.seniority || known('seniority', p.seniority),
+      english: f.english || known('english', p.english),
+      skills: f.skills || (p.skills ?? []).join(', '),
+      cv: accepted[0].name,
+    }));
+  };
   const levels = (kind: 'english' | 'seniority') => taxonomy.filter((x) => x.kind === kind && x.active);
 
   const title = mode === 'pool' ? t('intake.pool.title') : mode === 'note' ? t('intake.note.title') : t('intake.title');
@@ -174,6 +200,16 @@ export function IntakeModal({ open, onClose, initialMode }: Props) {
           </div>
           <Field id="ip-skills" label={t('intake.field.skills')}>
             <input id="ip-skills" className={FIELD} value={pool.skills} onChange={setP('skills')} />
+          </Field>
+          <Field id="ip-tags" label={t('intake.field.tags')}>
+            <input id="ip-tags" className={FIELD} value={pool.tags} onChange={setP('tags')} />
+          </Field>
+          <Field id="ip-source" label={t('intake.field.source')}>
+            <input id="ip-source" className={FIELD} value={pool.source} onChange={setP('source')} />
+          </Field>
+          <Field id="ip-cv" label={t('intake.field.cv')} error={err('cv')}>
+            <input id="ip-cv" type="file" accept=".pdf,.docx,.txt" onChange={(e) => pickCv(e.target.files?.[0])} className="text-sm" />
+            {pool.cv && <span className="text-xs text-[#896a61]">{pool.cv}</span>}
           </Field>
           <Field id="ip-job" label={t('intake.field.job')}>
             <select id="ip-job" className={FIELD} value={pool.jobId} onChange={setP('jobId')}>
