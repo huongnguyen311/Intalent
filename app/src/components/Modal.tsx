@@ -1,8 +1,21 @@
-import type { ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 
 type Props = { open: boolean; title: string; onClose: () => void; children: ReactNode; footer?: ReactNode };
 
 export function Modal({ open, title, onClose, children, footer }: Props) {
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+  // Escape closes (same as the close button); focus goes back to whatever opened the dialog.
+  useEffect(() => {
+    if (!open) return;
+    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onCloseRef.current();
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      if (opener?.isConnected) opener.focus();
+    };
+  }, [open]);
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
