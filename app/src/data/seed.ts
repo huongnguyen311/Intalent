@@ -3,6 +3,7 @@ import type {
   Prompt, Stage, StageHistoryEntry, TaxonomyItem, User, Via,
 } from '../domain/types';
 import { campaignLinks, CHANNEL_SOURCE, DEMO_ORIGIN, type Channel } from '../domain/campaigns';
+import { SOURCE_CAREERS, SOURCE_CV_UPLOAD, SOURCE_MANUAL, SOURCE_REFERRAL, SOURCE_TALENT_POOL } from '../domain/sources';
 import { STAGES } from '../domain/stages';
 import { normalizeEmail } from '../domain/normalize';
 import {
@@ -253,7 +254,7 @@ function buildCandidates(rng: Rng, count: number, contacts: Contacts, clock: Clo
       tags: rng() < 0.3 ? sample(rng, TAGS, 1) : [],
       groups: rng() < 0.25 ? sample(rng, GROUPS, 1) : [],
       cvOwner: pick(rng, STAFF),
-      source: pick(rng, ['Upload', 'Careers site', 'Referral', 'Manual']),
+      source: pick(rng, [SOURCE_CV_UPLOAD, SOURCE_CAREERS, SOURCE_REFERRAL, SOURCE_MANUAL]),
       inTalentPool: true as const,
       createdAt: clock.daysAgo(int(rng, 1, 200)),
       cv: `${title} (${seniority}). Skills: ${skills.join(', ')}.`,
@@ -286,10 +287,10 @@ function buildApplications(rng: Rng, candidates: Candidate[], jobs: Job[], campa
     const via: Via = r < 0.3 ? 'careers' : r < 0.7 ? 'talent_pool' : r < 0.9 && camps.length ? 'campaign' : 'manual';
     const campaign = via === 'campaign' ? pick(rng, camps) : undefined;
     const source =
-      via === 'careers' ? 'Careers site'
-      : via === 'talent_pool' ? 'Talent Pool'
+      via === 'careers' ? SOURCE_CAREERS
+      : via === 'talent_pool' ? SOURCE_TALENT_POOL
       : campaign ? CHANNEL_SOURCE[pick(rng, campaign.channels) as Channel]
-      : 'Manual';
+      : SOURCE_MANUAL;
     const addedBy = pick(rng, STAFF);
 
     const path: Stage[] = stage === 'rejected'

@@ -1,6 +1,7 @@
 import { useRef, useState, type DragEvent } from 'react';
 import { AppLayout } from '../../components/AppLayout';
 import { UPLOAD_LIMITS } from '../../domain/parseCv';
+import { SOURCE_CV_UPLOAD } from '../../domain/sources';
 import { useT } from '../../i18n/i18n';
 import { QueueRows } from './QueueRows';
 import { useUploadQueue } from './useUploadQueue';
@@ -11,7 +12,7 @@ export function UploadPage() {
   const [dragging, setDragging] = useState(false);
   const { rows, running, add, clear } = useUploadQueue({
     limits: UPLOAD_LIMITS,
-    source: 'CV Upload',
+    source: SOURCE_CV_UPLOAD,
     concurrency: 2,
     autoStart: true,
   });

@@ -1,10 +1,11 @@
 import { findDuplicate } from '../../domain/dedupe';
 import { CHANNEL_SOURCE, parseSrc } from '../../domain/campaigns';
+import { SOURCE_CAREERS } from '../../domain/sources';
 import type { DemoActions, Env, Get, Set } from './types';
 
 /** Activity `by` for applications that arrive without a signed-in user. */
 export const CAREERS_ACTOR = 'Careers site';
-export const CAREERS_SOURCE = 'Careers page';
+export const CAREERS_SOURCE = SOURCE_CAREERS;
 
 export function careersActions(_set: Set, get: Get, _env: Env): Pick<DemoActions, 'applyFromCareers'> {
   return {

@@ -1,6 +1,7 @@
 import { useRef, useState, type DragEvent, type KeyboardEvent } from 'react';
 import { AppLayout } from '../../components/AppLayout';
 import { ULTRA_LIMITS } from '../../domain/parseCv';
+import { SOURCE_ULTRA_UPLOAD } from '../../domain/sources';
 import { useT } from '../../i18n/i18n';
 import { QueueRows } from './QueueRows';
 import { LucideIcon } from './ultraIcons';
@@ -26,7 +27,7 @@ export function UltraUploadPage() {
   const [dragging, setDragging] = useState(false);
   const { rows, running, add, start, clear } = useUploadQueue({
     limits: ULTRA_LIMITS,
-    source: 'Ultra Upload',
+    source: SOURCE_ULTRA_UPLOAD,
     concurrency: 20,
     autoStart: false,
   });

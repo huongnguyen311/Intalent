@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Modal } from '../../components/Modal';
+import { SOURCE_TALENT_POOL } from '../../domain/sources';
 import { stageLabel } from '../../domain/stages';
 import type { Stage } from '../../domain/types';
 import { CURRENT_USER_ID } from '../../domain/users';
@@ -18,7 +19,7 @@ type Props = {
 
 type Result = { ok: true } | { ok: false; stage: Stage };
 
-const DEFAULT_SOURCE = 'Talent Pool';
+const DEFAULT_SOURCE = SOURCE_TALENT_POOL;
 const FIELD =
   'w-full px-3 py-2 bg-white dark:bg-[#251f1e] border border-[#e6dddb] dark:border-[#3a3433] rounded-lg text-sm text-[#181211] dark:text-white focus:ring-1 focus:ring-primary focus:border-primary focus:outline-none';
 const BTN_PRIMARY =

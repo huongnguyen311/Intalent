@@ -2,10 +2,21 @@ import { buildSeed, mulberry32, SEED_BASE_TIME } from './seed';
 import { isOverSla } from '../domain/pipeline';
 import { buildMockupFixture, isFixtureMode } from './fixtureMockup';
 import { normalizeEmail, normalizePhone } from '../domain/normalize';
+import { SOURCE_CAREERS, SOURCE_CV_UPLOAD, SOURCE_MANUAL, SOURCE_REFERRAL } from '../domain/sources';
 import { STAGES } from '../domain/stages';
 import { createDemoStore } from '../store/store';
 
 describe('seed', () => {
+  it('seed source labels match the live flows', () => {
+    const s = buildSeed();
+    const known = new Set([SOURCE_CAREERS, SOURCE_CV_UPLOAD, SOURCE_REFERRAL, SOURCE_MANUAL]);
+    expect(s.candidates.every((c) => known.has(c.source))).toBe(true);
+    const careers = s.applications.filter((a) => a.via === 'careers');
+    expect(careers.length).toBeGreaterThan(0);
+    expect(careers.every((a) => a.source === SOURCE_CAREERS)).toBe(true);
+    expect(s.applications.some((a) => a.source === 'Careers site')).toBe(false);
+  });
+
   it('seed volumes match spec', () => {
     const s = buildSeed();
     expect(s.candidates).toHaveLength(150);
