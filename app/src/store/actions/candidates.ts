@@ -38,6 +38,7 @@ export function candidateActions(set: Set, get: Get, env: Env): Pick<DemoActions
           english: existing.english || input.english || '',
           cvOwner: existing.cvOwner || input.cvOwner || '',
           cv: existing.cv || input.cv || '',
+          ...((existing.linkedin || input.linkedin) ? { linkedin: existing.linkedin || input.linkedin } : {}),
           skills: union(existing.skills, input.skills),
           domains: union(existing.domains, input.domains),
           tags: union(existing.tags, input.tags),
@@ -73,6 +74,7 @@ export function candidateActions(set: Set, get: Get, env: Env): Pick<DemoActions
         inTalentPool: true,
         createdAt: at,
         cv: input.cv ?? '',
+        ...(input.linkedin ? { linkedin: input.linkedin } : {}),
       };
       const activity: Activity = {
         type: 'candidate_created',

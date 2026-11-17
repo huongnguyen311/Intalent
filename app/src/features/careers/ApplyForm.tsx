@@ -1,15 +1,17 @@
 import { useState, type FormEvent, type ReactNode } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { UPLOAD_LIMITS, validateFiles } from '../../domain/parseCv';
+import { mulberry32 } from '../../data/seed';
+import { hashString, parseCvFile, UPLOAD_LIMITS, validateFiles } from '../../domain/parseCv';
 import { useT, type TKey } from '../../i18n/i18n';
 import { useStore } from '../../store/store';
 import { JobUnavailable } from './JobBits';
 
 const INPUT = 'w-full h-12 px-4 rounded-lg bg-[#f8f6f6] ring-1 ring-gray-200 focus:ring-2 focus:ring-primary outline-none text-sm';
 const CV_LIMITS = { ...UPLOAD_LIMITS, extensions: ['pdf', 'docx'] };
+const LINKEDIN = /^(https?:\/\/|(www\.)?linkedin\.com\/)/i;
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-type Errors = Partial<Record<'name' | 'contact' | 'email' | 'cv' | 'consent', TKey>>;
+type Errors = Partial<Record<'name' | 'contact' | 'email' | 'linkedin' | 'cv' | 'consent', TKey>>;
 
 function Field({ id, label, error, children }: { id: string; label: string; error?: string; children: ReactNode }) {
   return (
@@ -29,7 +31,7 @@ export function ApplyForm() {
   const [params] = useSearchParams();
   const job = useStore((s) => s.jobs.find((j) => j.id === jobId));
   const apply = useStore((s) => s.applyFromCareers);
-  const [form, setForm] = useState({ name: '', email: '', phone: '' });
+  const [form, setForm] = useState({ name: '', email: '', phone: '', linkedin: '' });
   const [cv, setCv] = useState<File | null>(null);
   const [consent, setConsent] = useState(false);
   const [errors, setErrors] = useState<Errors>({});
@@ -39,7 +41,17 @@ export function ApplyForm() {
   const pickCv = (file: File | undefined) => {
     setCv(null);
     const { accepted, rejected } = validateFiles(file ? [file] : [], CV_LIMITS);
-    if (accepted.length) setCv(accepted[0]);
+    if (accepted.length) {
+      setCv(accepted[0]);
+      // Simulated parse: only fills what is still empty, never what the applicant typed.
+      const parsed = parseCvFile(accepted[0], mulberry32(hashString(accepted[0].name)));
+      setForm((f) => ({
+        ...f,
+        name: f.name || parsed.name,
+        email: f.email || parsed.email || '',
+        phone: f.phone || parsed.phone || '',
+      }));
+    }
     const bad = rejected[0]?.reason;
     setErrors((e) => ({ ...e, cv: bad ? (bad === 'size' ? 'careers.apply.err.size' : 'careers.apply.err.type') : undefined }));
   };
@@ -49,14 +61,16 @@ export function ApplyForm() {
     const name = form.name.trim();
     const email = form.email.trim();
     const phone = form.phone.trim();
+    const linkedin = form.linkedin.trim();
     const next: Errors = errors.cv ? { cv: errors.cv } : {};
     if (!name) next.name = 'careers.apply.err.name';
     if (!email && !phone) next.contact = 'careers.apply.err.contact';
     else if (email && !EMAIL.test(email)) next.email = 'careers.apply.err.email';
+    if (linkedin && !LINKEDIN.test(linkedin)) next.linkedin = 'careers.apply.err.linkedin';
     if (!consent) next.consent = 'careers.apply.err.consent';
     setErrors(next);
     if (Object.keys(next).length) return;
-    const r = apply({ name, email, phone }, job.id, params.get('src') ?? undefined);
+    const r = apply({ name, email, phone, ...(linkedin ? { linkedin } : {}) }, job.id, params.get('src') ?? undefined);
     if (!r.ok && r.reason === 'unavailable') return navigate('/careers');
     const q = new URLSearchParams({ job: job.id });
     if (!r.ok) {
@@ -80,6 +94,9 @@ export function ApplyForm() {
         </Field>
         <Field id="ap-phone" label={t('careers.apply.phone')}>
           <input id="ap-phone" type="tel" className={INPUT} value={form.phone} onChange={set('phone')} autoComplete="tel" />
+        </Field>
+        <Field id="ap-linkedin" label={t('careers.apply.linkedin')} error={err('linkedin')}>
+          <input id="ap-linkedin" type="url" className={INPUT} value={form.linkedin} onChange={set('linkedin')} placeholder="https://linkedin.com/in/..." />
         </Field>
         <Field id="ap-cv" label={t('careers.apply.cv')} error={err('cv')}>
           <input

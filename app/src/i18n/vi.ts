@@ -714,4 +714,12 @@ export const vi: Record<TKey, string> = {
   'careers.stage.hired': 'Chào mừng gia nhập',
   'careers.stage.rejected': 'Chưa phù hợp lần này',
   'careers.footer': 'Trang tuyển dụng demo. Toàn bộ nội dung là dữ liệu mẫu.',
+  'careers.filter.search': 'Tìm vị trí',
+  'careers.filter.department': 'Phòng ban',
+  'careers.filter.location': 'Địa điểm',
+  'careers.filter.level': 'Cấp bậc',
+  'careers.filter.all': 'Tất cả',
+  'careers.filter.noMatch': 'Không có vị trí nào phù hợp với tìm kiếm.',
+  'careers.apply.linkedin': 'LinkedIn (không bắt buộc)',
+  'careers.apply.err.linkedin': 'Liên kết LinkedIn không hợp lệ',
 };

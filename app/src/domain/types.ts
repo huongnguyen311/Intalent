@@ -19,6 +19,7 @@ export interface Candidate {
   inTalentPool: true;
   createdAt: string;
   cv: string;
+  linkedin?: string;
   /** Optional profile detail; absent for candidates created from a bare intake form. */
   summary?: string;
   /** CV tagline and city, used only to render the original-document pane. */

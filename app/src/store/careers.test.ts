@@ -61,9 +61,23 @@ describe('applyFromCareers', () => {
     s.getState().applyFromCareers(applicant, openJob.id);
     const apps = s.getState().applications.length;
     const cands = s.getState().candidates.length;
-    const r = s.getState().applyFromCareers({ ...applicant, name: 'Other Name' }, openJob.id);
+    const candSnap = structuredClone(s.getState().candidates);
+    const actSnap = structuredClone(s.getState().activities);
+    const r = s.getState().applyFromCareers({ ...applicant, name: 'Other Name', linkedin: 'https://linkedin.com/in/x' }, openJob.id);
     expect(r).toEqual({ ok: false, reason: 'duplicate', stage: 'new' });
     expect(s.getState().applications).toHaveLength(apps);
     expect(s.getState().candidates).toHaveLength(cands);
+    expect(s.getState().candidates).toEqual(candSnap);
+    expect(s.getState().activities).toEqual(actSnap);
+  });
+
+  it('saves linkedin on the candidate and fills it when blank on merge', () => {
+    const { s, openJob } = setup();
+    const other = s.getState().jobs.filter((j) => j.status === 'open')[1];
+    const r = s.getState().applyFromCareers({ ...applicant, linkedin: 'https://linkedin.com/in/le' }, openJob.id);
+    expect(r.ok && s.getState().candidates.find((c) => c.id === r.application.candidateId)?.linkedin).toBe('https://linkedin.com/in/le');
+    const r2 = s.getState().applyFromCareers({ ...applicant, email: 'blank.li@example.com' }, openJob.id);
+    s.getState().applyFromCareers({ ...applicant, email: 'blank.li@example.com', linkedin: 'linkedin.com/in/b' }, other.id);
+    expect(r2.ok && s.getState().candidates.find((c) => c.id === r2.application.candidateId)?.linkedin).toBe('linkedin.com/in/b');
   });
 });

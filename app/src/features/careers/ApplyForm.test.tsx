@@ -95,6 +95,46 @@ describe('Careers site', () => {
     expect(screen.getByText('Received')).toBeInTheDocument();
   });
 
+  it('filters jobs by keyword, department, location and level, with an empty message', () => {
+    renderAt('/careers');
+    const open = useStore.getState().jobs.filter((j) => j.status === 'open');
+    const grid = () => screen.getByTestId('careers-grid').children.length;
+    const first = open[0];
+    fireEvent.change(screen.getByLabelText('Search positions'), { target: { value: first.title.toUpperCase() } });
+    expect(grid()).toBe(open.filter((j) => j.title.toLowerCase().includes(first.title.toLowerCase())).length);
+    fireEvent.change(screen.getByLabelText('Search positions'), { target: { value: '' } });
+    for (const [label, key] of [['Department', 'department'], ['Location', 'location'], ['Level', 'level']] as const) {
+      fireEvent.change(screen.getByLabelText(label), { target: { value: first[key] } });
+      expect(grid()).toBe(open.filter((j) => j[key] === first[key]).length);
+      fireEvent.change(screen.getByLabelText(label), { target: { value: '' } });
+      expect(grid()).toBe(open.length);
+    }
+    fireEvent.change(screen.getByLabelText('Search positions'), { target: { value: 'zzzz-nothing' } });
+    expect(screen.getByText('No positions match your search.')).toBeInTheDocument();
+  });
+
+  it('saves a LinkedIn link and rejects an invalid one', () => {
+    renderAt(`/careers/${jobId}/apply`);
+    fill('Pham Thi Test', 'pham.test@example.com');
+    fireEvent.change(screen.getByLabelText(/LinkedIn/), { target: { value: 'not a link' } });
+    consent();
+    submit();
+    expect(screen.getByText('Enter a valid LinkedIn link')).toBeInTheDocument();
+    expect(useStore.getState().applications).toHaveLength(0);
+    fireEvent.change(screen.getByLabelText(/LinkedIn/), { target: { value: 'https://linkedin.com/in/pham' } });
+    submit();
+    expect(useStore.getState().candidates.find((c) => c.email === 'pham.test@example.com')?.linkedin).toBe('https://linkedin.com/in/pham');
+  });
+
+  it('a picked CV prefills only empty fields', () => {
+    renderAt(`/careers/${jobId}/apply`);
+    fireEvent.change(screen.getByLabelText('Full name'), { target: { value: 'Typed Name' } });
+    fireEvent.change(screen.getByLabelText(/^CV/), { target: { files: [new File(['x'], 'Tran_Van_Binh_CV.pdf')] } });
+    expect(screen.getByLabelText('Full name')).toHaveValue('Typed Name');
+    expect((screen.getByLabelText('Email') as HTMLInputElement).value).not.toBe('');
+    expect((screen.getByLabelText('Phone') as HTMLInputElement).value).not.toBe('');
+  });
+
   it('language toggle switches the careers scope to Vietnamese', () => {
     renderAt('/careers');
     fireEvent.click(screen.getByRole('button', { name: /^vi$/i }));

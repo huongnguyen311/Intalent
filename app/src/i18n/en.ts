@@ -713,6 +713,14 @@ export const en = {
   'careers.stage.hired': 'Welcome aboard',
   'careers.stage.rejected': 'Not selected',
   'careers.footer': 'Demo careers site. All content is placeholder.',
+  'careers.filter.search': 'Search positions',
+  'careers.filter.department': 'Department',
+  'careers.filter.location': 'Location',
+  'careers.filter.level': 'Level',
+  'careers.filter.all': 'All',
+  'careers.filter.noMatch': 'No positions match your search.',
+  'careers.apply.linkedin': 'LinkedIn (optional)',
+  'careers.apply.err.linkedin': 'Enter a valid LinkedIn link',
 } as const;
 
 export type TKey = keyof typeof en;
