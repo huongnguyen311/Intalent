@@ -250,4 +250,26 @@ describe('Board', () => {
     renderBoard();
     expect(within(card(names[1])).getByText('1n')).toBeInTheDocument();
   });
+
+  it('column header shows sla and late count', () => {
+    renderBoard();
+    const h = within(screen.getByTestId('column-screening'));
+    expect(h.getByText('SLA 3 days · 1 late ⚠')).toBeInTheDocument();
+    expect(h.getByText('67%')).toBeInTheDocument();
+    expect(within(screen.getByTestId('column-new')).getByText('SLA 2 days · on time')).toBeInTheDocument();
+  });
+
+  it('filter changes count but not overdue or share', () => {
+    render(<MemoryRouter><Board job={job()} filter={{ text: names[1] }} /></MemoryRouter>);
+    const col = within(screen.getByTestId('column-screening'));
+    expect(col.getByTestId('column-count')).toHaveTextContent('1');
+    expect(col.getByText('SLA 3 days · 1 late ⚠')).toBeInTheDocument();
+    expect(col.getByText('67%')).toBeInTheDocument();
+  });
+
+  it('vi header uses ngày and trễ', () => {
+    useStore.setState((s) => ({ ui: { ...s.ui, lang: 'vi' } }));
+    renderBoard();
+    expect(within(screen.getByTestId('column-screening')).getByText('SLA 3 ngày · 1 trễ ⚠')).toBeInTheDocument();
+  });
 });

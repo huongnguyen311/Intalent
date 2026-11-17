@@ -594,6 +594,8 @@ export const vi: Record<TKey, string> = {
   'pipeline.filter.noMatch': 'Không có ứng viên phù hợp',
   'pipeline.collapse': 'Thu gọn {stage}',
   'pipeline.expand': 'Mở rộng {stage}',
+  'pipeline.col.sla': 'SLA {days} ngày · {n} trễ ⚠',
+  'pipeline.col.onTime': 'SLA {days} ngày · đúng hạn',
   'pipeline.move.title': 'Chuyển sang {stage}',
   'pipeline.move.desc': 'Chuyển {name} sang {stage}. Bạn có thể để lại ghi chú cho nhóm.',
   'pipeline.move.note': 'Ghi chú',

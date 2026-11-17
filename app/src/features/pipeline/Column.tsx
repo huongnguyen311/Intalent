@@ -1,15 +1,19 @@
 import { useDroppable } from '@dnd-kit/core';
 import { stageLabel } from '../../domain/stages';
+import type { StageMetrics } from '../../domain/pipeline';
 import type { Application, Candidate, Job, Stage } from '../../domain/types';
 import { useLang, useT } from '../../i18n/i18n';
 import { STAGE_COLOR } from '../jobs/JobBits';
 import { CandidateCard } from './CandidateCard';
+import { ColumnHeader } from './ColumnHeader';
 
 type Props = {
   stage: Stage;
   apps: Application[];
   candidates: Map<string, Candidate>;
   job: Job;
+  /** SLA / late / share numbers computed from the job's unfiltered applications. */
+  metrics: StageMetrics;
   onOpen: (appId: string) => void;
   onMove: (appId: string, to: Stage) => void;
   /** Collapsed: a narrow strip that is still a drop target for its stage. */
@@ -17,7 +21,7 @@ type Props = {
   onToggleCollapse?: () => void;
 };
 
-export function Column({ stage, apps, candidates, job, onOpen, onMove, collapsed, onToggleCollapse }: Props) {
+export function Column({ stage, apps, candidates, job, metrics, onOpen, onMove, collapsed, onToggleCollapse }: Props) {
   const t = useT();
   const [lang] = useLang();
   const { setNodeRef, isOver } = useDroppable({ id: stage });
@@ -55,27 +59,12 @@ export function Column({ stage, apps, candidates, job, onOpen, onMove, collapsed
       aria-label={stageLabel(stage, lang)}
       className={`flex-1 min-w-[160px] flex flex-col rounded-2xl border p-2 transition-colors ${over}`}
     >
-      <header className="flex items-center justify-between px-1 pb-2">
-        <span className="flex items-center gap-2 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-          <span className="size-2 rounded-full" style={{ background: STAGE_COLOR[stage] }}></span>
-          {stageLabel(stage, lang)}
-        </span>
-        <span className="flex items-center gap-1">
-          <span data-testid="column-count" className="min-w-6 px-2 py-0.5 rounded-full bg-white dark:bg-[#2a2423] border border-gray-100 dark:border-white/10 text-xs font-bold text-slate-600 dark:text-gray-300 text-center">
-            {apps.length}
-          </span>
-          {onToggleCollapse && (
-            <button
-              aria-label={t('pipeline.collapse', { stage: stageLabel(stage, lang) })}
-              title={t('pipeline.collapse', { stage: stageLabel(stage, lang) })}
-              onClick={onToggleCollapse}
-              className="size-6 rounded-full flex items-center justify-center text-[#896a61] hover:text-primary hover:bg-white dark:hover:bg-white/5"
-            >
-              <span aria-hidden="true" className="material-symbols-outlined text-[16px]">chevron_right</span>
-            </button>
-          )}
-        </span>
-      </header>
+      <ColumnHeader
+        stage={stage}
+        count={apps.length}
+        metrics={metrics}
+        onToggleCollapse={onToggleCollapse}
+      />
       <div className="flex-1 flex flex-col gap-1.5 min-h-[80px]">
         {apps.map((a) => (
           <CandidateCard

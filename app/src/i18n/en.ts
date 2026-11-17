@@ -593,6 +593,8 @@ export const en = {
   'pipeline.filter.noMatch': 'No candidates match',
   'pipeline.collapse': 'Collapse {stage}',
   'pipeline.expand': 'Expand {stage}',
+  'pipeline.col.sla': 'SLA {days} days · {n} late ⚠',
+  'pipeline.col.onTime': 'SLA {days} days · on time',
   'pipeline.move.title': 'Move to {stage}',
   'pipeline.move.desc': 'Move {name} to {stage}. You can leave a note for the team.',
   'pipeline.move.note': 'Note',

@@ -12,6 +12,7 @@ import {
 } from '@dnd-kit/core';
 import { useMemo, useState } from 'react';
 import { toast } from '../../components/Toast';
+import { stageMetrics } from '../../domain/pipeline';
 import { filterApplications } from '../../domain/pipelineFilter';
 import { STAGES, stageLabel } from '../../domain/stages';
 import type { Job, Stage } from '../../domain/types';
@@ -166,6 +167,7 @@ export function Board({ job, filter, view = 'kanban' }: { job: Job; filter?: { t
               apps={apps.filter((a) => a.stage === stage)}
               candidates={candidates}
               job={job}
+              metrics={stageMetrics(jobApps, job, stage)}
               onOpen={setOpenId}
               onMove={move}
               collapsed={isCollapsed(stage)}
