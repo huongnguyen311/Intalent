@@ -19,6 +19,7 @@ import { JdListPage } from './features/jds/JdListPage';
 import { JdMatchingPage } from './features/matching/JdMatchingPage';
 import { NotesRoute } from './features/notes/NotesRoute';
 import { PipelinePage } from './features/pipeline/PipelinePage';
+import { PublishedJobsPage } from './features/published/PublishedJobsPage';
 import { SystemConfigPage } from './features/system-config/SystemConfigPage';
 import { TaContributionPage } from './features/ta-contribution/TaContributionPage';
 import { TaxonomyPage } from './features/taxonomy/TaxonomyPage';
@@ -46,6 +47,7 @@ export function AppRoutes() {
       <Route path="/ta-contribution" element={<TaContributionPage />} />
       <Route path="/jobs" element={<JobsPage />} />
       <Route path="/jobs/:id" element={<JobDetailPage />} />
+      <Route path="/published" element={<PublishedJobsPage />} />
       <Route path="/campaigns" element={<CampaignsPage />} />
       <Route path="/campaigns/:id" element={<CampaignDetailPage />} />
       <Route path="/pipeline" element={<PipelinePage />} />
