@@ -131,6 +131,7 @@
 - `Column` gets `collapsed?: boolean; onToggleCollapse?: () => void`. Collapsed renders a narrow vertical strip (`w-12`) with the rotated stage name and count, and it stays a dnd-kit droppable with the same stage id.
 - Default collapse: Hired and Rejected start collapsed when the active stages (new..offer) hold more than 3 applications in total. The user toggle overrides this for the session.
 - Empty after filters: both views show `pipeline.filter.noMatch` ("No candidates match" / "Không có ứng viên phù hợp").
+- **Move note:** `RejectDialog` becomes `MoveDialog({ open, name, to: Stage, onCancel, onConfirm(note: string) })`, titled "Chuyển sang {stage}" / "Move to {stage}". The note textarea is optional, but required (trimmed non-empty) when `to === 'rejected'`, which keeps today's reject wording. `handleDrop` returns `'needs_note'` for any real move, replacing `'needs_reason'`; `'none'` stays for no-ops. A new `commitMove(appId, to, note, by)` calls `moveStage(appId, to, by, reason?, note?)`. The store's `moveStage` gains an optional `note` saved on the new history entry `{stage, at, by, note?}`, and `rejectedReason` = note when `to==='rejected'`. Every move path uses it: drag, keyboard, the card menu, the list-row menu and the drawer's "Move to…". `ApplicationDrawer` stage history shows `note` under each entry.
 
 - [ ] **Step 1: Failing tests:**
   - `list view sorts by days in stage`
@@ -140,5 +141,9 @@
   - `end columns collapsed by default when busy`
   - `filters with no match show empty message` (both views)
   - `job detail pipeline tab offers list view`
+  - `every move opens note dialog and cancel keeps stage` (drop New→Screening, Cancel → still new, no history entry)
+  - `optional note saved on history entry` (confirm with "Hẹn PV thứ 5" → history last entry note; drawer shows it)
+  - `move with empty note allowed except rejected`
+  - Update the existing Board/moves tests from `needs_reason` to `needs_note`.
 - [ ] **Step 2–4:** FAIL → implement → focused + full `npm test` + `npm run build` + `npm run fidelity` PASS.
 - [ ] **Step 5:** Commit `feat(app): pipeline list view and collapsible end columns`.

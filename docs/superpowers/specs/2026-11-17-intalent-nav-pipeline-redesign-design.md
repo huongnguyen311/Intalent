@@ -21,6 +21,7 @@ Stakeholder feedback on the React prototype: the left menu and the Pipeline page
    - **Hired / Rejected columns** can be collapsed to a narrow vertical strip with the stage name and count. Collapsed by default when the job has more than 3 active stages filled. A collapsed strip is still a drop target (dropping on Rejected still asks for a reason).
    - Search, filter and view choice apply to both views. Drag & drop, keyboard moves, reject reason and drawer behave as today.
    - The same compact board is used inside Job detail → Pipeline tab.
+   - **Note on every move (stakeholder, 2026-11-17):** moving a card to another stage, whether by drag & drop, keyboard or the "Chuyển sang…" menu in either view, opens a small dialog "Chuyển sang {stage}" with a note field. The note is optional for every stage except Rejected, where it is the required reason, as today. Confirm moves the card and saves the note on that stage-history entry; Cancel leaves the card where it was. The drawer's stage history shows each note under its stage entry.
 
 ## Non-goals
 Mobile layout of the internal app. Changing data model rules (dedupe, applications, sources). Restyling other pages beyond what the merged items need.
