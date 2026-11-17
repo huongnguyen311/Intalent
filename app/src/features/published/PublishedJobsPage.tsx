@@ -56,7 +56,7 @@ export function PublishedJobsPage() {
                   {(['jobs.col.title', 'jobs.col.department', 'jobs.col.location', 'jobs.col.level', 'published.col.published', 'published.col.applied'] as const).map((k) => (
                     <th key={k} className={TH}>{t(k)}</th>
                   ))}
-                  <th className="px-6 py-4 w-16 border-b border-[#e6dddb] dark:border-[#2a2423] text-xs font-bold text-[#896a61] uppercase tracking-wider text-center">{t('jobs.col.actions')}</th>
+                  <th className="px-6 py-4 border-b border-[#e6dddb] dark:border-[#2a2423] text-xs font-bold text-[#896a61] uppercase tracking-wider text-center">{t('jobs.col.actions')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#f4f1f0] dark:divide-[#2a2423]">
@@ -81,6 +81,10 @@ export function PublishedJobsPage() {
                       {careersApplicants + campaignApplicants}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-center">
+                      <div className="inline-flex items-center gap-2">
+                      <Link to={`/careers/${job.id}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold text-primary hover:bg-orange-50 dark:hover:bg-white/5 transition-colors">
+                        <span aria-hidden="true" className="material-symbols-outlined text-[16px]">open_in_new</span>{t('published.menu.view')}
+                      </Link>
                       <Popover
                         align="right"
                         trigger={({ toggle }) => (
@@ -91,12 +95,12 @@ export function PublishedJobsPage() {
                       >
                         {(close) => (
                           <>
-                            <Link to={`/careers/${job.id}`} target="_blank" rel="noopener noreferrer" onClick={close} className={ITEM}>{t('published.menu.view')}</Link>
                             <Link to={`/pipeline/${job.id}`} onClick={close} className={ITEM}>{t('published.menu.pipeline')}</Link>
                             <button role="menuitem" onClick={() => { close(); setRemoving(job); }} className={ITEM}>{t('published.menu.unpublish')}</button>
                           </>
                         )}
                       </Popover>
+                      </div>
                     </td>
                   </tr>
                 ))}

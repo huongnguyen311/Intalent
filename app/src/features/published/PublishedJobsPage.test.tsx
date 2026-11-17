@@ -58,10 +58,18 @@ describe('PublishedJobsPage', () => {
 
   it('view as candidate link opens careers job in new tab', () => {
     renderPage();
-    const job = openFirstMenu();
-    const link = screen.getByRole('link', { name: 'View as candidate' });
+    const job = useStore.getState().jobs.filter((j) => j.status === 'open').sort((a, b) => b.openedAt.localeCompare(a.openedAt))[0];
+    const link = screen.getAllByRole('link', { name: 'View as candidate' })[0];
     expect(link).toHaveAttribute('href', `/careers/${job.id}`);
     expect(link).toHaveAttribute('target', '_blank');
     expect(link).toHaveAttribute('rel', expect.stringContaining('noopener'));
+  });
+
+  it('view as candidate is inline, not inside the actions menu', () => {
+    renderPage();
+    openFirstMenu();
+    const menu = screen.getByRole('menu');
+    expect(within(menu).queryByRole('link', { name: 'View as candidate' })).toBeNull();
+    expect(within(menu).getByRole('link', { name: 'Pipeline' })).toBeInTheDocument();
   });
 });
