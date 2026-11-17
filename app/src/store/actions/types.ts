@@ -57,6 +57,12 @@ export interface DemoActions {
   addComment(appId: string, text: string, by: string): boolean;
   /** Integer 1-5; a reviewer rating again replaces their earlier score. */
   rateApplication(appId: string, by: string, stars: number): boolean;
+  /** Public apply: dedupes the candidate, then adds to the job's pipeline. `src` is a campaign tracking code (`<campaignId>-<channel>`); unknown codes count as the careers page. */
+  applyFromCareers(
+    input: CandidateInput,
+    jobId: string,
+    src?: string,
+  ): { ok: true; application: Application; created: boolean } | { ok: false; reason: 'unavailable' } | { ok: false; reason: 'duplicate'; stage: Stage };
   addNote(input: NoteInput, by: string): Note;
   convertNote(noteId: string, by: string): { candidate: Candidate; created: boolean };
   createJd(input: JdInput): Jd;

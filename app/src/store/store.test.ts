@@ -204,6 +204,14 @@ describe('persistence', () => {
     }
   });
 
+  it('resets a version 1 save to the seed', () => {
+    const seed = buildSeed();
+    const raw = JSON.stringify({ version: 1, state: { ...seed, candidates: [{ id: 'stale' }], ui: { ...seed.ui, lang: 'vi' } } });
+    const s = createDemoStore(memoryStorage({ [PERSIST_KEY]: raw })).getState();
+    expect(s.candidates).toEqual(seed.candidates);
+    expect(s.ui).toEqual(seed.ui);
+  });
+
   it('loads seed when version matches but state shape is invalid', () => {
     const seed = buildSeed();
     const { ui: _ui, ...noUi } = seed;
@@ -215,7 +223,7 @@ describe('persistence', () => {
       null,
     ];
     for (const state of bad) {
-      const raw = JSON.stringify({ version: 1, state });
+      const raw = JSON.stringify({ version: 2, state });
       const s = createDemoStore(memoryStorage({ [PERSIST_KEY]: raw })).getState();
       expect(s.candidates).toEqual(seed.candidates);
       expect(s.ui).toEqual(seed.ui);
@@ -226,17 +234,17 @@ describe('persistence', () => {
   it('keeps valid persisted state of the current version', () => {
     const seed = buildSeed();
     const good = { ...seed, ui: { lang: 'vi', piiUnlocked: false } };
-    const raw = JSON.stringify({ version: 1, state: good });
+    const raw = JSON.stringify({ version: 2, state: good });
     const s = createDemoStore(memoryStorage({ [PERSIST_KEY]: raw })).getState();
     expect(s.ui.lang).toBe('vi');
   });
 
-  it('persists under intalent-demo with version 1 and resetDemo restores seed', () => {
+  it('persists under intalent-demo with version 2 and resetDemo restores seed', () => {
     const storage = memoryStorage();
     const store = createDemoStore(storage, () => new Date(SEED_BASE_TIME).toISOString());
     store.getState().upsertCandidate({ name: 'A', email: 'a@example.com' }, ctx);
     const saved = JSON.parse(storage.getItem('intalent-demo')!);
-    expect(saved.version).toBe(1);
+    expect(saved.version).toBe(2);
     expect(saved.state.candidates).toHaveLength(buildSeed().candidates.length + 1);
     store.getState().resetDemo();
     expect(store.getState().candidates).toEqual(buildSeed().candidates);
@@ -246,7 +254,7 @@ describe('persistence', () => {
 describe('persisted ui migration', () => {
   it('persisted ui without careersLang gets default vi', () => {
     const raw = JSON.stringify({
-      version: 1,
+      version: 2,
       state: { ...buildSeed(), ui: { lang: 'vi', piiUnlocked: true } },
     });
     const s = createDemoStore(memoryStorage({ [PERSIST_KEY]: raw })).getState();

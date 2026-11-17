@@ -6,6 +6,12 @@ import { CampaignDetailPage } from './features/campaigns/CampaignDetailPage';
 import { CampaignsPage } from './features/campaigns/CampaignsPage';
 import { CandidatePoolPage } from './features/candidates/CandidatePoolPage';
 import { CandidateProfilePage } from './features/candidates/CandidateProfilePage';
+import { Applied } from './features/careers/Applied';
+import { ApplyForm } from './features/careers/ApplyForm';
+import { CareersHome } from './features/careers/CareersHome';
+import { CareersJob } from './features/careers/CareersJob';
+import { CareersLayout } from './features/careers/CareersLayout';
+import { StatusCheck } from './features/careers/StatusCheck';
 import { DashboardPage } from './features/dashboard/DashboardPage';
 import { JobDetailPage } from './features/jobs/JobDetailPage';
 import { JobsPage } from './features/jobs/JobsPage';
@@ -49,14 +55,6 @@ const INTERNAL: { path: string; title: string }[] = [
   { path: '/notes', title: 'Notes' },
 ];
 
-const PUBLIC: { path: string; title: string }[] = [
-  { path: '/login', title: 'Login' },
-  { path: '/careers', title: 'Careers' },
-  { path: '/careers/applied', title: 'Application received' },
-  { path: '/careers/:jobId', title: 'Job' },
-  { path: '/careers/:jobId/apply', title: 'Apply' },
-];
-
 export function AppRoutes() {
   return (
     <Routes>
@@ -92,9 +90,13 @@ export function AppRoutes() {
           }
         />
       ))}
-      {PUBLIC.filter(({ path }) => path !== '/login').map(({ path, title }) => (
-        <Route key={path} path={path} element={<Placeholder title={title} />} />
-      ))}
+      <Route path="/careers" element={<CareersLayout />}>
+        <Route index element={<CareersHome />} />
+        <Route path="status" element={<StatusCheck />} />
+        <Route path="applied" element={<Applied />} />
+        <Route path=":jobId" element={<CareersJob />} />
+        <Route path=":jobId/apply" element={<ApplyForm />} />
+      </Route>
       <Route path="/dashboard" element={<Navigate to="/" replace />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
