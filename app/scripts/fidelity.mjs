@@ -43,12 +43,12 @@ for (const [url, hint] of [[MOCK, 'cd mockup && python -m http.server 5181'], [A
 
 fs.mkdirSync(OUT, { recursive: true });
 const browser = await launch();
-const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
-const a = await ctx.newPage();
-const b = await ctx.newPage();
 const rows = [];
 let failed = false;
 try {
+const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+const a = await ctx.newPage();
+const b = await ctx.newPage();
 for (const [name, route] of PAIRS) {
   await a.goto(`${MOCK}${name}.html`);
   await b.goto(APP + route);

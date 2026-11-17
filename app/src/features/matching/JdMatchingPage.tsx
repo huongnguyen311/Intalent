@@ -87,7 +87,7 @@ export function JdMatchingPage() {
   const jd = jds.find((j) => j.id === jdId);
   const req = useMemo(() => (jd ? jdRequirements(jd, taxonomy) : { stack: [] }), [jd, taxonomy]);
   // eslint-disable-next-line react-hooks/exhaustive-deps -- runAt re-runs the (deterministic) scoring on demand
-  const all = useMemo(() => fixture?.rows ?? asRows(candidates, req), [fixture, candidates, req, runAt]);
+  const all = useMemo(() => fixture?.rows ?? (jd ? asRows(candidates, req) : []), [fixture, jd, candidates, req, runAt]);
 
   const strong = fixture?.strong ?? all.filter((r) => r.score >= 80).length;
   const partial = fixture?.partial ?? all.filter((r) => r.score >= 60 && r.score < 80).length;
@@ -204,7 +204,7 @@ export function JdMatchingPage() {
               {rows.map((r, i) => (
                 <MatchRowItem key={`${r.candidateId}-${i}`} row={r} rank={(page - 1) * PAGE_SIZE + i + 1} onOpen={() => navigate({ pathname: `/candidates/${r.candidateId}`, search })} />
               ))}
-              {rows.length === 0 && <div className="px-6 py-10 text-center text-sm text-[#896a61]">{t('matching.empty')}</div>}
+              {rows.length === 0 && <div className="px-6 py-10 text-center text-sm text-[#896a61]">{t(jd || fixture ? 'matching.empty' : 'matching.noJds')}</div>}
             </div>
             <MatchPager page={page} pageSize={PAGE_SIZE} total={total} onPage={setPage} />
           </div>

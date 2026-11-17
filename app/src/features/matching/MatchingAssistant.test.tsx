@@ -26,6 +26,13 @@ describe('JdMatchingPage', () => {
     expect(Math.min(...scores)).toBeGreaterThanOrEqual(60);
   });
 
+  it('shows an empty state instead of scoring everyone when there is no JD', () => {
+    useStore.setState({ jds: [] });
+    wrap(<JdMatchingPage />, '/jd-matching');
+    expect(document.querySelectorAll('.jm-score')).toHaveLength(0);
+    expect(screen.getAllByText('Create a job description to run a match').length).toBeGreaterThan(1);
+  });
+
   it('score filter widens the list', () => {
     wrap(<JdMatchingPage />, '/jd-matching?jd=jd-2026-002');
     const topN = () => Number(/Top (\d+) of/.exec(screen.getByText(/Top \d+ of/).textContent!)![1]);
