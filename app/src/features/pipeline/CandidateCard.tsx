@@ -69,7 +69,7 @@ export function CardBody({ app, candidate, job, menu }: BodyProps) {
           title={late ? t('pipeline.overSla', { n: job.stageSla[app.stage] ?? 0 }) : undefined}
           className="font-medium shrink-0"
         >
-          {daysInStage(app)}d{late ? ' ⚠' : ''}
+          {t('pipeline.daysShort', { n: daysInStage(app) })}{late ? ' ⚠' : ''}
         </span>
         {avg !== undefined && (
           <span aria-label={t('pipeline.avgRating', { n: avg })} className="ml-auto flex items-center gap-0.5 font-bold text-slate-600 dark:text-gray-300 shrink-0">
