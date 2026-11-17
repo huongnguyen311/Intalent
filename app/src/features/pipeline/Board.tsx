@@ -132,7 +132,7 @@ export function Board({ job }: { job: Job }) {
         onDragCancel={() => setActiveId(null)}
         onDragEnd={onDragEnd}
       >
-        <div className="flex gap-4 overflow-x-auto custom-scrollbar pb-4 items-stretch">
+        <div className="flex gap-3 overflow-x-auto custom-scrollbar pb-4 items-stretch">
           {STAGES.map((stage) => (
             <Column
               key={stage}

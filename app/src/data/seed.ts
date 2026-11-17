@@ -23,11 +23,19 @@ export function mulberry32(seed: number): Rng {
   };
 }
 
-// Fixed "now" so a given rng always yields identical timestamps.
-const BASE_TIME = Date.parse('2026-11-16T09:00:00.000Z');
+/** Default reference "now": a given rng and base always yield identical timestamps. */
+export const SEED_BASE_TIME = Date.parse('2026-11-16T09:00:00.000Z');
 const HOUR = 3_600_000;
-const iso = (offsetHours: number) => new Date(BASE_TIME + offsetHours * HOUR).toISOString();
-const daysAgo = (d: number) => iso(-24 * d);
+
+/** Timestamps relative to the seed's reference time. */
+interface Clock {
+  iso(offsetHours: number): string;
+  daysAgo(days: number): string;
+}
+const clockAt = (base: number): Clock => {
+  const iso = (offsetHours: number) => new Date(base + offsetHours * HOUR).toISOString();
+  return { iso, daysAgo: (d) => iso(-24 * d) };
+};
 
 const pick = <T>(rng: Rng, xs: readonly T[]): T => xs[Math.floor(rng() * xs.length)];
 const int = (rng: Rng, lo: number, hi: number) => lo + Math.floor(rng() * (hi - lo + 1));
@@ -140,9 +148,9 @@ const USER_ROWS: Array<[id: string, name: string, email: string, role: string]> 
 ];
 const STAFF = USER_ROWS.slice(1).map((u) => u[0]);
 
-function buildUsers(): User[] {
+function buildUsers(clock: Clock): User[] {
   return USER_ROWS.map(([id, name, email, role], i) => ({
-    id, name, email, role, status: 'Active', createdAt: daysAgo(300 - i * 20).slice(0, 10),
+    id, name, email, role, status: 'Active', createdAt: clock.daysAgo(300 - i * 20).slice(0, 10),
   }));
 }
 
@@ -155,18 +163,18 @@ const JOB_ROWS: Array<[id: string, jdId: string, title: string, status: Job['sta
   ['job-6', 'jd-2026-004', 'Growth Marketing Manager', 'closed', 'Marketing', 'Middle'],
 ];
 
-function buildJobs(): Job[] {
+function buildJobs(clock: Clock): Job[] {
   return JOB_ROWS.map(([id, jdId, title, status, department, level], i) => ({
     id, jdId, title, department, level, status,
     location: i % 2 ? 'Ho Chi Minh City' : 'Hanoi',
     employment: 'Full-time',
     stageSla: { new: 2, screening: 5, interview: 7, offer: 3 },
-    openedAt: daysAgo(90 - i * 10),
+    openedAt: clock.daysAgo(90 - i * 10),
     hiringManager: i % 2 ? 'u-nam' : 'u-thu',
   }));
 }
 
-function buildCampaigns(): Campaign[] {
+function buildCampaigns(clock: Clock): Campaign[] {
   const link = (campaign: string, channel: string, job: string) => ({
     channel,
     url: `https://careers.company.demo/jobs/${job}?utm_source=${fold(channel)}&utm_campaign=${campaign}`,
@@ -174,17 +182,17 @@ function buildCampaigns(): Campaign[] {
   return [
     {
       id: 'camp-1', name: 'Frontend Summer Push', jobIds: ['job-1', 'job-2'], channels: ['LinkedIn', 'Facebook'],
-      goal: 40, start: daysAgo(40), end: daysAgo(-20), status: 'active',
+      goal: 40, start: clock.daysAgo(40), end: clock.daysAgo(-20), status: 'active',
       links: [link('camp-1', 'LinkedIn', 'job-1'), link('camp-1', 'Facebook', 'job-1')], stats: { views: 1240 },
     },
     {
       id: 'camp-2', name: 'Mobile Talent Hunt', jobIds: ['job-3'], channels: ['LinkedIn', 'Zalo'],
-      goal: 25, start: daysAgo(25), end: daysAgo(-35), status: 'active',
+      goal: 25, start: clock.daysAgo(25), end: clock.daysAgo(-35), status: 'active',
       links: [link('camp-2', 'LinkedIn', 'job-3'), link('camp-2', 'Zalo', 'job-3')], stats: { views: 860 },
     },
     {
       id: 'camp-3', name: 'Growth Marketing Referral', jobIds: ['job-4', 'job-6'], channels: ['Referral'],
-      goal: 15, start: daysAgo(70), end: daysAgo(10), status: 'ended',
+      goal: 15, start: clock.daysAgo(70), end: clock.daysAgo(10), status: 'ended',
       links: [link('camp-3', 'Referral', 'job-4')], stats: { views: 410 },
     },
   ];
@@ -219,7 +227,7 @@ const SENIORITY_WEIGHTED = [
   'Lead', 'Lead', 'Principal', 'Architect',
 ];
 
-function buildCandidates(rng: Rng, count: number, contacts: Contacts): Candidate[] {
+function buildCandidates(rng: Rng, count: number, contacts: Contacts, clock: Clock): Candidate[] {
   const names = new Set<string>();
   return Array.from({ length: count }, (_, i) => {
     let last: string, mid: string, first: string, full: string;
@@ -249,7 +257,7 @@ function buildCandidates(rng: Rng, count: number, contacts: Contacts): Candidate
       cvOwner: pick(rng, STAFF),
       source: pick(rng, ['Upload', 'Careers site', 'Referral', 'Manual']),
       inTalentPool: true as const,
-      createdAt: daysAgo(int(rng, 1, 200)),
+      createdAt: clock.daysAgo(int(rng, 1, 200)),
       cv: `${title} (${seniority}). Skills: ${skills.join(', ')}.`,
     };
   });
@@ -257,7 +265,7 @@ function buildCandidates(rng: Rng, count: number, contacts: Contacts): Candidate
 
 const STAGE_COUNTS: Record<Stage, number> = { new: 18, screening: 16, interview: 14, offer: 7, hired: 6, rejected: 9 };
 
-function buildApplications(rng: Rng, candidates: Candidate[], jobs: Job[], campaigns: Campaign[]) {
+function buildApplications(rng: Rng, candidates: Candidate[], jobs: Job[], campaigns: Campaign[], clock: Clock) {
   const openJobs = jobs.filter((j) => j.status === 'open');
   const closedJob = jobs.find((j) => j.status === 'closed')!;
   const stages = sample(rng, STAGES.flatMap((s) => Array<Stage>(STAGE_COUNTS[s]).fill(s)), 70);
@@ -289,12 +297,18 @@ function buildApplications(rng: Rng, candidates: Candidate[], jobs: Job[], campa
     const path: Stage[] = stage === 'rejected'
       ? [...STAGES.slice(0, int(rng, 1, 3)), 'rejected']
       : STAGES.slice(0, STAGES.indexOf(stage) + 1);
-    let at = -24 * int(rng, 2, 60);
-    const addedAt = iso(at);
+    // Same rng draws, in the same order, as before: one for the time in the current stage, then one gap per step.
+    const dwellDraw = int(rng, 2, 60);
+    const gaps = path.slice(1).map(() => int(rng, 12, 72));
+    const sla = job.stageSla[stage];
+    // Active stages spread over 0..1.25x (SLA + 1) days, so roughly a fifth of them are overdue.
+    const dwellHours = sla === undefined ? 24 * dwellDraw : Math.round(((dwellDraw - 2) / 58) * (sla + 1) * 1.25 * 24);
+    let at = -dwellHours - gaps.reduce((n, g) => n + g, 0);
     const history: StageHistoryEntry[] = path.map((s, idx) => {
-      if (idx) at += int(rng, 12, 72);
-      return { stage: s, at: iso(at), by: addedBy };
+      if (idx) at += gaps[idx - 1];
+      return { stage: s, at: clock.iso(at), by: addedBy };
     });
+    const addedAt = history[0].at;
     const last = history[history.length - 1];
     const id = `app-${String(i + 1).padStart(3, '0')}`;
     const comments: ApplicationComment[] =
@@ -325,7 +339,7 @@ function buildApplications(rng: Rng, candidates: Candidate[], jobs: Job[], campa
   return { apps, activities };
 }
 
-function buildNotes(rng: Rng, contacts: Contacts): Note[] {
+function buildNotes(rng: Rng, contacts: Contacts, clock: Clock): Note[] {
   return Array.from({ length: 10 }, (_, i) => {
     const first = pick(rng, FIRST_NAMES);
     const last = pick(rng, LAST_NAMES);
@@ -335,18 +349,23 @@ function buildNotes(rng: Rng, contacts: Contacts): Note[] {
       contact: i % 2 ? contacts.email(`${first}.note`, last) : contacts.phone(),
       text: pick(rng, NOTE_TEXTS),
       createdBy: pick(rng, STAFF),
-      createdAt: daysAgo(int(rng, 1, 30)),
+      createdAt: clock.daysAgo(int(rng, 1, 30)),
     };
   });
 }
 
-export function buildSeed(rng: Rng = mulberry32(20261116)): DemoState {
+/**
+ * Deterministic demo data for a given rng and reference time. The store passes the load time as `base`
+ * so days-in-stage, days-open and recent activity look the same on whatever day the demo runs.
+ */
+export function buildSeed(rng: Rng = mulberry32(20261116), base: number = SEED_BASE_TIME): DemoState {
+  const clock = clockAt(base);
   const contacts = contactFactory(rng);
-  const candidates = buildCandidates(rng, 150, contacts);
-  const jobs = buildJobs();
-  const campaigns = buildCampaigns();
-  const { apps, activities } = buildApplications(rng, candidates, jobs, campaigns);
-  const notes = buildNotes(rng, contacts);
+  const candidates = buildCandidates(rng, 150, contacts, clock);
+  const jobs = buildJobs(clock);
+  const campaigns = buildCampaigns(clock);
+  const { apps, activities } = buildApplications(rng, candidates, jobs, campaigns, clock);
+  const notes = buildNotes(rng, contacts, clock);
   const created: Activity[] = candidates.map((c) => ({
     type: 'candidate_created', candidateId: c.id, by: c.cvOwner, at: c.createdAt,
     detail: `Added to Talent Pool via ${c.source}`,
@@ -361,7 +380,7 @@ export function buildSeed(rng: Rng = mulberry32(20261116)): DemoState {
     campaigns,
     notes,
     activities: [...created, ...activities, ...noted].sort((a, b) => a.at.localeCompare(b.at)),
-    users: buildUsers(),
+    users: buildUsers(clock),
     jds: buildJds(),
     taxonomy: buildTaxonomy(candidates),
     prompts: [...buildPrompts(), ...buildEmailTemplates()],

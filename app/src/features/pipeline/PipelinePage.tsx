@@ -45,7 +45,7 @@ export function PipelinePage() {
 
   return (
     <AppLayout title={t('nav.pipeline')} subtitle={t('pipeline.subtitle')} actions={actions}>
-      <div className="p-8 max-w-[1400px] mx-auto min-h-full">
+      <div className="p-6 max-w-[1600px] mx-auto min-h-full">
         {job ? (
           <Board key={job.id} job={job} />
         ) : (

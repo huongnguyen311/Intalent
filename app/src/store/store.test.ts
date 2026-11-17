@@ -1,5 +1,5 @@
 import { createDemoStore } from './store';
-import { buildSeed } from '../data/seed';
+import { buildSeed, SEED_BASE_TIME } from '../data/seed';
 import { PERSIST_KEY } from './persist';
 
 function memoryStorage(initial: Record<string, string> = {}): Storage {
@@ -188,6 +188,10 @@ describe('notes', () => {
 });
 
 describe('persistence', () => {
+  // Fallback seeds are built relative to load time; pin the clock so they equal the default seed.
+  beforeEach(() => { vi.useFakeTimers({ toFake: ['Date'] }); vi.setSystemTime(SEED_BASE_TIME); });
+  afterEach(() => { vi.useRealTimers(); });
+
   it('loads seed when persisted state is invalid or version mismatches', () => {
     const seed = buildSeed();
     const stale = JSON.stringify({ version: 0, state: { ...seed, candidates: [{ id: 'stale' }] } });
@@ -229,7 +233,7 @@ describe('persistence', () => {
 
   it('persists under intalent-demo with version 1 and resetDemo restores seed', () => {
     const storage = memoryStorage();
-    const store = createDemoStore(storage);
+    const store = createDemoStore(storage, () => new Date(SEED_BASE_TIME).toISOString());
     store.getState().upsertCandidate({ name: 'A', email: 'a@example.com' }, ctx);
     const saved = JSON.parse(storage.getItem('intalent-demo')!);
     expect(saved.version).toBe(1);

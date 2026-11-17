@@ -49,13 +49,13 @@ export function persistOptions<T extends DemoState>(storage: Storage): PersistOp
     // Same-version payloads skip migrate, so shape-validate here; invalid -> seed.
     merge: (persisted, current) =>
       isValidState(persisted)
-        ? { ...current, ...persisted, ui: { ...buildSeed().ui, ...persisted.ui } }
-        : { ...current, ...buildSeed() },
+        ? { ...current, ...persisted, ui: { ...buildSeed(undefined, Date.now()).ui, ...persisted.ui } }
+        : { ...current, ...buildSeed(undefined, Date.now()) },
     name: PERSIST_KEY,
     version: PERSIST_VERSION,
     storage: createJSONStorage(() => storage),
     partialize: (s) => pickData(s),
     // Any version mismatch (including a missing/garbled payload) resets to seed.
-    migrate: () => buildSeed(),
+    migrate: () => buildSeed(undefined, Date.now()),
   };
 }

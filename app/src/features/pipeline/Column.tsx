@@ -23,7 +23,7 @@ export function Column({ stage, apps, candidates, job, onOpen, onMove }: Props) 
       ref={setNodeRef}
       data-testid={`column-${stage}`}
       aria-label={stageLabel(stage, lang)}
-      className={`w-72 shrink-0 flex flex-col rounded-2xl border p-3 transition-colors ${isOver ? 'border-primary/50 bg-orange-50/60 dark:bg-white/5' : 'border-gray-100 dark:border-white/10 bg-[#f8f6f6] dark:bg-[#1a1a1a]'}`}
+      className={`flex-1 min-w-[160px] flex flex-col rounded-2xl border p-3 transition-colors ${isOver ? 'border-primary/50 bg-orange-50/60 dark:bg-white/5' : 'border-gray-100 dark:border-white/10 bg-[#f8f6f6] dark:bg-[#1a1a1a]'}`}
     >
       <header className="flex items-center justify-between px-1 pb-3">
         <span className="flex items-center gap-2 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">

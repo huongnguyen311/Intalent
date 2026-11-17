@@ -24,7 +24,8 @@ export function createDemoStore(
   now: () => string = () => new Date().toISOString(),
   opts: { fixture?: boolean } = {},
 ) {
-  const initial = opts.fixture ? buildMockupFixture : buildSeed;
+  // Seed timestamps are relative to load time (store creation / resetDemo) so SLA badges look the same on any day.
+  const initial = opts.fixture ? buildMockupFixture : () => buildSeed(undefined, Date.parse(now()));
   const env: Env = { now, id: (prefix) => `${prefix}-${crypto.randomUUID()}` };
   const creator: StateCreator<DemoStore> = (set, get) => ({
     ...initial(),

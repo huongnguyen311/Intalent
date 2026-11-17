@@ -35,13 +35,13 @@ export function CardBody({ app, candidate, job, menu }: BodyProps) {
   const avg = averageRating(app);
   return (
     <>
-      <div className="flex items-start gap-3">
+      <div className="flex items-start justify-between gap-2">
         <Avatar name={name} tone={toneFor(name)} />
-        <div className="flex-1 min-w-0">
-          <div className="font-bold text-sm text-slate-800 dark:text-white truncate">{name}</div>
-          <div className="text-xs text-[#896a61] truncate">{candidate?.title}</div>
-        </div>
         {menu}
+      </div>
+      <div className="min-w-0">
+        <div className="font-bold text-sm text-slate-800 dark:text-white break-words leading-snug">{name}</div>
+        <div className="text-xs text-[#896a61] truncate" title={candidate?.title}>{candidate?.title}</div>
       </div>
       <div className="flex items-center gap-2 flex-wrap">
         <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-[#f4f1f0] dark:bg-[#2a2423] text-slate-600 dark:text-[#e6dddb]">{app.source}</span>

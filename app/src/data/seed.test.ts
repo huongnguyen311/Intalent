@@ -1,4 +1,5 @@
-import { buildSeed, mulberry32 } from './seed';
+import { buildSeed, mulberry32, SEED_BASE_TIME } from './seed';
+import { isOverSla } from '../domain/pipeline';
 import { buildMockupFixture, isFixtureMode } from './fixtureMockup';
 import { normalizeEmail, normalizePhone } from '../domain/normalize';
 import { STAGES } from '../domain/stages';
@@ -65,6 +66,26 @@ describe('seed', () => {
   it('seed is deterministic', () => {
     expect(buildSeed()).toEqual(buildSeed());
     expect(buildSeed(mulberry32(1))).not.toEqual(buildSeed(mulberry32(2)));
+  });
+
+  it('most active applications are within their stage SLA at seed time', () => {
+    for (const base of [SEED_BASE_TIME, Date.parse('2027-03-01T08:00:00.000Z')]) {
+      const s = buildSeed(undefined, base);
+      const jobs = new Map(s.jobs.map((j) => [j.id, j]));
+      const active = s.applications.filter((a) => a.stage !== 'hired' && a.stage !== 'rejected');
+      const over = active.filter((a) => isOverSla(a, jobs.get(a.jobId)!, base));
+      expect(over.length).toBeGreaterThan(0);
+      expect(over.length / active.length).toBeLessThan(0.3);
+    }
+  });
+
+  it('timestamps are relative to the reference time', () => {
+    const base = Date.parse('2027-03-01T08:00:00.000Z');
+    const shift = base - SEED_BASE_TIME;
+    const a = buildSeed(undefined, SEED_BASE_TIME).applications[0];
+    const b = buildSeed(undefined, base).applications[0];
+    expect(Date.parse(b.stageEnteredAt) - Date.parse(a.stageEnteredAt)).toBe(shift);
+    expect(Date.parse(b.stageEnteredAt)).toBeLessThanOrEqual(base);
   });
 
   it('seed uses only fictional email domains', () => {
