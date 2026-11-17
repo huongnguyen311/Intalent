@@ -1,10 +1,11 @@
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
 import { AppLayout } from '../../components/AppLayout';
-import { MenuItem, Popover } from '../../components/Popover';
+import { useMemo, useState } from 'react';
+import { pipelineSummary } from '../../domain/pipelineFilter';
 import { useT } from '../../i18n/i18n';
 import { useStore } from '../../store/store';
-import { AddFromPoolButton } from './AddFromPoolModal';
 import { Board } from './Board';
+import { PipelineHeader, type PipelineQuery, type PipelineView } from './PipelineHeader';
 
 /** `/pipeline/:jobId`; bare `/pipeline` redirects to the first open job. */
 export function PipelinePage() {
@@ -13,41 +14,37 @@ export function PipelinePage() {
   const { jobId } = useParams();
   const jobs = useStore((s) => s.jobs);
   const openJobs = jobs.filter((j) => j.status === 'open');
+  const applications = useStore((s) => s.applications);
   const job = jobs.find((j) => j.id === jobId);
+
+  const [query, setQuery] = useState<PipelineQuery>({ text: '', source: '' });
+  const [view, setView] = useState<PipelineView>('kanban');
+  const jobApps = useMemo(() => applications.filter((a) => a.jobId === jobId), [applications, jobId]);
+  const sources = useMemo(() => [...new Set(jobApps.map((a) => a.source))].sort(), [jobApps]);
+  const summary = useMemo(() => (job ? pipelineSummary(jobApps, job, Date.now()) : { total: 0, overdue: 0, daysOpen: 0 }), [jobApps, job]);
 
   if (!jobId && openJobs[0]) return <Navigate to={`/pipeline/${openJobs[0].id}`} replace />;
 
   // A draft/closed job reached by link stays selectable so the switcher shows where you are.
   const switchable = job && job.status !== 'open' ? [job, ...openJobs] : openJobs;
-  const actions = job && (
-    <div className="flex items-center gap-3">
-      <Popover
-        align="right"
-        trigger={({ toggle }) => (
-          <button onClick={toggle} className="px-4 py-2.5 rounded-full bg-white dark:bg-[#2a2423] border border-[#e6dddb] dark:border-[#3a3433] text-sm font-bold text-slate-700 dark:text-white flex items-center gap-2 hover:border-primary/50 transition-colors shadow-sm max-w-[320px]">
-            <span aria-hidden="true" className="material-symbols-outlined text-[20px] text-[#896a61]">work</span>
-            <span className="truncate">{t('pipeline.job', { title: job.title })}</span>
-            <span aria-hidden="true" className="material-symbols-outlined text-[18px]">expand_more</span>
-          </button>
-        )}
-      >
-        {(close) =>
-          switchable.map((j) => (
-            <MenuItem key={j.id} active={j.id === job.id} onClick={() => { close(); navigate(`/pipeline/${j.id}`); }}>
-              {j.title}
-            </MenuItem>
-          ))
-        }
-      </Popover>
-      <AddFromPoolButton jobId={job.id} />
-    </div>
-  );
-
   return (
-    <AppLayout title={t('nav.pipeline')} subtitle={t('pipeline.subtitle')} actions={actions}>
-      <div className="p-6 max-w-[1600px] mx-auto min-h-full">
+    <AppLayout title={t('nav.pipeline')} subtitle={t('pipeline.subtitle')}>
+      <div className="p-4 max-w-[1600px] mx-auto min-h-full">
         {job ? (
-          <Board key={job.id} job={job} />
+          <>
+            <PipelineHeader
+              job={job}
+              switchable={switchable}
+              onSwitch={(id) => navigate(`/pipeline/${id}`)}
+              summary={summary}
+              sources={sources}
+              query={query}
+              onQuery={setQuery}
+              view={view}
+              onView={setView}
+            />
+            <Board key={job.id} job={job} filter={query} />
+          </>
         ) : (
           <p className="text-[#896a61]">{t(jobId ? 'pipeline.notFound' : 'pipeline.noOpenJobs')}</p>
         )}

@@ -56,6 +56,25 @@ describe('PipelinePage', () => {
     expect(saved.ratings?.find((r) => r.by === 'u-admin')?.stars).toBe(4);
   });
 
+  it('header shows summary and search narrows board', () => {
+    renderAt('/pipeline/job-1');
+    const total = useStore.getState().applications.filter((a) => a.jobId === 'job-1').length;
+    expect(screen.getByText(new RegExp(`^${total} candidates · [0-9]+ overdue · Open [0-9]+ days$`))).toBeInTheDocument();
+    const cards = () => screen.getAllByTestId(/^card-/);
+    expect(cards()).toHaveLength(total);
+    const { candidates, applications } = useStore.getState();
+    const first = candidates.find((c) => c.id === applications.find((a) => a.jobId === 'job-1')!.candidateId)!;
+    fireEvent.change(screen.getByRole('searchbox'), { target: { value: first.name } });
+    expect(cards().length).toBeLessThan(total);
+    expect(within(cards()[0]).getByText(first.name)).toBeInTheDocument();
+  });
+
+  it('view toggle switches state', () => {
+    renderAt('/pipeline/job-1');
+    fireEvent.click(screen.getByRole('button', { name: 'List view' }));
+    expect(screen.getByRole('button', { name: 'List view' })).toHaveAttribute('aria-pressed', 'true');
+  });
+
   it('unknown job shows not found', () => {
     renderAt('/pipeline/nope');
     expect(screen.getByText('Job not found')).toBeInTheDocument();

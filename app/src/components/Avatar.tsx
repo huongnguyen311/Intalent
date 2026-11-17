@@ -25,9 +25,9 @@ export function toneFor(name: string): AvatarTone {
   return TONE_NAMES[h % TONE_NAMES.length];
 }
 
-export function Avatar({ name, tone = 'purple' }: { name: string; tone?: AvatarTone }) {
+export function Avatar({ name, tone = 'purple', small }: { name: string; tone?: AvatarTone; small?: boolean }) {
   return (
-    <div className={`size-10 rounded-full flex items-center justify-center font-bold text-sm ${TONES[tone]}`}>
+    <div className={`${small ? 'size-7 text-[11px]' : 'size-10 text-sm'} shrink-0 rounded-full flex items-center justify-center font-bold ${TONES[tone]}`}>
       {initials(name)}
     </div>
   );

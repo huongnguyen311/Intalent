@@ -12,6 +12,7 @@ import {
 } from '@dnd-kit/core';
 import { useMemo, useState } from 'react';
 import { toast } from '../../components/Toast';
+import { filterApplications } from '../../domain/pipelineFilter';
 import { STAGES, stageLabel } from '../../domain/stages';
 import type { Job, Stage } from '../../domain/types';
 import { CURRENT_USER_ID } from '../../domain/users';
@@ -53,7 +54,7 @@ const columnKeyboardCoordinates: KeyboardCoordinateGetter = (event, { active, co
 const KEYBOARD_CODES = { start: ['Space'], cancel: ['Escape'], end: ['Space', 'Enter'] };
 
 /** Per-job Kanban: drag (pointer or keyboard) or "Move to…" between stages; Rejected asks for a reason first. */
-export function Board({ job }: { job: Job }) {
+export function Board({ job, filter }: { job: Job; filter?: { text?: string; source?: string } }) {
   const t = useT();
   const [lang] = useLang();
   const allApps = useStore((s) => s.applications);
@@ -62,9 +63,13 @@ export function Board({ job }: { job: Job }) {
   const [rejectingId, setRejectingId] = useState<string | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
 
-  const apps = useMemo(
+  const jobApps = useMemo(
     () => allApps.filter((a) => a.jobId === job.id).sort((a, b) => a.stageEnteredAt.localeCompare(b.stageEnteredAt)),
     [allApps, job.id],
+  );
+  const apps = useMemo(
+    () => filterApplications(jobApps, allCandidates, { text: filter?.text, source: filter?.source }),
+    [jobApps, allCandidates, filter?.text, filter?.source],
   );
   const candidates = useMemo(() => new Map(allCandidates.map((c) => [c.id, c])), [allCandidates]);
   const nameOf = (appId: UniqueIdentifier) => {
@@ -107,7 +112,7 @@ export function Board({ job }: { job: Job }) {
       t('pipeline.a11y.cancelled', { name: nameOf(active.id), stage: stageName(apps.find((a) => a.id === active.id)?.stage) }),
   };
 
-  if (apps.length === 0) {
+  if (jobApps.length === 0) {
     return (
       <div className="bg-white dark:bg-[#1e1e1e] rounded-2xl border border-gray-100 dark:border-white/10 shadow-sm p-12 flex flex-col items-center text-center gap-3">
         <span className="size-14 rounded-full bg-orange-50 text-[#F97316] flex items-center justify-center">

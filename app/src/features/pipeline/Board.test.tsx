@@ -88,20 +88,25 @@ describe('Board', () => {
     expect(within(screen.getByTestId('column-rejected')).getByText(names[0])).toBeInTheDocument();
   });
 
-  it('days in stage turns red after SLA', () => {
+  it('card shows one source label and no duplicate talent pool chip', () => {
     renderBoard();
-    const late = within(card(names[0])).getByText('4d in stage');
-    const fresh = within(card(names[1])).getByText('1d in stage');
-    expect(late).toHaveClass('text-red-500');
-    expect(fresh).not.toHaveClass('text-red-500');
-  });
-
-  it('cards show the Talent Pool marker and columns show counts', () => {
-    renderBoard();
-    expect(within(card(names[1])).getByText('From Talent Pool')).toBeInTheDocument();
-    expect(within(card(names[0])).queryByText('From Talent Pool')).not.toBeInTheDocument();
+    const c = within(card(names[1]));
+    expect(c.getAllByText('Talent Pool')).toHaveLength(1);
+    expect(c.queryByText('From Talent Pool')).not.toBeInTheDocument();
+    expect(c.getByText('1d')).toBeInTheDocument();
     expect(within(screen.getByTestId('column-screening')).getByTestId('column-count')).toHaveTextContent('2');
     expect(within(screen.getByTestId('column-new')).getByTestId('column-count')).toHaveTextContent('1');
+  });
+
+  it('overdue card has red left border and warning', () => {
+    renderBoard();
+    const late = card(names[0]);
+    expect(late).toHaveClass('border-l-4', 'border-l-red-500');
+    expect(within(late).getByText(/4d/)).toHaveTextContent('⚠');
+    expect(within(late).getByText(/4d/)).not.toHaveClass('text-red-500');
+    const fresh = card(names[1]);
+    expect(fresh).not.toHaveClass('border-l-red-500');
+    expect(within(fresh).queryByText(/⚠/)).not.toBeInTheDocument();
   });
 
   it('renders empty state for a job with no applications', () => {

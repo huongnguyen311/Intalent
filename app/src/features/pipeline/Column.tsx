@@ -23,9 +23,9 @@ export function Column({ stage, apps, candidates, job, onOpen, onMove }: Props) 
       ref={setNodeRef}
       data-testid={`column-${stage}`}
       aria-label={stageLabel(stage, lang)}
-      className={`flex-1 min-w-[160px] flex flex-col rounded-2xl border p-3 transition-colors ${isOver ? 'border-primary/50 bg-orange-50/60 dark:bg-white/5' : 'border-gray-100 dark:border-white/10 bg-[#f8f6f6] dark:bg-[#1a1a1a]'}`}
+      className={`flex-1 min-w-[160px] flex flex-col rounded-2xl border p-2 transition-colors ${isOver ? 'border-primary/50 bg-orange-50/60 dark:bg-white/5' : 'border-gray-100 dark:border-white/10 bg-[#f8f6f6] dark:bg-[#1a1a1a]'}`}
     >
-      <header className="flex items-center justify-between px-1 pb-3">
+      <header className="flex items-center justify-between px-1 pb-2">
         <span className="flex items-center gap-2 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
           <span className="size-2 rounded-full" style={{ background: STAGE_COLOR[stage] }}></span>
           {stageLabel(stage, lang)}
@@ -34,7 +34,7 @@ export function Column({ stage, apps, candidates, job, onOpen, onMove }: Props) 
           {apps.length}
         </span>
       </header>
-      <div className="flex-1 flex flex-col gap-3 min-h-[120px]">
+      <div className="flex-1 flex flex-col gap-1.5 min-h-[80px]">
         {apps.map((a) => (
           <CandidateCard
             key={a.id}
@@ -46,7 +46,7 @@ export function Column({ stage, apps, candidates, job, onOpen, onMove }: Props) 
           />
         ))}
         {apps.length === 0 && (
-          <div className="flex-1 rounded-xl border-2 border-dashed border-[#e6dddb] dark:border-[#3a3433] flex items-center justify-center text-xs text-gray-400 py-8">
+          <div className="flex-1 rounded-xl border-2 border-dashed border-[#e6dddb] dark:border-[#3a3433] flex items-center justify-center text-xs text-gray-400 py-4">
             {t('pipeline.dropHere')}
           </div>
         )}

@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { Avatar, toneFor } from '../../components/Avatar';
 import { MenuItem, Popover } from '../../components/Popover';
 import { averageRating, daysInStage, isOverSla } from '../../domain/pipeline';
+import { SOURCE_CAREERS, SOURCE_CV_UPLOAD, SOURCE_MANUAL, SOURCE_REFERRAL, SOURCE_TALENT_POOL, SOURCE_ULTRA_UPLOAD } from '../../domain/sources';
 import { STAGES, stageLabel } from '../../domain/stages';
 import type { Application, Candidate, Job, Stage } from '../../domain/types';
 import { useLang, useT } from '../../i18n/i18n';
@@ -25,9 +26,27 @@ export function MoveToMenu({ current, onMove, button }: MoveProps) {
 
 type BodyProps = { app: Application; candidate?: Candidate; job: Job; menu?: ReactNode };
 
-const CARD = 'bg-white dark:bg-[#1e1e1e] rounded-2xl border border-gray-100 dark:border-white/10 shadow-sm p-4 space-y-3';
+const CARD = 'bg-white dark:bg-[#1e1e1e] rounded-xl border border-gray-100 dark:border-white/10 shadow-sm px-2.5 py-2 space-y-1';
 
-/** Card content; also rendered on its own inside the DragOverlay. */
+const SOURCE_DOT: Record<string, string> = {
+  [SOURCE_CAREERS]: '#10b981',
+  [SOURCE_CV_UPLOAD]: '#3b82f6',
+  [SOURCE_ULTRA_UPLOAD]: '#6366f1',
+  [SOURCE_TALENT_POOL]: '#F97316',
+  [SOURCE_MANUAL]: '#94a3b8',
+  [SOURCE_REFERRAL]: '#a855f7',
+  Facebook: '#1877f2',
+  LinkedIn: '#0a66c2',
+  'Facebook Groups': '#4267b2',
+  VietnamWorks: '#f59e0b',
+  TopCV: '#14b8a6',
+};
+const sourceDot = (source: string) => SOURCE_DOT[source] ?? '#94a3b8';
+
+/** An over-SLA card gets this accent; the text stays neutral. */
+const lateBorder = (late: boolean) => (late ? ' border-l-4 border-l-red-500' : '');
+
+/** Card content (3 lines); also rendered on its own inside the DragOverlay. */
 export function CardBody({ app, candidate, job, menu }: BodyProps) {
   const t = useT();
   const name = candidate?.name ?? app.candidateId;
@@ -35,32 +54,26 @@ export function CardBody({ app, candidate, job, menu }: BodyProps) {
   const avg = averageRating(app);
   return (
     <>
-      <div className="flex items-start justify-between gap-2">
-        <Avatar name={name} tone={toneFor(name)} />
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <Avatar name={name} tone={toneFor(name)} small />
+          <span className="font-bold text-sm text-slate-800 dark:text-white truncate" title={name}>{name}</span>
+        </div>
         {menu}
       </div>
-      <div className="min-w-0">
-        <div className="font-bold text-sm text-slate-800 dark:text-white break-words leading-snug">{name}</div>
-        <div className="text-xs text-[#896a61] truncate" title={candidate?.title}>{candidate?.title}</div>
-      </div>
-      <div className="flex items-center gap-2 flex-wrap">
-        <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-[#f4f1f0] dark:bg-[#2a2423] text-slate-600 dark:text-[#e6dddb]">{app.source}</span>
-        {app.via === 'talent_pool' && (
-          <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-orange-50 text-[#F97316] flex items-center gap-1">
-            <span className="material-symbols-outlined text-[12px]">diversity_3</span>{t('pipeline.fromPool')}
-          </span>
-        )}
-      </div>
-      <div className="flex items-center justify-between text-xs">
+      <div className="text-xs text-[#896a61] truncate" title={candidate?.title}>{candidate?.title}</div>
+      <div className="flex items-center gap-1.5 text-[11px] text-gray-400 min-w-0">
+        <span aria-hidden="true" className="size-1.5 rounded-full shrink-0" style={{ background: sourceDot(app.source) }}></span>
+        <span className="truncate">{app.source}</span>
         <span
           title={late ? t('pipeline.overSla', { n: job.stageSla[app.stage] ?? 0 }) : undefined}
-          className={`font-medium ${late ? 'text-red-500' : 'text-gray-400'}`}
+          className="font-medium shrink-0"
         >
-          {t('pipeline.daysInStage', { n: daysInStage(app) })}
+          {daysInStage(app)}d{late ? ' ⚠' : ''}
         </span>
         {avg !== undefined && (
-          <span aria-label={t('pipeline.avgRating', { n: avg })} className="flex items-center gap-0.5 font-bold text-slate-600 dark:text-gray-300">
-            <span className="material-symbols-outlined text-[14px] text-amber-400" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
+          <span aria-label={t('pipeline.avgRating', { n: avg })} className="ml-auto flex items-center gap-0.5 font-bold text-slate-600 dark:text-gray-300 shrink-0">
+            <span className="material-symbols-outlined text-[12px] text-amber-400" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
             {avg}
           </span>
         )}
@@ -71,7 +84,7 @@ export function CardBody({ app, candidate, job, menu }: BodyProps) {
 
 export function OverlayCard(props: Omit<BodyProps, 'menu'>) {
   return (
-    <div className={`${CARD} shadow-lg rotate-1 cursor-grabbing`}>
+    <div className={`${CARD}${lateBorder(isOverSla(props.app, props.job))} shadow-lg rotate-1 cursor-grabbing`}>
       <CardBody {...props} />
     </div>
   );
@@ -95,8 +108,8 @@ export function CandidateCard({ app, candidate, job, onOpen, onMove }: CardProps
         current={app.stage}
         onMove={onMove}
         button={(toggle) => (
-          <button aria-label={t('pipeline.moveTo')} onClick={toggle} className="size-7 rounded-full flex items-center justify-center text-[#896a61] hover:text-primary hover:bg-[#f8f6f6] dark:hover:bg-white/5">
-            <span className="material-symbols-outlined text-[18px]">more_vert</span>
+          <button aria-label={t('pipeline.moveTo')} onClick={toggle} className="size-6 shrink-0 rounded-full flex items-center justify-center text-[#896a61] hover:text-primary hover:bg-[#f8f6f6] dark:hover:bg-white/5">
+            <span className="material-symbols-outlined text-[16px]">more_vert</span>
           </button>
         )}
       />
@@ -113,7 +126,7 @@ export function CandidateCard({ app, candidate, job, onOpen, onMove }: CardProps
         if (e.key === 'Enter' && e.target === e.currentTarget) onOpen();
         listeners?.onKeyDown?.(e);
       }}
-      className={`${CARD} cursor-grab select-none hover:border-primary/40 transition-colors focus:outline-none focus:ring-2 focus:ring-primary/40 ${isDragging ? 'opacity-40' : ''}`}
+      className={`${CARD}${lateBorder(isOverSla(app, job))} cursor-grab select-none hover:border-primary/40 transition-colors focus:outline-none focus:ring-2 focus:ring-primary/40 ${isDragging ? 'opacity-40' : ''}`}
     >
       <CardBody app={app} candidate={candidate} job={job} menu={menu} />
     </div>
