@@ -49,6 +49,10 @@ export interface DemoActions {
     ctx: { via: Via; source: string; campaignId?: string; by: string },
   ): { ok: true; application: Application } | { ok: false; reason: 'duplicate'; stage: Stage };
   moveStage(appId: string, to: Stage, by: string, reason?: string): boolean;
+  /** Refuses blank text and unknown applications. */
+  addComment(appId: string, text: string, by: string): boolean;
+  /** Integer 1-5; a reviewer rating again replaces their earlier score. */
+  rateApplication(appId: string, by: string, stars: number): boolean;
   addNote(input: NoteInput, by: string): Note;
   convertNote(noteId: string, by: string): { candidate: Candidate; created: boolean };
   createJd(input: JdInput): Jd;

@@ -1,44 +1,13 @@
 import { Link } from 'react-router-dom';
 import { Chip } from '../../components/Chip';
-import { STAGES, stageLabel } from '../../domain/stages';
+import { stageLabel } from '../../domain/stages';
 import type { Application, Campaign, Job, Jd } from '../../domain/types';
 import { useLang, useT } from '../../i18n/i18n';
-import { stageCounts } from '../../store/selectors';
 import { useStore } from '../../store/store';
 import { fullDate } from '../jds/format';
-import { STAGE_COLOR } from './JobBits';
 
-const CARD = 'bg-white dark:bg-[#1e1e1e] p-8 rounded-[2rem] border border-gray-100 dark:border-white/10 shadow-sm';
 const TH = 'px-6 py-4 text-xs font-bold text-[#896a61] uppercase tracking-wider border-b border-[#e6dddb] dark:border-[#2a2423]';
 const TD = 'px-6 py-4 whitespace-nowrap text-sm text-slate-600 dark:text-gray-400';
-
-/** Interim summary; the embedded Kanban board replaces it in the Pipeline task. */
-export function PipelineTab({ job }: { job: Job }) {
-  const t = useT();
-  const [lang] = useLang();
-  const applications = useStore((s) => s.applications);
-  const counts = stageCounts(applications, job.id);
-  return (
-    <div className={CARD}>
-      <div className="flex items-center justify-between mb-6">
-        <h3 className="font-bold text-lg text-slate-800 dark:text-white">{t('jobs.pipeline.summary')}</h3>
-        <Link to={`/pipeline/${job.id}`} className="px-6 py-2.5 bg-[#F97316] hover:bg-[#EA580C] text-white rounded-full font-bold shadow-lg shadow-orange-500/20 flex items-center gap-2 transition-all text-sm">
-          {t('jobs.pipeline.open')} <span className="material-symbols-outlined text-[20px]">arrow_forward</span>
-        </Link>
-      </div>
-      <div className="grid grid-cols-6 gap-4">
-        {STAGES.map((s) => (
-          <div key={s} className="rounded-2xl border border-gray-100 dark:border-white/10 p-4">
-            <div className="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase tracking-wider">
-              <span className="size-2 rounded-full" style={{ background: STAGE_COLOR[s] }}></span>{stageLabel(s, lang)}
-            </div>
-            <div className="text-3xl font-bold text-slate-800 dark:text-white mt-2">{counts[s]}</div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
 
 export function CandidatesTab({ job }: { job: Job }) {
   const t = useT();

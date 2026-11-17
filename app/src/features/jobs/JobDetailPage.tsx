@@ -8,7 +8,8 @@ import { useStore } from '../../store/store';
 import { fullDate } from '../jds/format';
 import { JobStatusBadge } from './JobBits';
 import { JobDrawer } from './JobDrawer';
-import { CampaignsTab, CandidatesTab, CareersPreviewTab, PipelineTab } from './JobTabs';
+import { Board } from '../pipeline/Board';
+import { CampaignsTab, CandidatesTab, CareersPreviewTab } from './JobTabs';
 
 const SECONDARY =
   'px-5 py-2.5 bg-white dark:bg-[#2a2423] border border-[#e6dddb] dark:border-[#3a3433] text-slate-700 dark:text-white text-sm font-bold rounded-full shadow-sm hover:border-primary/50 transition-colors flex items-center gap-2';
@@ -90,7 +91,7 @@ export function JobDetailPage() {
             ))}
           </div>
 
-          {tab === 'pipeline' && <PipelineTab job={job} />}
+          {tab === 'pipeline' && <Board job={job} />}
           {tab === 'candidates' && <CandidatesTab job={job} />}
           {tab === 'campaigns' && <CampaignsTab job={job} />}
           {tab === 'careers' && <CareersPreviewTab job={job} jd={jd} />}

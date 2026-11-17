@@ -11,6 +11,7 @@ import { JdDetailPage } from './features/jds/JdDetailPage';
 import { JdListPage } from './features/jds/JdListPage';
 import { JdMatchingPage } from './features/matching/JdMatchingPage';
 import { NotesPage } from './features/notes/NotesPage';
+import { PipelinePage } from './features/pipeline/PipelinePage';
 import { SystemConfigPage } from './features/system-config/SystemConfigPage';
 import { TaContributionPage } from './features/ta-contribution/TaContributionPage';
 import { TaxonomyPage } from './features/taxonomy/TaxonomyPage';
@@ -74,7 +75,9 @@ export function AppRoutes() {
       <Route path="/ta-contribution" element={<TaContributionPage />} />
       <Route path="/jobs" element={<JobsPage />} />
       <Route path="/jobs/:id" element={<JobDetailPage />} />
-      {INTERNAL.filter(({ path }) => !['/', '/candidates', '/candidates/:id', '/notes', '/upload', '/upload-ultra', '/assistant', '/jds', '/jds/:id', '/jd-matching', '/taxonomy', '/system-config', '/users', '/ta-contribution', '/jobs', '/jobs/:id'].includes(path)).map(({ path, title }) => (
+      <Route path="/pipeline" element={<PipelinePage />} />
+      <Route path="/pipeline/:jobId" element={<PipelinePage />} />
+      {INTERNAL.filter(({ path }) => !['/', '/candidates', '/candidates/:id', '/notes', '/upload', '/upload-ultra', '/assistant', '/jds', '/jds/:id', '/jd-matching', '/taxonomy', '/system-config', '/users', '/ta-contribution', '/jobs', '/jobs/:id', '/pipeline', '/pipeline/:jobId'].includes(path)).map(({ path, title }) => (
         <Route
           key={path}
           path={path}

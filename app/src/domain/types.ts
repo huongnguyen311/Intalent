@@ -60,6 +60,13 @@ export interface ApplicationComment {
   text: string;
 }
 
+/** One reviewer's score; each user keeps at most one rating per application. */
+export interface ApplicationRating {
+  by: string;
+  stars: number;
+  at: string;
+}
+
 export interface Application {
   id: string;
   candidateId: string;
@@ -72,7 +79,7 @@ export interface Application {
   addedAt: string;
   stageEnteredAt: string;
   history: StageHistoryEntry[];
-  rating?: number;
+  ratings?: ApplicationRating[];
   comments: ApplicationComment[];
   rejectedReason?: string;
 }

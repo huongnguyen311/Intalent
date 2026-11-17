@@ -126,9 +126,12 @@ describe('JobDetailPage', () => {
     expect(screen.getByTestId('careers-preview')).toHaveTextContent('Senior Frontend Developer');
   });
 
-  it('pipeline tab links to the pipeline board', () => {
+  it('pipeline tab embeds the Kanban board', () => {
     renderAt('/jobs/job-1');
-    expect(screen.getByRole('link', { name: /Open pipeline/ })).toHaveAttribute('href', '/pipeline/job-1');
+    const inJob = useStore.getState().applications.filter((a) => a.jobId === 'job-1');
+    const column = screen.getByTestId('column-new');
+    expect(within(column).getByTestId('column-count')).toHaveTextContent(String(inJob.filter((a) => a.stage === 'new').length));
+    expect(screen.getAllByTestId(/^card-/)).toHaveLength(inJob.length);
   });
 
   it('closing a job from the header updates its status', () => {

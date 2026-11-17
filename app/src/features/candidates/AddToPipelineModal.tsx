@@ -5,11 +5,15 @@ import type { Stage } from '../../domain/types';
 import { CURRENT_USER_ID } from '../../domain/users';
 import { useLang, useT } from '../../i18n/i18n';
 import { useStore } from '../../store/store';
+import { PoolSearch } from './PoolSearch';
 
 type Props = {
   open: boolean;
   onClose: () => void;
-  candidateIds: string[];
+  /** Fixed people to add; omit for search mode (multi-select from the Talent Pool). */
+  candidateIds?: string[];
+  /** Fixed target job (e.g. from its Pipeline); omit to pick an open job. */
+  jobId?: string;
 };
 
 type Result = { ok: true } | { ok: false; stage: Stage };
@@ -23,22 +27,27 @@ const BTN_GHOST =
   'px-4 py-2 text-sm font-medium border border-[#e6dddb] dark:border-[#3a3433] text-[#181211] dark:text-white rounded-lg hover:border-primary/50 transition-colors';
 
 /** Adds Talent Pool candidates to one open job's pipeline and reports the outcome per candidate. */
-export function AddToPipelineModal({ open, onClose, candidateIds }: Props) {
+export function AddToPipelineModal({ open, onClose, candidateIds: fixedIds, jobId: fixedJobId }: Props) {
   const t = useT();
   const [lang] = useLang();
   const jobs = useStore((s) => s.jobs);
   const candidates = useStore((s) => s.candidates);
-  const [jobId, setJobId] = useState('');
+  const [pickedJobId, setJobId] = useState('');
+  const [picked, setPicked] = useState<string[]>([]);
   const [source, setSource] = useState(DEFAULT_SOURCE);
   const [results, setResults] = useState<Record<string, Result> | null>(null);
 
   useEffect(() => {
     if (!open) return;
     setJobId('');
+    setPicked([]);
     setSource(DEFAULT_SOURCE);
     setResults(null);
   }, [open]);
 
+  const searchMode = fixedIds === undefined;
+  const candidateIds = fixedIds ?? picked;
+  const jobId = fixedJobId ?? pickedJobId;
   const openJobs = jobs.filter((j) => j.status === 'open');
   const people = candidateIds.map((id) => ({ id, name: candidates.find((c) => c.id === id)?.name ?? id }));
 
@@ -59,7 +68,7 @@ export function AddToPipelineModal({ open, onClose, candidateIds }: Props) {
   return (
     <Modal
       open={open}
-      title={t('atp.title')}
+      title={t(fixedJobId ? 'pipeline.addFromPool' : 'atp.title')}
       onClose={onClose}
       footer={
         results ? (
@@ -67,7 +76,7 @@ export function AddToPipelineModal({ open, onClose, candidateIds }: Props) {
         ) : (
           <>
             <button className={BTN_GHOST} onClick={onClose}>{t('common.cancel')}</button>
-            <button className={BTN_PRIMARY} disabled={!jobId} onClick={confirm}>{t('atp.confirm')}</button>
+            <button className={BTN_PRIMARY} disabled={!jobId || candidateIds.length === 0} onClick={confirm}>{t('atp.confirm')}</button>
           </>
         )
       }
@@ -75,36 +84,41 @@ export function AddToPipelineModal({ open, onClose, candidateIds }: Props) {
       <div className="flex flex-col gap-4">
         {!results && (
           <>
-            <div className="flex flex-col gap-1">
-              <label htmlFor="atp-job" className="text-xs font-semibold text-[#896a61]">{t('atp.job')}</label>
-              <select id="atp-job" className={FIELD} value={jobId} onChange={(e) => setJobId(e.target.value)}>
-                <option value="">{t('atp.selectJob')}</option>
-                {openJobs.map((j) => (
-                  <option key={j.id} value={j.id}>{j.title}</option>
-                ))}
-              </select>
-            </div>
+            {!fixedJobId && (
+              <div className="flex flex-col gap-1">
+                <label htmlFor="atp-job" className="text-xs font-semibold text-[#896a61]">{t('atp.job')}</label>
+                <select id="atp-job" className={FIELD} value={jobId} onChange={(e) => setJobId(e.target.value)}>
+                  <option value="">{t('atp.selectJob')}</option>
+                  {openJobs.map((j) => (
+                    <option key={j.id} value={j.id}>{j.title}</option>
+                  ))}
+                </select>
+              </div>
+            )}
             <div className="flex flex-col gap-1">
               <label htmlFor="atp-source" className="text-xs font-semibold text-[#896a61]">{t('atp.source')}</label>
               <input id="atp-source" className={FIELD} value={source} onChange={(e) => setSource(e.target.value)} />
             </div>
+            {searchMode && <PoolSearch jobId={jobId} selected={picked} onChange={setPicked} />}
           </>
         )}
-        <ul className="flex flex-col gap-2">
-          {people.map((p) => {
-            const r = results?.[p.id];
-            return (
-              <li key={p.id} className="flex items-center justify-between gap-3">
-                <span className="font-medium">{p.name}</span>
-                {r && (
-                  <span className={`text-xs font-medium ${r.ok ? 'text-green-700 dark:text-green-300' : 'text-amber-700 dark:text-amber-300'}`}>
-                    {r.ok ? t('atp.added') : t('intake.toast.alreadyInJob', { stage: stageLabel(r.stage, lang) })}
-                  </span>
-                )}
-              </li>
-            );
-          })}
-        </ul>
+        {(!searchMode || results) && (
+          <ul className="flex flex-col gap-2">
+            {people.map((p) => {
+              const r = results?.[p.id];
+              return (
+                <li key={p.id} className="flex items-center justify-between gap-3">
+                  <span className="font-medium">{p.name}</span>
+                  {r && (
+                    <span className={`text-xs font-medium ${r.ok ? 'text-green-700 dark:text-green-300' : 'text-amber-700 dark:text-amber-300'}`}>
+                      {r.ok ? t('atp.added') : t('intake.toast.alreadyInJob', { stage: stageLabel(r.stage, lang) })}
+                    </span>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        )}
       </div>
     </Modal>
   );

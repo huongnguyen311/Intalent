@@ -62,4 +62,29 @@ describe('AddToPipelineModal', () => {
     render(<AddToPipelineModal open onClose={() => {}} candidateIds={ids} />);
     expect(screen.getByRole('button', { name: 'Add to pipeline' })).toBeDisabled();
   });
+
+  it('search mode multi-selects from the Talent Pool into a fixed job', () => {
+    const { candidates } = useStore.getState();
+    useStore.getState().addToPipeline(candidates[2].id, jobId, { via: 'manual', source: 'Manual', by: 'u-admin' });
+    render(<AddToPipelineModal open onClose={() => {}} jobId={jobId} />);
+    expect(screen.getByRole('dialog', { name: 'Add from Talent Pool' })).toBeInTheDocument();
+    expect(screen.queryByLabelText('Job')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Add to pipeline' })).toBeDisabled();
+
+    const search = screen.getByLabelText('Search Talent Pool by name, title or email...');
+    fireEvent.change(search, { target: { value: candidates[2].name } });
+    expect(screen.getByRole('checkbox', { name: new RegExp(candidates[2].name) })).toBeDisabled();
+    expect(screen.getByText('In pipeline (New)')).toBeInTheDocument();
+
+    for (const c of candidates.slice(0, 2)) {
+      fireEvent.change(search, { target: { value: c.name } });
+      fireEvent.click(screen.getByRole('checkbox', { name: new RegExp(c.name) }));
+    }
+    expect(screen.getByText('2 selected')).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Source'), { target: { value: 'Referral' } });
+    confirm();
+    const added = useStore.getState().applications.filter((a) => a.source === 'Referral');
+    expect(added.map((a) => a.candidateId).sort()).toEqual([candidates[0].id, candidates[1].id].sort());
+    for (const a of added) expect(a).toMatchObject({ jobId, stage: 'new', via: 'talent_pool' });
+  });
 });

@@ -1,5 +1,5 @@
 import type {
-  Activity, Application, ApplicationComment, Campaign, Candidate, DemoState, Job, Jd, Note,
+  Activity, Application, ApplicationComment, ApplicationRating, Campaign, Candidate, DemoState, Job, Jd, Note,
   Prompt, Stage, StageHistoryEntry, TaxonomyItem, User, Via,
 } from '../domain/types';
 import { STAGES } from '../domain/stages';
@@ -299,12 +299,15 @@ function buildApplications(rng: Rng, candidates: Candidate[], jobs: Job[], campa
     const id = `app-${String(i + 1).padStart(3, '0')}`;
     const comments: ApplicationComment[] =
       stage === 'new' ? [] : [{ by: pick(rng, STAFF), at: last.at, text: pick(rng, COMMENTS) }];
+    // Same rng draw as before; the commenting teammate is also the rater.
+    const ratings: ApplicationRating[] =
+      stage === 'new' ? [] : [{ by: comments[0].by, stars: int(rng, 2, 5), at: last.at }];
 
     apps.push({
       id, candidateId: cand.id, jobId: job.id, stage, source, via,
       ...(campaign ? { campaignId: campaign.id } : {}),
       addedBy, addedAt, stageEnteredAt: last.at, history,
-      ...(stage === 'new' ? {} : { rating: int(rng, 2, 5) }),
+      ratings,
       comments,
       ...(stage === 'rejected' ? { rejectedReason: pick(rng, REJECT_REASONS) } : {}),
     });
