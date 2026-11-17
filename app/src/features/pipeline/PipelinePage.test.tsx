@@ -69,6 +69,26 @@ describe('PipelinePage', () => {
     expect(within(cards()[0]).getByText(first.name)).toBeInTheDocument();
   });
 
+  it('source select narrows the board', () => {
+    renderAt('/pipeline/job-1');
+    const apps = useStore.getState().applications.filter((a) => a.jobId === 'job-1');
+    const src = apps[0].source;
+    fireEvent.change(screen.getByLabelText('All sources'), { target: { value: src } });
+    expect(screen.getAllByTestId(/^card-/)).toHaveLength(apps.filter((a) => a.source === src).length);
+  });
+
+  it('filters reset when switching job', () => {
+    const st = useStore.getState();
+    const other = st.jobs.find((j) => j.status === 'open' && j.id !== 'job-1' && st.applications.some((a) => a.jobId === j.id))!;
+    const src = st.applications.find((a) => a.jobId === 'job-1')!.source;
+    renderAt('/pipeline/job-1');
+    fireEvent.change(screen.getByLabelText('All sources'), { target: { value: src } });
+    fireEvent.click(screen.getByRole('button', { name: /^Job: / }));
+    fireEvent.click(screen.getByRole('menuitem', { name: other.title }));
+    expect(screen.getByLabelText('All sources')).toHaveValue('');
+    expect(screen.getAllByTestId(/^card-/)).toHaveLength(st.applications.filter((a) => a.jobId === other.id).length);
+  });
+
   it('view toggle switches state', () => {
     renderAt('/pipeline/job-1');
     fireEvent.click(screen.getByRole('button', { name: 'List view' }));

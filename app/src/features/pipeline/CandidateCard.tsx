@@ -26,7 +26,7 @@ export function MoveToMenu({ current, onMove, button }: MoveProps) {
 
 type BodyProps = { app: Application; candidate?: Candidate; job: Job; menu?: ReactNode };
 
-const CARD = 'bg-white dark:bg-[#1e1e1e] rounded-xl border border-gray-100 dark:border-white/10 shadow-sm px-2.5 py-2 space-y-1';
+const CARD = 'relative group bg-white dark:bg-[#1e1e1e] rounded-xl border border-gray-100 dark:border-white/10 shadow-sm px-2.5 py-2 space-y-1';
 
 const SOURCE_DOT: Record<string, string> = {
   [SOURCE_CAREERS]: '#10b981',
@@ -54,13 +54,13 @@ export function CardBody({ app, candidate, job, menu }: BodyProps) {
   const avg = averageRating(app);
   return (
     <>
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2 min-w-0">
-          <Avatar name={name} tone={toneFor(name)} small />
-          <span className="font-bold text-sm text-slate-800 dark:text-white truncate" title={name}>{name}</span>
-        </div>
-        {menu}
+      <div className="flex items-start gap-2 min-w-0">
+        <Avatar name={name} tone={toneFor(name)} small />
+        <span className="font-bold text-sm text-slate-800 dark:text-white break-words leading-tight min-w-0" title={name}>{name}</span>
       </div>
+      {menu && (
+        <div className="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100 bg-white dark:bg-[#1e1e1e] rounded-full">{menu}</div>
+      )}
       <div className="text-xs text-[#896a61] truncate" title={candidate?.title}>{candidate?.title}</div>
       <div className="flex items-center gap-1.5 text-[11px] text-gray-400 min-w-0">
         <span aria-hidden="true" className="size-1.5 rounded-full shrink-0" style={{ background: sourceDot(app.source) }}></span>

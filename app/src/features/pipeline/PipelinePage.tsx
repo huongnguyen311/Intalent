@@ -17,10 +17,13 @@ export function PipelinePage() {
   const applications = useStore((s) => s.applications);
   const job = jobs.find((j) => j.id === jobId);
 
-  const [query, setQuery] = useState<PipelineQuery>({ text: '', source: '' });
+  const [stored, setStored] = useState<PipelineQuery & { jobId?: string }>({ text: '', source: '' });
   const [view, setView] = useState<PipelineView>('kanban');
   const jobApps = useMemo(() => applications.filter((a) => a.jobId === jobId), [applications, jobId]);
   const sources = useMemo(() => [...new Set(jobApps.map((a) => a.source))].sort(), [jobApps]);
+  // Filters belong to one job: switching jobs starts clean, and a source this job doesn't have is ignored.
+  const query: PipelineQuery = stored.jobId === jobId ? { text: stored.text, source: sources.includes(stored.source) ? stored.source : '' } : { text: '', source: '' };
+  const setQuery = (q: PipelineQuery) => setStored({ ...q, jobId });
   const summary = useMemo(() => (job ? pipelineSummary(jobApps, job, Date.now()) : { total: 0, overdue: 0, daysOpen: 0 }), [jobApps, job]);
 
   if (!jobId && openJobs[0]) return <Navigate to={`/pipeline/${openJobs[0].id}`} replace />;
