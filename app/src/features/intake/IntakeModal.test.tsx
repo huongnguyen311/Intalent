@@ -50,8 +50,14 @@ describe('IntakeModal', () => {
     fireEvent.click(screen.getByRole('button', { name: /Add to Talent Pool/ }));
     type(/Full name/, 'Mai Le');
     type(/^Email/, 'MAI@example.com');
+    type(/^Title/, 'Designer');
     fireEvent.click(screen.getByRole('button', { name: 'Add candidate' }));
+    // Nothing is merged until HR confirms (PRD AC-11).
+    expect(screen.getByText(/already belongs to Mai Le/)).toBeInTheDocument();
+    expect(useStore.getState().candidates[0].title).toBe('');
+    fireEvent.click(screen.getByRole('button', { name: 'Merge into this profile' }));
     expect(useStore.getState().candidates).toHaveLength(1);
+    expect(useStore.getState().candidates[0].title).toBe('Designer');
     expect(toast).toHaveBeenLastCalledWith('Existing profile updated', 'info');
   });
 

@@ -22,23 +22,36 @@ beforeEach(() => {
 });
 
 /** Hired/Rejected are collapsed on a busy board, so their cards are not rendered. */
-const visibleApps = (jobId: string) => useStore.getState().applications.filter((a) => a.jobId === jobId && a.stage !== 'hired' && a.stage !== 'rejected');
-
-const firstOpen = () => useStore.getState().jobs.find((j) => j.status === 'open')!;
+// The default board fits on screen, so every column is open and every card renders.
+const visibleApps = (jobId: string) => useStore.getState().applications.filter((a) => a.jobId === jobId);
 
 describe('PipelinePage', () => {
-  it('bare /pipeline opens the first open job', () => {
+  it('bare /pipeline shows All jobs: every open job on one board, each card naming its job', () => {
     renderAt('/pipeline');
-    expect(screen.getByRole('button', { name: `Job: ${firstOpen().title}` })).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Job' })).toHaveValue('');
+    const st = useStore.getState();
+    const open = new Set(st.jobs.filter((j) => j.status === 'open' || j.status === 'on_hold').map((j) => j.id));
+    const ids = screen.getAllByTestId(/^card-/).map((el) => el.dataset.testid!.slice(5));
+    const jobIds = new Set(ids.map((id) => st.applications.find((a) => a.id === id)!.jobId));
+    expect(jobIds.size).toBeGreaterThan(1);
+    for (const j of jobIds) expect(open.has(j)).toBe(true);
+    const a = st.applications.find((x) => x.id === ids[0])!;
+    expect(within(screen.getByTestId(`card-${a.id}`)).getByText(st.jobs.find((j) => j.id === a.jobId)!.title)).toBeInTheDocument();
+    // Settings are per job: nothing to configure on All jobs.
+    expect(screen.queryByRole('button', { name: /Pipeline settings/ })).not.toBeInTheDocument();
   });
 
-  it('the job switcher lists open jobs and switches the board', () => {
+  it('the Job filter lists All jobs + open jobs and switches the board', () => {
     renderAt('/pipeline/job-1');
-    fireEvent.click(screen.getByRole('button', { name: /^Job: / }));
-    const items = screen.getAllByRole('menuitem').map((m) => m.textContent);
-    expect(items).toEqual(useStore.getState().jobs.filter((j) => j.status === 'open').map((j) => j.title));
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Tech Lead / Senior Engineer' }));
-    expect(screen.getByRole('button', { name: 'Job: Tech Lead / Senior Engineer' })).toBeInTheDocument();
+    const select = screen.getByRole('combobox', { name: 'Job' });
+    expect(select).toHaveValue('job-1');
+    const items = within(select).getAllByRole('option').map((o) => o.textContent);
+    expect(items).toEqual(['All jobs', ...useStore.getState().jobs.filter((j) => j.status === 'open' || j.status === 'on_hold').map((j) => j.title)]);
+    const tech = useStore.getState().jobs.find((j) => j.title === 'Tech Lead / Senior Engineer')!;
+    fireEvent.change(select, { target: { value: tech.id } });
+    expect(screen.getByRole('combobox', { name: 'Job' })).toHaveValue(tech.id);
+    fireEvent.change(screen.getByRole('combobox', { name: 'Job' }), { target: { value: '' } });
+    expect(screen.getByRole('combobox', { name: 'Job' })).toHaveValue('');
   });
 
   it('clicking a card opens the drawer; comments and ratings are saved by the current user', () => {
@@ -59,10 +72,8 @@ describe('PipelinePage', () => {
     expect(saved.ratings?.find((r) => r.by === 'u-admin')?.stars).toBe(4);
   });
 
-  it('header shows summary and search narrows board', () => {
+  it('search narrows board', () => {
     renderAt('/pipeline/job-1');
-    const total = useStore.getState().applications.filter((a) => a.jobId === 'job-1').length;
-    expect(screen.getByText(new RegExp(`^${total} candidates · [0-9]+ overdue · Open [0-9]+ days$`))).toBeInTheDocument();
     const cards = () => screen.getAllByTestId(/^card-/);
     expect(cards()).toHaveLength(visibleApps('job-1').length);
     const { candidates, applications } = useStore.getState();
@@ -72,39 +83,14 @@ describe('PipelinePage', () => {
     expect(within(cards()[0]).getByText(first.name)).toBeInTheDocument();
   });
 
-  it('source select narrows the board', () => {
-    renderAt('/pipeline/job-1');
-    const apps = useStore.getState().applications.filter((a) => a.jobId === 'job-1');
-    const src = apps[0].source;
-    fireEvent.change(screen.getByLabelText('All sources'), { target: { value: src } });
-    expect(screen.getAllByTestId(/^card-/)).toHaveLength(apps.filter((a) => a.source === src).length);
-  });
-
-  it('filters reset when switching job', () => {
+  it('search resets when switching job', () => {
     const st = useStore.getState();
     const other = st.jobs.find((j) => j.status === 'open' && j.id !== 'job-1' && st.applications.some((a) => a.jobId === j.id))!;
-    const src = st.applications.find((a) => a.jobId === 'job-1')!.source;
     renderAt('/pipeline/job-1');
-    fireEvent.change(screen.getByLabelText('All sources'), { target: { value: src } });
     fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'zzz' } });
-    fireEvent.click(screen.getByRole('button', { name: /^Job: / }));
-    fireEvent.click(screen.getByRole('menuitem', { name: other.title }));
-    expect(screen.getByLabelText('All sources')).toHaveValue('');
+    fireEvent.change(screen.getByRole('combobox', { name: 'Job' }), { target: { value: other.id } });
     expect(screen.getByRole('searchbox')).toHaveValue('');
     expect(screen.getAllByTestId(/^card-/)).toHaveLength(visibleApps(other.id).length);
-  });
-
-  it('ignores a source the current job does not have', () => {
-    renderAt('/pipeline/job-1');
-    const total = visibleApps('job-1').length;
-    // Stored filter for a source absent from the job: simulate via a select option that exists only elsewhere.
-    const select = screen.getByLabelText('All sources') as HTMLSelectElement;
-    const opt = document.createElement('option');
-    opt.value = 'Nowhere';
-    select.appendChild(opt);
-    fireEvent.change(select, { target: { value: 'Nowhere' } });
-    expect(screen.getAllByTestId(/^card-/)).toHaveLength(total);
-    expect(screen.getByLabelText('All sources')).toHaveValue('');
   });
 
   it('view toggle switches state', () => {
@@ -113,24 +99,42 @@ describe('PipelinePage', () => {
     expect(screen.getByRole('button', { name: 'List view' })).toHaveAttribute('aria-pressed', 'true');
   });
 
+  it('Add from Candidate Pool opens the pool picker for this job (no job choice needed)', () => {
+    renderAt('/pipeline/job-1');
+    fireEvent.click(screen.getByRole('button', { name: /Add from Candidate Pool/ }));
+    const dialog = screen.getByRole('dialog', { name: 'Add from Candidate Pool' });
+    expect(within(dialog).queryByLabelText('Job')).not.toBeInTheDocument();
+  });
+
+  it('on All jobs, Add from Candidate Pool asks which job', () => {
+    renderAt('/pipeline');
+    fireEvent.click(screen.getByRole('button', { name: /Add from Candidate Pool/ }));
+    expect(within(screen.getByRole('dialog')).getByRole('combobox', { name: 'Job' })).toBeInTheDocument();
+  });
+
   it('unknown job shows not found', () => {
     renderAt('/pipeline/nope');
     expect(screen.getByText('Job not found')).toBeInTheDocument();
   });
-  it('an empty job shows one Add button and no search, source filter or view toggle', () => {
+  it('an empty job shows one Add button and no search or view toggle', () => {
     useStore.setState((s) => ({ applications: s.applications.filter((a) => a.jobId !== 'job-2') }));
     renderAt('/pipeline/job-2');
-    expect(screen.getAllByRole('button', { name: /Add from Talent Pool/ })).toHaveLength(1);
+    expect(screen.getAllByRole('button', { name: /Add from Candidate Pool/ })).toHaveLength(1);
     expect(screen.queryByRole('searchbox')).not.toBeInTheDocument();
     expect(screen.queryByRole('combobox', { name: 'All sources' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Kanban view' })).not.toBeInTheDocument();
     expect(screen.getByText('No candidates in this pipeline yet')).toBeInTheDocument();
   });
 
-  it('view toggle shows short text labels', () => {
+  it('view toggle is icon-only (names in aria-label / tooltip); search comes before the Job filter', () => {
     renderAt('/pipeline/job-1');
-    expect(screen.getByRole('button', { name: 'Kanban view' })).toHaveTextContent('Kanban');
-    expect(screen.getByRole('button', { name: 'List view' })).toHaveTextContent('List');
+    const kanban = screen.getByRole('button', { name: 'Kanban view' });
+    expect(kanban).toHaveTextContent(/^view_kanban$/);
+    expect(kanban).toHaveAttribute('title', 'Kanban view');
+    expect(screen.getByRole('button', { name: 'List view' })).toHaveTextContent(/^view_list$/);
+    const search = screen.getByRole('searchbox');
+    const job = screen.getByRole('combobox', { name: 'Job' });
+    expect(search.compareDocumentPosition(job) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it('a rejection reason appears once in the drawer', () => {
@@ -138,7 +142,6 @@ describe('PipelinePage', () => {
     const a = st.applications.find((x) => x.jobId === 'job-1' && x.stage !== 'rejected')!;
     st.moveStage(a.id, 'rejected', 'u-admin', 'Salary mismatch', 'Salary mismatch');
     renderAt('/pipeline/job-1');
-    fireEvent.click(screen.getByRole('button', { name: /Expand Rejected/ }));
     fireEvent.click(screen.getByTestId(`card-${a.id}`));
     expect(within(screen.getByRole('dialog')).getAllByText(/Salary mismatch/)).toHaveLength(1);
   });

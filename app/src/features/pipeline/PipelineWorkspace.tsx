@@ -1,26 +1,36 @@
 import { useMemo, useState } from 'react';
-import { pipelineSummary } from '../../domain/pipelineFilter';
 import type { Job } from '../../domain/types';
+import { useCan } from '../../store/session';
 import { useStore } from '../../store/store';
 import { Board } from './Board';
-import { PipelineHeader, type PipelineQuery, type PipelineView } from './PipelineHeader';
+import { PipelineConfigDrawer } from './PipelineConfigDrawer';
+import { EMPTY_QUERY, PipelineHeader, type PipelineQuery, type PipelineView } from './PipelineHeader';
 
-type Props = { job: Job; switchable?: Job[]; onSwitch?: (jobId: string) => void };
+type Props = {
+  /** One job's pipeline; omit for "All jobs" (every job in `switchable`). */
+  job?: Job;
+  /** Jobs offered by the job filter (and shown together under "All jobs"). */
+  switchable?: Job[];
+  /** Picks a job; '' = All jobs. */
+  onSwitch?: (jobId: string) => void;
+};
 
-/** Header (summary, search, source filter, view toggle) plus the board or list for one job. Mount with `key={job.id}` so filters start clean per job. */
+/** Header (search, job filter, view toggle) plus the board or list. Mount with `key` per job so the search starts clean. */
 export function PipelineWorkspace({ job, switchable, onSwitch }: Props) {
   const applications = useStore((s) => s.applications);
-  const [stored, setStored] = useState<PipelineQuery>({ text: '', source: '' });
+  const [query, setQuery] = useState<PipelineQuery>(EMPTY_QUERY);
   const [view, setView] = useState<PipelineView>('kanban');
-  const jobApps = useMemo(() => applications.filter((a) => a.jobId === job.id), [applications, job.id]);
-  const sources = useMemo(() => [...new Set(jobApps.map((a) => a.source))].sort(), [jobApps]);
-  // A source this job doesn't have is ignored.
-  const query: PipelineQuery = { text: stored.text, source: sources.includes(stored.source) ? stored.source : '' };
-  const summary = useMemo(() => pipelineSummary(jobApps, job, Date.now()), [jobApps, job]);
+  const [configOpen, setConfigOpen] = useState(false);
+  // Rounds, SLA and automation are part of one job's setup (nothing to configure on "All jobs").
+  const canConfigure = useCan()('job.edit');
+  const configure = job && canConfigure ? () => setConfigOpen(true) : undefined;
+  const scope = useMemo(() => new Set((job ? [job] : switchable ?? []).map((j) => j.id)), [job, switchable]);
+  const empty = useMemo(() => !applications.some((a) => scope.has(a.jobId)), [applications, scope]);
   return (
     <>
-      <PipelineHeader job={job} switchable={switchable} onSwitch={onSwitch} summary={summary} sources={sources} query={query} onQuery={setStored} view={view} onView={setView} empty={jobApps.length === 0} />
-      <Board job={job} filter={query} view={view} />
+      <PipelineHeader job={job} switchable={switchable} onSwitch={onSwitch} query={query} onQuery={setQuery} view={view} onView={setView} empty={empty} onConfigure={configure} />
+      <Board job={job} jobs={switchable} filter={query} view={view} onConfigure={configure} />
+      {job && configure && <PipelineConfigDrawer job={job} open={configOpen} onClose={() => setConfigOpen(false)} />}
     </>
   );
 }

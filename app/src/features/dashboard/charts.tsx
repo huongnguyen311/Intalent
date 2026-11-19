@@ -48,6 +48,39 @@ export function EnglishDonut({ data }: { data: Slice[] }) {
   );
 }
 
+/**
+ * Generic donut, 12 o'clock clockwise. Slices are split by a 2px gap in the surface colour
+ * (`currentColor`, so the wrapper's text colour sets it for light and dark).
+ */
+export function Donut({ data, onHover }: { data: Slice[]; onHover?: (name: string | undefined) => void }) {
+  return (
+    <ResponsiveContainer width="100%" height="100%">
+      <PieChart>
+        <Pie
+          data={data}
+          dataKey="value"
+          nameKey="name"
+          innerRadius="68%"
+          outerRadius="100%"
+          startAngle={90}
+          endAngle={-270}
+          stroke="currentColor"
+          strokeWidth={2}
+          cx="50%"
+          cy="50%"
+          isAnimationActive={false}
+          onMouseEnter={(d: { name?: string }) => onHover?.(d.name)}
+          onMouseLeave={() => onHover?.(undefined)}
+        >
+          {data.map((d) => (
+            <Cell key={d.name} fill={d.color} />
+          ))}
+        </Pie>
+      </PieChart>
+    </ResponsiveContainer>
+  );
+}
+
 const FROM = [252, 165, 165];
 const TO = [239, 81, 37];
 

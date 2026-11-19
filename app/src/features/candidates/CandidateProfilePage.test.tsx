@@ -99,7 +99,7 @@ describe('CandidateProfilePage', () => {
     renderAt(`/candidates/${id}`);
     const row = screen.getByTestId(`used-in-${open[0].id}`);
     expect(within(row).getByRole('link', { name: open[0].title })).toHaveAttribute('href', `/pipeline/${open[0].id}`);
-    expect(within(row).getByText('Screening')).toBeInTheDocument();
+    expect(within(row).getByText('HR Screening')).toBeInTheDocument();
     expect(within(row).getByText('LinkedIn Ad')).toBeInTheDocument();
     expect(within(row).getByText('Careers site')).toBeInTheDocument();
     expect(within(row).getByText('Super Admin')).toBeInTheDocument();

@@ -1,99 +1,166 @@
+import { useJobStages, useStageName } from './jobStageContext';
 import { useDraggable } from '@dnd-kit/core';
 import type { ReactNode } from 'react';
-import { Avatar, toneFor } from '../../components/Avatar';
 import { MenuItem, Popover } from '../../components/Popover';
-import { averageRating, daysInStage, isOverSla } from '../../domain/pipeline';
-import { SOURCE_CAREERS, SOURCE_CV_UPLOAD, SOURCE_MANUAL, SOURCE_REFERRAL, SOURCE_TALENT_POOL, SOURCE_ULTRA_UPLOAD } from '../../domain/sources';
-import { STAGES, stageLabel } from '../../domain/stages';
+import { latestEvaluation } from '../../domain/aiEvaluation';
+import { awaitsScorecardFrom } from '../../domain/hiring';
+import { daysInStage, isOverSla } from '../../domain/pipeline';
 import type { Application, Candidate, Job, Stage } from '../../domain/types';
-import { useLang, useT } from '../../i18n/i18n';
+import { canMoveTo, normalizeRole } from '../../domain/permissions';
+import { useT } from '../../i18n/i18n';
+import { useMe } from '../../store/session';
+import { fullDate } from '../jds/format';
 
 type MoveProps = { current: Stage; onMove: (to: Stage) => void; button: (toggle: () => void) => ReactNode };
 
 /** Keyboard/screen-reader friendly alternative to dragging: lists every other stage. */
 export function MoveToMenu({ current, onMove, button }: MoveProps) {
-  const [lang] = useLang();
+  const label = useStageName();
+  const user = useMe();
+  // Only stages this user may move to (Hiring Managers: next step or Rejected); nothing to offer = no menu.
+  const stages = useJobStages();
+  const targets = stages.filter((s) => s !== current && canMoveTo(user, { stage: current }, s, stages));
+  if (targets.length === 0) return null;
   return (
     <Popover align="right" trigger={({ toggle }) => button(toggle)}>
       {(close) =>
-        STAGES.filter((s) => s !== current).map((s) => (
-          <MenuItem key={s} onClick={() => { close(); onMove(s); }}>{stageLabel(s, lang)}</MenuItem>
+        targets.map((s) => (
+          <MenuItem key={s} onClick={() => { close(); onMove(s); }}>{label(s)}</MenuItem>
         ))
       }
     </Popover>
   );
 }
 
-type BodyProps = { app: Application; candidate?: Candidate; job: Job; menu?: ReactNode };
+/** `showJob` ("All jobs" board): the second line names the job instead of the candidate's title. */
+type BodyProps = { app: Application; candidate?: Candidate; job: Job; menu?: ReactNode; showJob?: boolean };
 
-const CARD = 'relative group bg-white dark:bg-[#1e1e1e] rounded-xl border border-gray-100 dark:border-white/10 shadow-sm px-2.5 py-2 space-y-1';
+const CARD = 'relative group bg-slate-50 dark:bg-[#232323] rounded-lg border border-gray-200/80 dark:border-white/10 shadow-[0_1px_2px_rgba(15,23,42,0.06)] px-3 pt-2.5 pb-1.5 space-y-1';
 
-const SOURCE_DOT: Record<string, string> = {
-  [SOURCE_CAREERS]: '#10b981',
-  [SOURCE_CV_UPLOAD]: '#3b82f6',
-  [SOURCE_ULTRA_UPLOAD]: '#6366f1',
-  [SOURCE_TALENT_POOL]: '#F97316',
-  [SOURCE_MANUAL]: '#94a3b8',
-  [SOURCE_REFERRAL]: '#a855f7',
-  Facebook: '#1877f2',
-  LinkedIn: '#0a66c2',
-  'Facebook Groups': '#4267b2',
-  VietnamWorks: '#f59e0b',
-  TopCV: '#14b8a6',
-};
-const sourceDot = (source: string) => SOURCE_DOT[source] ?? '#94a3b8';
 
 /** An over-SLA card gets this accent; the text stays neutral. */
-const lateBorder = (late: boolean) => (late ? ' border-l-4 border-l-red-500' : '');
 
-/** Card content (3 lines); also rendered on its own inside the DragOverlay. */
-export function CardBody({ app, candidate, job, menu }: BodyProps) {
+/**
+ * Card content kept to three short lines: name, title, then AI match / days-in-stage chips (source and date in the tooltip).
+ * Also rendered on its own inside the DragOverlay.
+ */
+export function CardBody({ app, candidate, job, menu, showJob }: BodyProps) {
   const t = useT();
   const name = candidate?.name ?? app.candidateId;
   const late = isOverSla(app, job);
-  const avg = averageRating(app);
   return (
     <>
-      <div className="flex items-start gap-2 min-w-0">
-        <Avatar name={name} tone={toneFor(name)} small />
-        <span className="font-bold text-sm text-slate-800 dark:text-white break-words leading-tight min-w-0 pr-6 line-clamp-2" title={name}>{name}</span>
-      </div>
-      {menu && (
-        <div className="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100 has-[[role=menu]]:opacity-100 bg-white dark:bg-[#1e1e1e] rounded-full">{menu}</div>
+      <div className="font-bold text-[13px] text-slate-800 dark:text-white leading-tight line-clamp-2 break-words" title={`${name} · ${app.source} · ${t('pipeline.card.added', { date: fullDate(app.addedAt) })}`}>{name}</div>
+      {showJob ? (
+        <div className="text-xs text-gray-500 dark:text-gray-400 truncate flex items-center gap-1" title={job.title}>
+          <span aria-hidden="true" className="material-symbols-outlined text-[13px] shrink-0">work</span>
+          <span className="truncate">{job.title}</span>
+        </div>
+      ) : (
+        candidate?.title && <div className="text-xs text-gray-500 dark:text-gray-400 truncate" title={candidate.title}>{candidate.title}</div>
       )}
-      <div className="text-xs text-[#896a61] truncate" title={candidate?.title}>{candidate?.title}</div>
-      <div className="flex items-center gap-1.5 text-[11px] text-gray-400 min-w-0">
-        <span aria-hidden="true" className="size-1.5 rounded-full shrink-0" style={{ background: sourceDot(app.source) }}></span>
-        <span className="truncate">{app.source}</span>
-        <span
-          title={late ? t('pipeline.overSla', { n: job.stageSla[app.stage] ?? 0 }) : undefined}
-          className="font-medium shrink-0"
-        >
-          {t('pipeline.daysShort', { n: daysInStage(app) })}{late ? ' ⚠' : ''}
-        </span>
-        {avg !== undefined && (
-          <span aria-label={t('pipeline.avgRating', { n: avg })} className="ml-auto flex items-center gap-0.5 font-bold text-slate-600 dark:text-gray-300 shrink-0">
-            <span className="material-symbols-outlined text-[12px] text-amber-400" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
-            {avg}
-          </span>
-        )}
+      <div className="flex items-center gap-1.5 text-[11px] min-w-0 min-h-6">
+        <AiBadge app={app} />
+        <SlaChip days={daysInStage(app)} sla={job.stageSla[app.stage]} late={late} />
+        {menu && <span className="ml-auto -mr-1.5">{menu}</span>}
       </div>
+      <HiringLine app={app} />
     </>
+  );
+}
+
+/** AI colour on the pipeline (card pill and list cell): soft yellow, kept apart from the SLA red. */
+export const AI_PILL = 'bg-yellow-50 text-yellow-700 dark:bg-yellow-400/15 dark:text-yellow-300';
+
+/** Shared pill shape for the AI score. */
+const PILL = 'shrink-0 h-5 px-1.5 rounded-md flex items-center gap-0.5 text-[11px] font-bold tabular-nums';
+
+/** AI match pill, first chip on the bottom row: sparkle + "54%". Hidden from an interviewer until their scorecard is in. */
+function AiBadge({ app }: { app: Application }) {
+  const t = useT();
+  const user = useMe();
+  if (normalizeRole(user.role) === 'Interviewer' && awaitsScorecardFrom(app, user.id)) return null;
+  const spark = (color?: string) => (
+    <span aria-hidden="true" className="material-symbols-outlined text-[14px]" style={{ fontVariationSettings: "'FILL' 1", color }}>auto_awesome</span>
+  );
+  if (app.aiPending) {
+    return (
+      <span title={t('ai.badge.pending')} aria-label={t('ai.badge.pending')} className={`${PILL} bg-slate-100 dark:bg-white/10 text-slate-400 animate-pulse`}>
+        {spark()}<span>…</span>
+      </span>
+    );
+  }
+  const e = latestEvaluation(app);
+  if (!e) return null;
+  if (e.noCriteria) {
+    return (
+      <span title={t('ai.badge.noCriteria')} aria-label={t('ai.badge.noCriteria')} className={`${PILL} bg-slate-100 dark:bg-white/10 text-slate-400`}>
+        {spark()}<span>—</span>
+      </span>
+    );
+  }
+  // One soft yellow for every score so the pill never reads as the red/amber SLA warning; the number carries the band.
+  return (
+    <span data-testid="ai-pill" title={t('ai.badge.score', { n: e.score })} aria-label={t('ai.badge.score', { n: e.score })} className={`${PILL} ${AI_PILL}`}>
+      {spark()}<span>{`${e.score}%`}</span>
+    </span>
+  );
+}
+
+/** Days in this stage as a chip; over SLA it just turns red ("8d"), the SLA itself is in the tooltip. */
+function SlaChip({ days, sla, late }: { days: number; sla?: number; late: boolean }) {
+  const t = useT();
+  const over = late && sla !== undefined;
+  return (
+    <span
+      data-testid="sla-card"
+      title={over ? t('pipeline.overSla', { n: sla }) : sla !== undefined ? t('pipeline.col.onTime', { days: sla }) : undefined}
+      className={`shrink-0 h-5 px-1.5 rounded-md flex items-center gap-0.5 font-semibold tabular-nums ${
+        late ? 'bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-400' : 'text-slate-400 dark:text-gray-500'
+      }`}
+    >
+      <span>{t('pipeline.daysShort', { n: days })}</span>
+    </span>
+  );
+}
+
+/** Optional 4th line: hand-off or offer status. */
+function HiringLine({ app }: { app: Application }) {
+  const t = useT();
+  const [icon, text, cls] = app.handoff
+    ? ['verified', t('card.handedOff'), 'text-emerald-600 dark:text-emerald-400']
+    : app.offer && app.stage === 'offer'
+      ? ['request_quote', t(`offer.status.${app.offer.status}`), app.offer.status === 'declined' ? 'text-red-500' : 'text-blue-600 dark:text-blue-400']
+      : [null, '', ''];
+  if (!icon) return null;
+  return (
+    <div className={`flex items-center gap-1 text-[11px] font-semibold min-w-0 ${cls}`}>
+      <span className="material-symbols-outlined text-[13px]">{icon}</span>
+      <span className="truncate">{app.offer && app.stage === 'offer' && !app.handoff ? `${t('offer.title')}: ${text}` : text}</span>
+    </div>
   );
 }
 
 export function OverlayCard(props: Omit<BodyProps, 'menu'>) {
   return (
-    <div className={`${CARD}${lateBorder(isOverSla(props.app, props.job))} shadow-lg rotate-1 cursor-grabbing`}>
+    <div className={`${CARD} shadow-lg rotate-1 cursor-grabbing`}>
       <CardBody {...props} />
     </div>
   );
 }
 
-type CardProps = Omit<BodyProps, 'menu'> & { onOpen: () => void; onMove: (to: Stage) => void };
+type CardProps = Omit<BodyProps, 'menu'> & {
+  onOpen: () => void;
+  onMove: (to: Stage) => void;
+  /** Bulk selection: omit `onSelect` to hide the checkbox. */
+  selected?: boolean;
+  onSelect?: (on: boolean) => void;
+  /** Some card is selected: keep every checkbox visible, not only on hover/focus. */
+  selecting?: boolean;
+};
 
 /** Draggable card (pointer or keyboard: focus it, Space to lift, arrows between columns, Space to drop). */
-export function CandidateCard({ app, candidate, job, onOpen, onMove }: CardProps) {
+export function CandidateCard({ app, candidate, job, showJob, onOpen, onMove, selected = false, onSelect, selecting = false }: CardProps) {
   const t = useT();
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, isDragging } = useDraggable({ id: app.id });
   const setRef = (el: HTMLElement | null) => {
@@ -102,14 +169,14 @@ export function CandidateCard({ app, candidate, job, onOpen, onMove }: CardProps
   };
   // The menu must neither start a drag nor open the drawer.
   const stop = (e: { stopPropagation: () => void }) => e.stopPropagation();
-  const menu = (
+  const menu = app.handoff ? undefined : (
     <div onClick={stop} onPointerDown={stop} onKeyDown={stop}>
       <MoveToMenu
         current={app.stage}
         onMove={onMove}
         button={(toggle) => (
-          <button aria-label={t('pipeline.moveTo')} onClick={toggle} className="size-6 shrink-0 rounded-full flex items-center justify-center text-[#896a61] hover:text-primary hover:bg-[#f8f6f6] dark:hover:bg-white/5">
-            <span className="material-symbols-outlined text-[16px]">more_vert</span>
+          <button aria-label={t('pipeline.moveTo')} onClick={toggle} className="size-6 shrink-0 rounded-md flex items-center justify-center text-slate-500 hover:text-primary hover:bg-white dark:hover:bg-white/5">
+            <span className="material-symbols-outlined text-[18px]">more_horiz</span>
           </button>
         )}
       />
@@ -126,9 +193,26 @@ export function CandidateCard({ app, candidate, job, onOpen, onMove }: CardProps
         if (e.key === 'Enter' && e.target === e.currentTarget) onOpen();
         listeners?.onKeyDown?.(e);
       }}
-      className={`${CARD}${lateBorder(isOverSla(app, job))} cursor-grab select-none hover:border-primary/40 transition-colors focus:outline-none focus:ring-2 focus:ring-primary/40 ${isDragging ? 'opacity-40' : ''}`}
+      className={`${CARD} cursor-grab select-none hover:border-primary/40 transition-colors focus:outline-none focus:ring-2 focus:ring-primary/40 ${isDragging ? 'opacity-40' : ''} ${selected ? 'ring-2 ring-primary/50 border-primary/40' : ''}`}
     >
-      <CardBody app={app} candidate={candidate} job={job} menu={menu} />
+      <CardBody app={app} candidate={candidate} job={job} menu={menu} showJob={showJob} />
+      {onSelect && (
+        // Sits over the avatar; must neither start a drag nor open the drawer.
+        <span
+          onClick={stop}
+          onPointerDown={stop}
+          onKeyDown={stop}
+          className={`absolute -top-1.5 -left-1.5 size-5 rounded-full bg-white dark:bg-[#1e1e1e] shadow-sm flex items-center justify-center transition-opacity ${selected || selecting ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 focus-within:opacity-100'}`}
+        >
+          <input
+            type="checkbox"
+            checked={selected}
+            onChange={(e) => onSelect(e.target.checked)}
+            aria-label={t('pipeline.bulk.select', { name: candidate?.name ?? app.candidateId })}
+            className="size-3.5 rounded border-[#d6cdcb] text-primary focus:ring-primary cursor-pointer"
+          />
+        </span>
+      )}
     </div>
   );
 }

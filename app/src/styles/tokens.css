@@ -1,0 +1,205 @@
+/*
+ * Design tokens (RGB channels, used by tailwind.config.cjs as rgb(var(--x) / alpha)).
+ * :root holds the reviewed app values; html[data-fixture] restores the production values so the
+ * `?fixture=mockup` pixel diff against the static mockup is unchanged.
+ */
+:root {
+  /* Brand: #d03f17 keeps white text at 4.8:1 (the old #ef5125 was 3.6:1, below WCAG AA). */
+  --c-primary: 208 63 23;
+  --c-primary-hover: 179 54 15;
+  --c-brand-accent: 208 63 23;
+  --c-brand-strong: 179 54 15;
+  --c-brand-vivid: 208 63 23;
+  --c-brand-light: 232 112 75;
+
+  /* One warm neutral family (matches #896a61 / #e6dddb / #181211 used across the app). */
+  --c-gray-50: 250 248 247;
+  --c-gray-100: 244 241 240;
+  --c-gray-200: 230 221 219;
+  --c-gray-300: 210 198 195;
+  --c-gray-400: 163 144 138;
+  --c-gray-500: 125 101 94;
+  --c-gray-600: 95 74 68;
+  --c-gray-700: 70 55 51;
+  --c-gray-800: 42 36 35;
+  --c-gray-900: 24 18 17;
+  --c-gray-950: 15 11 10;
+
+  --c-slate-50: var(--c-gray-50);
+  --c-slate-100: var(--c-gray-100);
+  --c-slate-200: var(--c-gray-200);
+  --c-slate-300: var(--c-gray-300);
+  --c-slate-400: var(--c-gray-400);
+  --c-slate-500: var(--c-gray-500);
+  --c-slate-600: var(--c-gray-600);
+  --c-slate-700: var(--c-gray-700);
+  --c-slate-800: var(--c-gray-800);
+  --c-slate-900: var(--c-gray-900);
+  --c-slate-950: var(--c-gray-950);
+
+  /* Orange tints follow the brand hue instead of Tailwind's yellower orange. */
+  --c-orange-50: 253 242 238;
+  --c-orange-100: 251 226 216;
+  --c-orange-200: 246 195 177;
+  --c-orange-300: 240 157 128;
+  --c-orange-400: 232 112 75;
+  --c-orange-500: 226 83 43;
+  --c-orange-600: 208 63 23;
+  --c-orange-700: 179 54 15;
+  --c-orange-800: 143 44 16;
+  --c-orange-900: 116 39 18;
+  --c-orange-950: 63 18 7;
+
+  /* Emerald text shades one step darker so green status text passes 4.5:1 on its tinted pill. */
+  --c-emerald-50: 236 253 245;
+  --c-emerald-100: 209 250 229;
+  --c-emerald-200: 167 243 208;
+  --c-emerald-300: 110 231 183;
+  --c-emerald-400: 52 211 153;
+  --c-emerald-500: 16 185 129;
+  --c-emerald-600: 4 120 87;
+  --c-emerald-700: 6 95 70;
+  --c-emerald-800: 6 78 59;
+  --c-emerald-900: 2 44 34;
+  --c-emerald-950: 2 30 23;
+
+  --c-muted: 125 101 94;
+  --c-sidebar-label: 168 146 140;
+  --fs-2xs: 11px;
+
+  /* Logo orange (#ec4b1d) for graphics/fills; text and buttons stay on the darker --c-primary. */
+  --c-orange-500: 236 75 29;
+  /* Brand-coloured text on a brand tint (chips): primary on primary/10 is only 4.1:1, this is 5.6:1. */
+  --c-primary-ink: 179 54 15;
+  /* Errors/destructive use a crimson (rose) hue so they never read as the orange-red brand. */
+  --c-red-50: 255 241 242;
+  --c-red-100: 255 228 230;
+  --c-red-200: 254 205 211;
+  --c-red-300: 253 164 175;
+  --c-red-400: 251 113 133;
+  --c-red-500: 208 22 64;
+  --c-red-600: 190 18 60;
+  --c-red-700: 159 18 57;
+  --c-red-800: 136 19 55;
+  --c-red-900: 110 15 45;
+  --c-red-950: 76 5 25;
+  /* One success green: Tailwind green-* resolves to the emerald family. */
+  --c-green-50: var(--c-emerald-50);
+  --c-green-100: var(--c-emerald-100);
+  --c-green-200: var(--c-emerald-200);
+  --c-green-300: var(--c-emerald-300);
+  --c-green-400: var(--c-emerald-400);
+  --c-green-500: var(--c-emerald-500);
+  --c-green-600: var(--c-emerald-600);
+  --c-green-700: var(--c-emerald-700);
+  --c-green-800: var(--c-emerald-800);
+  --c-green-900: var(--c-emerald-900);
+  --c-green-950: var(--c-emerald-950);
+  /* amber-600/700 one step darker so warning text passes 4.5:1 on amber-50. */
+  --c-amber-50: 255 251 235;
+  --c-amber-100: 254 243 199;
+  --c-amber-200: 253 230 138;
+  --c-amber-300: 252 211 77;
+  --c-amber-400: 251 191 36;
+  --c-amber-500: 245 158 11;
+  --c-amber-600: 180 83 9;
+  --c-amber-700: 146 64 14;
+  --c-amber-800: 120 53 15;
+  --c-amber-900: 99 43 12;
+  --c-amber-950: 69 26 3;
+  /* Warm page canvas / hairline instead of the cool #f9fafb / #f0f0f0. */
+  --c-canvas: 248 246 246;
+  --c-hairline: 240 235 234;
+}
+
+html[data-fixture] {
+  --c-primary: 239 81 37;
+  --c-primary-hover: 214 64 24;
+  --c-brand-accent: 249 115 22;
+  --c-brand-strong: 234 88 12;
+  --c-brand-vivid: 255 107 0;
+  --c-brand-light: 255 144 69;
+
+  --c-gray-50: 249 250 251;
+  --c-gray-100: 243 244 246;
+  --c-gray-200: 229 231 235;
+  --c-gray-300: 209 213 219;
+  --c-gray-400: 156 163 175;
+  --c-gray-500: 107 114 128;
+  --c-gray-600: 75 85 99;
+  --c-gray-700: 55 65 81;
+  --c-gray-800: 31 41 55;
+  --c-gray-900: 17 24 39;
+  --c-gray-950: 3 7 18;
+
+  --c-slate-50: 248 250 252;
+  --c-slate-100: 241 245 249;
+  --c-slate-200: 226 232 240;
+  --c-slate-300: 203 213 225;
+  --c-slate-400: 148 163 184;
+  --c-slate-500: 100 116 139;
+  --c-slate-600: 71 85 105;
+  --c-slate-700: 51 65 85;
+  --c-slate-800: 30 41 59;
+  --c-slate-900: 15 23 42;
+  --c-slate-950: 2 6 23;
+
+  --c-orange-50: 255 247 237;
+  --c-orange-100: 255 237 213;
+  --c-orange-200: 254 215 170;
+  --c-orange-300: 253 186 116;
+  --c-orange-400: 251 146 60;
+  --c-orange-500: 249 115 22;
+  --c-orange-600: 234 88 12;
+  --c-orange-700: 194 65 12;
+  --c-orange-800: 154 52 18;
+  --c-orange-900: 124 45 18;
+  --c-orange-950: 67 20 7;
+
+  --c-emerald-600: 5 150 105;
+  --c-emerald-700: 4 120 87;
+  --c-emerald-800: 6 95 70;
+  --c-emerald-900: 6 78 59;
+  --c-emerald-950: 2 44 34;
+
+  --c-muted: 156 163 175;
+  --c-sidebar-label: 137 106 97;
+  --fs-2xs: 10px;
+
+  --c-primary-ink: 239 81 37;
+  --c-red-50: 254 242 242;
+  --c-red-100: 254 226 226;
+  --c-red-200: 254 202 202;
+  --c-red-300: 252 165 165;
+  --c-red-400: 248 113 113;
+  --c-red-500: 239 68 68;
+  --c-red-600: 220 38 38;
+  --c-red-700: 185 28 28;
+  --c-red-800: 153 27 27;
+  --c-red-900: 127 29 29;
+  --c-red-950: 69 10 10;
+  --c-green-50: 240 253 244;
+  --c-green-100: 220 252 231;
+  --c-green-200: 187 247 208;
+  --c-green-300: 134 239 172;
+  --c-green-400: 74 222 128;
+  --c-green-500: 34 197 94;
+  --c-green-600: 22 163 74;
+  --c-green-700: 21 128 61;
+  --c-green-800: 22 101 52;
+  --c-green-900: 20 83 45;
+  --c-green-950: 5 46 22;
+  --c-amber-50: 255 251 235;
+  --c-amber-100: 254 243 199;
+  --c-amber-200: 253 230 138;
+  --c-amber-300: 252 211 77;
+  --c-amber-400: 251 191 36;
+  --c-amber-500: 245 158 11;
+  --c-amber-600: 217 119 6;
+  --c-amber-700: 180 83 9;
+  --c-amber-800: 146 64 14;
+  --c-amber-900: 120 53 15;
+  --c-amber-950: 69 26 3;
+  --c-canvas: 249 250 251;
+  --c-hairline: 240 240 240;
+}

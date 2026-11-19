@@ -3,7 +3,9 @@ import { Drawer } from '../../components/Drawer';
 import { toast } from '../../components/Toast';
 import { campaignLinks, CHANNELS, isChannel } from '../../domain/campaigns';
 import type { Campaign } from '../../domain/types';
+import { jobsInScope } from '../../domain/permissions';
 import { useT } from '../../i18n/i18n';
+import { useMe } from '../../store/session';
 import { useStore } from '../../store/store';
 import { LinkRow, SECONDARY_BTN, useChannelLabel } from './CampaignBits';
 
@@ -30,6 +32,7 @@ export function CampaignWizard({ open, campaign, onClose, onSaved }: Props) {
   const t = useT();
   const channelLabel = useChannelLabel();
   const jobs = useStore((s) => s.jobs);
+  const user = useMe();
   const [step, setStep] = useState(1);
   const [name, setName] = useState('');
   const [jobIds, setJobIds] = useState<string[]>([]);
@@ -54,7 +57,9 @@ export function CampaignWizard({ open, campaign, onClose, onSaved }: Props) {
     setChannels(campaign?.channels ?? []);
   }, [open, campaign]);
 
-  const selectableJobs = jobs.filter((j) => j.status === 'open' || jobIds.includes(j.id));
+  // Only the user's own jobs (all for admins), like the Jobs page; a job already on the campaign stays listed.
+  const scoped = jobsInScope(user, jobs);
+  const selectableJobs = scoped.filter((j) => j.status === 'open' || jobIds.includes(j.id));
   const id = campaign?.id ?? draftId;
   const origin = typeof location === 'undefined' ? '' : location.origin;
   const draft = useMemo(() => ({ id, jobIds, channels }), [id, jobIds, channels]);
@@ -100,7 +105,7 @@ export function CampaignWizard({ open, campaign, onClose, onSaved }: Props) {
   };
 
   return (
-    <Drawer open={open} title={t(campaign ? 'campaigns.wizard.edit' : 'campaigns.wizard.create')} onClose={onClose}>
+    <Drawer open={open} title={t(campaign ? 'campaigns.wizard.edit' : 'campaigns.wizard.create')} onClose={onClose} guardUnsaved variant="center">
       <div className="flex flex-col gap-5">
         <div className="flex items-center gap-2 text-xs font-bold text-[#896a61]">
           <span>{t('campaigns.wizard.step', { n: step })}</span>
@@ -154,13 +159,14 @@ export function CampaignWizard({ open, campaign, onClose, onSaved }: Props) {
         {step === 3 && (
           <>
             <section>
-              <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">{t('campaigns.wizard.links')}</h4>
+              <h4 className="text-2xs font-bold text-muted uppercase tracking-widest mb-1">{t('campaigns.wizard.links')}</h4>
               <div className="divide-y divide-[#f4f1f0] dark:divide-[#2a2423]">
-                {links.map((l) => <LinkRow key={`${l.jobId}-${l.channel}`} channel={l.channel} jobTitle={jobTitle(l.jobId)} url={l.url} />)}
+                {links.map((l) => <LinkRow key={`${l.jobId}-${l.channel}`} channel={l.channel} jobTitle={jobTitle(l.jobId)} url={l.url} copyable={!!campaign} />)}
               </div>
+              {!campaign && <p className="mt-2 text-xs text-[#896a61]">{t('campaigns.wizard.linksLater')}</p>}
             </section>
             <section className="flex flex-col gap-3">
-              <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{t('campaigns.wizard.posts')}</h4>
+              <h4 className="text-2xs font-bold text-muted uppercase tracking-widest">{t('campaigns.wizard.posts')}</h4>
               {chosenChannels.filter(isChannel).map((c) => (
                 <div key={c} className="rounded-xl border border-[#e6dddb] dark:border-[#3a3433] p-4">
                   <div className="text-xs font-bold text-[#896a61] mb-2">{channelLabel(c)}</div>

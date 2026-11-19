@@ -66,8 +66,10 @@ describe('UsersPage', () => {
   it('computes the stat cards from users', () => {
     page(<UsersPage />);
     const users = useStore.getState().users;
-    const card = screen.getByText('Total Users').parentElement!;
-    expect(within(card).getByText(String(users.length))).toBeInTheDocument();
+    // Six-role model: staff vs candidate accounts.
+    const candidates = users.filter((u) => u.role === 'Candidate').length;
+    expect(within(screen.getByText('Staff accounts').parentElement!).getByText(String(users.length - candidates))).toBeInTheDocument();
+    expect(within(screen.getByText('Candidate accounts').parentElement!).getByText(String(candidates))).toBeInTheDocument();
   });
 
   it('adds a user, blocks a duplicate email, deactivates and changes role', () => {
@@ -75,10 +77,12 @@ describe('UsersPage', () => {
     click(/New User/);
     fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Tester Nguyen' } });
     fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'tester@company.demo' } });
-    fireEvent.change(screen.getByLabelText('Role'), { target: { value: 'Admin' } });
+    fireEvent.change(screen.getByLabelText('Role'), { target: { value: 'Recruitment Lead' } });
     click('Save');
+    // 10 seeded users fill page 1; search to bring the new one into view.
+    fireEvent.change(screen.getByPlaceholderText('Search by name or email...'), { target: { value: 'tester' } });
     expect(screen.getByText('tester@company.demo')).toBeInTheDocument();
-    expect(useStore.getState().users.find((u) => u.name === 'Tester Nguyen')?.role).toBe('Admin');
+    expect(useStore.getState().users.find((u) => u.name === 'Tester Nguyen')?.role).toBe('Recruitment Lead');
 
     click(/New User/);
     fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Other' } });
@@ -88,15 +92,20 @@ describe('UsersPage', () => {
     click('Cancel');
 
     const row = () => screen.getByText('Tester Nguyen').closest('tr')!;
+    // New users are invited first (PRD 3.1) and become Active when they join.
+    expect(within(row()).getByText('Invited')).toBeInTheDocument();
+    fireEvent.click(within(row()).getByRole('button', { name: 'Actions' }));
+    menu('Mark as joined (demo)');
+    expect(within(row()).getByText('Active')).toBeInTheDocument();
     fireEvent.click(within(row()).getByRole('button', { name: 'Actions' }));
     menu('Deactivate');
     expect(within(row()).getByText('Inactive')).toBeInTheDocument();
 
     fireEvent.click(within(row()).getByRole('button', { name: 'Actions' }));
     menu('Edit');
-    fireEvent.change(screen.getByLabelText('Role'), { target: { value: 'User' } });
+    fireEvent.change(screen.getByLabelText('Role'), { target: { value: 'Recruiter' } });
     click('Save');
-    expect(useStore.getState().users.find((u) => u.name === 'Tester Nguyen')?.role).toBe('User');
+    expect(useStore.getState().users.find((u) => u.name === 'Tester Nguyen')?.role).toBe('Recruiter');
   });
 
   it('editing the demo admin with a role downgrade changes nothing and shows the error', () => {
@@ -115,7 +124,7 @@ describe('UsersPage', () => {
 
   it('never lets the demo user be deactivated', () => {
     expect(useStore.getState().setUserActive('u-admin', false)).toEqual({ ok: false, reason: 'protected' });
-    expect(useStore.getState().setUserRole('u-admin', 'User')).toEqual({ ok: false, reason: 'protected' });
+    expect(useStore.getState().setUserRole('u-admin', 'Recruiter')).toEqual({ ok: false, reason: 'protected' });
   });
 
   it('filters by search text', () => {

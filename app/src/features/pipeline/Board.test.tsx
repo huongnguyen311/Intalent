@@ -84,17 +84,20 @@ describe('Board', () => {
     fireEvent.click(within(card(names[0])).getByRole('button', { name: 'Move to…' }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'Rejected' }));
     const dialog = screen.getByRole('dialog', { name: 'Reject candidate' });
-    fireEvent.change(within(dialog).getByLabelText('Reason'), { target: { value: 'Salary mismatch' } });
+    // A category is required before Reject is enabled.
+    expect(within(dialog).getByRole('button', { name: 'Reject' })).toBeDisabled();
+    fireEvent.change(within(dialog).getByLabelText('Reason category'), { target: { value: 'salary' } });
+    fireEvent.change(within(dialog).getByLabelText('Details (optional)'), { target: { value: 'Salary mismatch' } });
     fireEvent.click(within(dialog).getByRole('button', { name: 'Reject' }));
-    expect(useStore.getState().applications.find((a) => a.id === 'a1')).toMatchObject({ stage: 'rejected', rejectedReason: 'Salary mismatch' });
+    expect(useStore.getState().applications.find((a) => a.id === 'a1')).toMatchObject({ stage: 'rejected', rejectedReason: 'Salary mismatch', rejectedCode: 'salary' });
     expect(within(screen.getByTestId('column-rejected')).getByText(names[0])).toBeInTheDocument();
   });
 
   it('every move opens note dialog and cancel keeps stage', () => {
     renderBoard();
     fireEvent.click(within(card(names[2])).getByRole('button', { name: 'Move to…' }));
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Screening' }));
-    const dialog = screen.getByRole('dialog', { name: 'Move to Screening' });
+    fireEvent.click(screen.getByRole('menuitem', { name: 'HR Screening' }));
+    const dialog = screen.getByRole('dialog', { name: 'Move to HR Screening' });
     fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(stageOf('a3')).toBe('new');
@@ -104,8 +107,8 @@ describe('Board', () => {
   it('move with empty note allowed except rejected', () => {
     renderBoard();
     fireEvent.click(within(card(names[2])).getByRole('button', { name: 'Move to…' }));
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Screening' }));
-    const dialog = screen.getByRole('dialog', { name: 'Move to Screening' });
+    fireEvent.click(screen.getByRole('menuitem', { name: 'HR Screening' }));
+    const dialog = screen.getByRole('dialog', { name: 'Move to HR Screening' });
     const ok = within(dialog).getByRole('button', { name: 'Move' });
     expect(ok).toBeEnabled();
     fireEvent.click(ok);
@@ -117,8 +120,8 @@ describe('Board', () => {
   it('optional note saved on history entry and shown in the drawer', () => {
     renderBoard();
     fireEvent.click(within(card(names[2])).getByRole('button', { name: 'Move to…' }));
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Screening' }));
-    const dialog = screen.getByRole('dialog', { name: 'Move to Screening' });
+    fireEvent.click(screen.getByRole('menuitem', { name: 'HR Screening' }));
+    const dialog = screen.getByRole('dialog', { name: 'Move to HR Screening' });
     fireEvent.change(within(dialog).getByLabelText('Note'), { target: { value: 'Hẹn PV thứ 5' } });
     fireEvent.click(within(dialog).getByRole('button', { name: 'Move' }));
     const a = useStore.getState().applications.find((x) => x.id === 'a3')!;
@@ -137,14 +140,16 @@ describe('Board', () => {
   });
 
   describe('collapsible end columns', () => {
+    // A wide board (more than 7 columns) with a busy pipeline: that is when the end columns fold.
     const busy = () => {
       const cs = buildSeed().candidates;
-      useStore.setState({
-        applications: [...useStore.getState().applications, app('a4', cs[3].id, 'interview', 1), app('a5', cs[4].id, 'offer', 1)],
-      });
+      useStore.setState((s) => ({
+        jobs: s.jobs.map((j) => (j.id === 'job-1' ? { ...j, pipeline: ['ai_screening', 'screening', 'interview', 'assessment', 'final_interview', 'offer'] } : j)),
+        applications: [...s.applications, app('a4', cs[3].id, 'interview', 1), app('a5', cs[4].id, 'offer', 1)],
+      }));
     };
 
-    it('end columns collapsed by default when busy', () => {
+    it('end columns collapsed by default when busy on a wide board', () => {
       busy();
       renderBoard();
       expect(screen.getByTestId('column-rejected')).toHaveClass('w-12');
@@ -154,9 +159,38 @@ describe('Board', () => {
       expect(screen.getByTestId('column-rejected')).not.toHaveClass('w-12');
     });
 
-    it('end columns stay open when the pipeline is quiet', () => {
+    it('default board: the 7 basic columns, all open when the pipeline is quiet', () => {
       renderBoard();
+      const ids = screen.getAllByTestId(/^column-[a-z_0-9]+$/).map((el) => el.dataset.testid).filter((id) => id !== 'column-header' && id !== 'column-count');
+      expect(ids).toEqual(['column-new', 'column-screening', 'column-interview', 'column-final_interview', 'column-offer', 'column-hired', 'column-rejected']);
       expect(screen.getByTestId('column-rejected')).not.toHaveClass('w-12');
+      expect(screen.getByTestId('column-offer')).not.toHaveClass('w-12');
+    });
+
+    it('with more than 7 columns, empty ones fold and can be opened by hand', () => {
+      useStore.setState((s) => ({
+        jobs: s.jobs.map((j) => (j.id === 'job-1' ? { ...j, pipeline: ['ai_screening', 'screening', 'interview', 'assessment', 'final_interview', 'offer', 'withdrawn'] } : j)),
+      }));
+      renderBoard();
+      expect(screen.getByTestId('column-withdrawn')).toHaveClass('w-12');
+      expect(screen.getByTestId('column-ai_screening')).toHaveClass('w-12');
+      fireEvent.click(within(screen.getByTestId('column-ai_screening')).getByRole('button', { name: 'Expand AI Screening' }));
+      expect(screen.getByTestId('column-ai_screening')).not.toHaveClass('w-12');
+    });
+
+    it('a job can rename and reorder its columns, and add a custom one', () => {
+      useStore.setState((s) => ({
+        jobs: s.jobs.map((j) => (j.id === 'job-1'
+          ? { ...j, pipeline: ['custom_1', 'screening', 'interview', 'offer'], stageNames: { custom_1: 'Phone call', screening: 'CV review' } }
+          : j)),
+      }));
+      renderBoard();
+      const ids = screen.getAllByTestId(/^column-[a-z_0-9]+$/).map((el) => el.dataset.testid).filter((id) => id !== 'column-header' && id !== 'column-count');
+      expect(ids.slice(0, 4)).toEqual(['column-new', 'column-custom_1', 'column-screening', 'column-interview']);
+      expect(within(screen.getByTestId('column-custom_1')).getByText('Phone call')).toBeInTheDocument();
+      expect(within(screen.getByTestId('column-screening')).getByText('CV review')).toBeInTheDocument();
+      fireEvent.click(within(card(names[2])).getByRole('button', { name: 'Move to…' }));
+      expect(screen.getByRole('menuitem', { name: 'Phone call' })).toBeInTheDocument();
     });
 
     it('collapsed rejected strip still requires reason', () => {
@@ -210,22 +244,24 @@ describe('Board', () => {
   it('card shows one source label and no duplicate talent pool chip', () => {
     renderBoard();
     const c = within(card(names[1]));
-    expect(c.getAllByText('Talent Pool')).toHaveLength(1);
+    // The source sits in the card tooltip, not as a chip.
+    expect(c.queryByText('Talent Pool')).not.toBeInTheDocument();
     expect(c.queryByText('From Talent Pool')).not.toBeInTheDocument();
     expect(c.getByText('1d')).toBeInTheDocument();
     expect(within(screen.getByTestId('column-screening')).getByTestId('column-count')).toHaveTextContent('2');
     expect(within(screen.getByTestId('column-new')).getByTestId('column-count')).toHaveTextContent('1');
   });
 
-  it('overdue card has red left border and warning', () => {
+  it('overdue card has no left border, only a red days chip (just "4d", the SLA is in the tooltip)', () => {
     renderBoard();
     const late = card(names[0]);
-    expect(late).toHaveClass('border-l-4', 'border-l-red-500');
-    expect(within(late).getByText(/4d/)).toHaveTextContent('⚠');
-    expect(within(late).getByText(/4d/)).not.toHaveClass('text-red-500');
+    expect(late).not.toHaveClass('border-l-4');
+    const chip = within(late).getByTestId('sla-card');
+    expect(chip).toHaveTextContent(/^4d$/);
+    expect(chip).toHaveClass('text-red-600');
+    expect(chip).toHaveAttribute('title', expect.stringMatching(/3/));
     const fresh = card(names[1]);
-    expect(fresh).not.toHaveClass('border-l-red-500');
-    expect(within(fresh).queryByText(/⚠/)).not.toBeInTheDocument();
+    expect(within(fresh).getByTestId('sla-card')).not.toHaveClass('text-red-600');
   });
 
   it('renders empty state for a job with no applications', () => {
@@ -238,8 +274,8 @@ describe('Board', () => {
   it('Escape closes the move dialog and leaves the stage unchanged', () => {
     renderBoard();
     fireEvent.click(within(card(names[0])).getByRole('button', { name: 'Move to…' }));
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Interview' }));
-    expect(screen.getByRole('dialog', { name: 'Move to Interview' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('menuitem', { name: '1st Interview' }));
+    expect(screen.getByRole('dialog', { name: 'Move to 1st Interview' })).toBeInTheDocument();
     fireEvent.keyDown(document, { key: 'Escape' });
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(stageOf('a1')).toBe('screening');
@@ -251,25 +287,55 @@ describe('Board', () => {
     expect(within(card(names[1])).getByText('1n')).toBeInTheDocument();
   });
 
-  it('column header shows sla and late count', () => {
+  it('column header shows only name and count (no SLA or share line)', () => {
     renderBoard();
     const h = within(screen.getByTestId('column-screening'));
-    expect(h.getByText('SLA 3 days · 1 late ⚠')).toBeInTheDocument();
-    expect(h.getByText('67%')).toBeInTheDocument();
-    expect(within(screen.getByTestId('column-new')).getByText('SLA 2 days · on time')).toBeInTheDocument();
+    expect(h.queryByText(/SLA/)).toBeNull();
+    expect(h.queryByText('67%')).toBeNull();
   });
 
-  it('filter changes count but not overdue or share', () => {
+  it('filter changes the column count', () => {
     render(<MemoryRouter><Board job={job()} filter={{ text: names[1] }} /></MemoryRouter>);
-    const col = within(screen.getByTestId('column-screening'));
-    expect(col.getByTestId('column-count')).toHaveTextContent('1');
-    expect(col.getByText('SLA 3 days · 1 late ⚠')).toBeInTheDocument();
-    expect(col.getByText('67%')).toBeInTheDocument();
+    expect(within(screen.getByTestId('column-screening')).getByTestId('column-count')).toHaveTextContent('1');
+  });
+});
+
+describe('Board bulk actions and job pipeline config', () => {
+  const bar = () => screen.getByRole('region', { name: 'Bulk actions' });
+
+  it('select a whole column, then bulk move every card with one dialog', () => {
+    renderBoard();
+    fireEvent.click(screen.getByLabelText(`Select ${names[0]}`));
+    fireEvent.click(screen.getByLabelText(`Select ${names[1]}`));
+    expect(bar()).toHaveTextContent('2 selected');
+    fireEvent.click(within(bar()).getByRole('button', { name: 'Move to…' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: '1st Interview' }));
+    const dialog = screen.getByRole('dialog', { name: 'Move to 1st Interview' });
+    expect(dialog).toHaveTextContent('2 candidates');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Move' }));
+    expect([stageOf('a1'), stageOf('a2'), stageOf('a3')]).toEqual(['interview', 'interview', 'new']);
+    expect(screen.queryByRole('region', { name: 'Bulk actions' })).not.toBeInTheDocument();
   });
 
-  it('vi header uses ngày and trễ', () => {
-    useStore.setState((s) => ({ ui: { ...s.ui, lang: 'vi' } }));
+  it('bulk reject saves the category on every selected card', () => {
     renderBoard();
-    expect(within(screen.getByTestId('column-screening')).getByText('SLA 3 ngày · 1 trễ ⚠')).toBeInTheDocument();
+    fireEvent.click(screen.getByLabelText(`Select ${names[0]}`));
+    fireEvent.click(screen.getByLabelText(`Select ${names[2]}`));
+    fireEvent.click(within(bar()).getByRole('button', { name: 'Reject' }));
+    const dialog = screen.getByRole('dialog', { name: 'Reject candidate' });
+    fireEvent.change(within(dialog).getByLabelText('Reason category'), { target: { value: 'filled' } });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Reject' }));
+    for (const id of ['a1', 'a3']) expect(useStore.getState().applications.find((a) => a.id === id)).toMatchObject({ stage: 'rejected', rejectedCode: 'filled' });
+    expect(stageOf('a2')).toBe('screening');
+  });
+
+  it('a job that switches a round off hides its empty column but keeps occupied ones', () => {
+    useStore.setState((s) => ({ jobs: s.jobs.map((j) => (j.id === 'job-1' ? { ...j, pipeline: ['interview', 'offer'] } : j)) }));
+    renderBoard();
+    expect(screen.queryByTestId('column-assessment')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('column-ai_screening')).not.toBeInTheDocument();
+    // HR Screening is off but still holds a1/a2, so it stays.
+    expect(screen.getByTestId('column-screening')).toBeInTheDocument();
+    expect(screen.getByTestId('column-interview')).toBeInTheDocument();
   });
 });

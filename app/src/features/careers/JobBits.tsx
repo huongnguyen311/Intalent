@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { salaryRange } from '../../domain/hiring';
 import type { Job } from '../../domain/types';
 import { useT } from '../../i18n/i18n';
 
@@ -8,6 +9,9 @@ export function MetaChips({ job }: { job: Job }) {
       {[job.location, job.level, job.employment, job.department].filter(Boolean).map((x) => (
         <span key={x} className="px-3 py-1 rounded-full bg-[#f4efee] text-xs font-semibold text-[#6b5650]">{x}</span>
       ))}
+      {job.showSalary && salaryRange(job) && (
+        <span className="px-3 py-1 rounded-full bg-emerald-50 text-xs font-semibold text-emerald-700">{salaryRange(job)}</span>
+      )}
     </div>
   );
 }

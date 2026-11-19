@@ -1,3 +1,4 @@
+import { isEnded } from './stages';
 import type { Application, Job, Stage } from './types';
 
 const DAY = 86_400_000;
@@ -6,9 +7,9 @@ const DAY = 86_400_000;
 export const daysInStage = (app: Application, now: number = Date.now()): number =>
   Math.max(0, Math.floor((now - new Date(app.stageEnteredAt).getTime()) / DAY));
 
-/** True when the card has sat in its stage longer than the job's SLA (hired/rejected have none). */
+/** True when the card has sat in its stage longer than the job's SLA (end stages have none). */
 export function isOverSla(app: Application, job: Job, now: number = Date.now()): boolean {
-  if (app.stage === 'hired' || app.stage === 'rejected') return false;
+  if (isEnded(app.stage)) return false;
   const sla = job.stageSla[app.stage];
   return sla !== undefined && daysInStage(app, now) > sla;
 }
@@ -25,7 +26,7 @@ export type StageMetrics = { sla?: number; overdue: number; share: number };
 /** Header numbers for one stage, from ALL of the job's applications (a filter never changes them). */
 export function stageMetrics(jobApps: Application[], job: Job, stage: Stage, now: number = Date.now()): StageMetrics {
   const inStage = jobApps.filter((a) => a.stage === stage);
-  const ended = stage === 'hired' || stage === 'rejected';
+  const ended = isEnded(stage);
   return {
     sla: ended ? undefined : job.stageSla[stage],
     overdue: inStage.filter((a) => isOverSla(a, job, now)).length,

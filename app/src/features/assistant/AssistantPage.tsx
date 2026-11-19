@@ -43,7 +43,7 @@ function History({ sessions, active, onOpen, onDelete }: { sessions: Session[]; 
     <div className="flex-1 overflow-y-auto custom-scrollbar px-2 pb-4">
       {groups.map(([g, list]) => (
         <div key={g} className="mb-3">
-          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-2 py-2">{t(`assistant.group.${g}` as TKey)}</p>
+          <p className="text-2xs font-bold text-muted uppercase tracking-widest px-2 py-2">{t(`assistant.group.${g}` as TKey)}</p>
           <div className="space-y-0.5">
             {list.map((s) => (
               <div
@@ -149,7 +149,7 @@ export function AssistantPage() {
           </button>
           <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-3">
             {t('assistant.title')}
-            <span className="px-2 py-0.5 bg-orange-100 text-primary text-[10px] font-bold uppercase rounded">{t('assistant.beta')}</span>
+            <span className="px-2 py-0.5 bg-orange-100 text-primary text-2xs font-bold uppercase rounded">{t('assistant.beta')}</span>
           </h2>
         </div>
         <div className="flex flex-1 overflow-hidden">
@@ -171,7 +171,7 @@ export function AssistantPage() {
                     <div className="size-20 rounded-2xl bg-primary/10 flex items-center justify-center text-primary mb-6">
                       <span className="material-symbols-outlined text-[48px] icon-filled">person_search</span>
                     </div>
-                    <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-3">{t('assistant.welcome.title')}</h3>
+                    <h3 className="ty-title text-2xl font-bold text-slate-900 dark:text-white mb-3">{t('assistant.welcome.title')}</h3>
                     <p className="text-sm text-gray-500 dark:text-gray-400 max-w-md">{t('assistant.welcome.body')}</p>
                   </div>
                 )}
@@ -202,7 +202,7 @@ export function AssistantPage() {
                       <span className="material-symbols-outlined text-[24px]">arrow_upward</span>
                     </button>
                   </div>
-                  <p className="text-center text-[10px] text-gray-400 font-bold mt-3 opacity-80">{t('assistant.disclaimer')}</p>
+                  <p className="text-center text-2xs text-muted font-bold mt-3 opacity-80">{t('assistant.disclaimer')}</p>
                 </div>
               </div>
             </div>

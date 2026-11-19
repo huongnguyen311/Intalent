@@ -1,4 +1,6 @@
 import type { ReactNode } from 'react';
+import { isFixtureMode } from '../data/fixtureMockup';
+import { TodoBell } from '../features/todo/TodoList';
 
 type Props = { title: string; subtitle?: string; actions?: ReactNode };
 
@@ -15,7 +17,11 @@ export function Header({ title, subtitle, actions }: Props) {
           <h2 className="text-xl font-bold text-[#181211] dark:text-white">{title}</h2>
         )}
       </div>
-      {actions}
+      <div className="flex items-center gap-3">
+        {actions}
+        {/* The static mockup has no bell; the app shows the to-do count on every page. */}
+        {!isFixtureMode() && <TodoBell />}
+      </div>
     </header>
   );
 }

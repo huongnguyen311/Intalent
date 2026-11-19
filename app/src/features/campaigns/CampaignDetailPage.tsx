@@ -11,7 +11,7 @@ import { CampaignStatusBadge, LinkRow, PRIMARY_BTN, SECONDARY_BTN, useChannelLab
 import { CampaignWizard } from './CampaignWizard';
 
 const CARD = 'bg-white dark:bg-surface-dark p-8 rounded-[2rem] border border-gray-100 dark:border-white/10 shadow-sm';
-const LABEL = 'text-[10px] font-bold text-gray-400 uppercase tracking-widest';
+const LABEL = 'text-2xs font-bold text-muted uppercase tracking-widest';
 const TH = 'px-6 py-4 text-xs font-bold text-[#896a61] uppercase tracking-wider border-b border-[#e6dddb] dark:border-[#2a2423]';
 const TD = 'px-6 py-4 whitespace-nowrap text-sm text-slate-600 dark:text-gray-400';
 
@@ -78,7 +78,7 @@ export function CampaignDetailPage() {
     <AppLayout title={campaign.name} subtitle={`${fullDate(campaign.start)} – ${fullDate(campaign.end)}`} actions={actions}>
       <div className="p-8 max-w-[1400px] mx-auto space-y-8">
         <div className="flex items-center gap-4 flex-wrap">
-          <button aria-label={t('common.back')} onClick={() => navigate('/campaigns')} className="size-10 rounded-full bg-white dark:bg-[#2a2423] border border-[#e6dddb] dark:border-[#3a3433] flex items-center justify-center text-[#896a61] hover:text-[#ff6b00] transition-colors shadow-sm">
+          <button aria-label={t('common.back')} onClick={() => navigate('/campaigns')} className="size-10 rounded-full bg-white dark:bg-[#2a2423] border border-[#e6dddb] dark:border-[#3a3433] flex items-center justify-center text-[#896a61] hover:text-brand-vivid transition-colors shadow-sm">
             <span className="material-symbols-outlined">arrow_back</span>
           </button>
           <CampaignStatusBadge status={campaign.status} />

@@ -2,9 +2,12 @@ import { useState } from 'react';
 import { Modal } from '../../components/Modal';
 import { toast } from '../../components/Toast';
 import type { User } from '../../domain/types';
+import { normalizeRole } from '../../domain/permissions';
 import { CURRENT_USER_ID, ROLES, type Role } from '../../domain/users';
 import { useT, type TKey } from '../../i18n/i18n';
 import { useStore } from '../../store/store';
+import { currentUser } from '../../store/session';
+import { sendInvitation } from '../auth/accounts';
 
 const FIELD = 'w-full px-3 py-2 bg-white dark:bg-[#251f1e] border border-[#e6dddb] dark:border-[#3a3433] focus:border-primary focus:ring-0 rounded-lg text-sm text-[#181211] dark:text-white';
 const LABEL = 'block text-xs font-bold text-[#896a61] uppercase tracking-wider mb-1';
@@ -21,7 +24,7 @@ export function UserDialog({ user, onClose }: { user?: User; onClose: () => void
   const t = useT();
   const [name, setName] = useState(user?.name ?? '');
   const [email, setEmail] = useState(user?.email ?? '');
-  const [role, setRole] = useState<Role>((user?.role as Role) ?? 'User');
+  const [role, setRole] = useState<Role>(user ? normalizeRole(user.role) : 'Recruiter');
   const [error, setError] = useState<TKey | null>(null);
 
   const submit = () => {
@@ -30,6 +33,8 @@ export function UserDialog({ user, onClose }: { user?: User; onClose: () => void
     if (user?.id === CURRENT_USER_ID && role !== 'Super Admin') return setError(REASONS.protected);
     const res = user ? updateUser(user.id, { name, email }) : addUser({ name, email, role });
     if (!res.ok) return setError(REASONS[res.reason]);
+    // New users get an invitation email (demo mailbox) with a link to set their password.
+    if (!user) sendInvitation(res.user, currentUser().name);
     if (user && role !== user.role) {
       const changed = setUserRole(user.id, role);
       if (!changed.ok) return setError(REASONS[changed.reason]);

@@ -78,7 +78,7 @@ export function TaContributionPage() {
       <div className="p-6 space-y-6">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-semibold text-gray-900">{t('nav.cvByTa')}</h1>
+            <h1 className="ty-title text-2xl font-semibold text-gray-900">{t('nav.cvByTa')}</h1>
             <p className="text-sm text-gray-500 mt-1">{t('ta.subtitle')}</p>
           </div>
           <div className="flex items-center gap-3">

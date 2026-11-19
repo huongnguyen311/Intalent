@@ -2,8 +2,9 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { AppLayout } from '../../components/AppLayout';
 import { toast } from '../../components/Toast';
-import { CURRENT_USER_ID, userName } from '../../domain/users';
+import { userName } from '../../domain/users';
 import { useT } from '../../i18n/i18n';
+import { me } from '../../store/session';
 import { useStore } from '../../store/store';
 import { IntakeModal } from '../intake/IntakeModal';
 
@@ -26,7 +27,7 @@ export function NotesPanel({ addOpen: ctrlOpen, onAddClose }: PanelProps) {
   const closeAdd = () => (controlled ? onAddClose?.() : setOwnOpen(false));
 
   const convert = (id: string) => {
-    const { created } = useStore.getState().convertNote(id, CURRENT_USER_ID);
+    const { created } = useStore.getState().convertNote(id, me());
     toast(t(created ? 'intake.toast.created' : 'intake.toast.merged'), created ? 'success' : 'info');
   };
 

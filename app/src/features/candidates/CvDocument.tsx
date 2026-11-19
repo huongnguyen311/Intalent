@@ -6,7 +6,8 @@ const SECTION_HEAD = { color: '#1f4e9c', fontWeight: 700, fontSize: 10, textTran
 const month = (m: string) => m.replace('-', '/');
 
 /** The "original document": a plain white page built from the candidate's CV data (falls back to `cv` text). */
-export function CvDocument({ c, zoom }: { c: Candidate; zoom: number }) {
+/** `maskContact`: for viewers without contact-data permission, phone and email are shown as dots, like the profile fields. */
+export function CvDocument({ c, zoom, maskContact = false }: { c: Candidate; zoom: number; maskContact?: boolean }) {
   const t = useT();
   const summary = c.summary ?? c.cv;
   return (
@@ -21,7 +22,7 @@ export function CvDocument({ c, zoom }: { c: Candidate; zoom: number }) {
         <h1 style={{ textAlign: 'center', fontSize: 24, fontWeight: 700, margin: '0 0 6px' }}>{c.name}</h1>
         <p style={{ textAlign: 'center', fontWeight: 700, margin: 0 }}>{c.headline ?? c.title}</p>
         <p style={{ textAlign: 'center', margin: '0 0 14px' }}>
-          {[c.location, c.phone, c.email].filter(Boolean).join(' · ')}
+          {[c.location, ...(maskContact ? [c.phone && '••••••••', c.email && '••••••••'] : [c.phone, c.email])].filter(Boolean).join(' · ')}
         </p>
         {summary && (
           <>

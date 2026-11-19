@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Modal } from '../../components/Modal';
+import { jobsInScope } from '../../domain/permissions';
 import { SOURCE_TALENT_POOL } from '../../domain/sources';
 import { stageLabel } from '../../domain/stages';
 import type { Stage } from '../../domain/types';
-import { CURRENT_USER_ID } from '../../domain/users';
 import { useLang, useT } from '../../i18n/i18n';
+import { me, useMe } from '../../store/session';
 import { useStore } from '../../store/store';
 import { PoolSearch } from './PoolSearch';
 
@@ -46,10 +47,12 @@ export function AddToPipelineModal({ open, onClose, candidateIds: fixedIds, jobI
     setResults(null);
   }, [open]);
 
+  const user = useMe();
   const searchMode = fixedIds === undefined;
   const candidateIds = fixedIds ?? picked;
   const jobId = fixedJobId ?? pickedJobId;
-  const openJobs = jobs.filter((j) => j.status === 'open');
+  // Only jobs this user works on: adding to someone else's job would leave them unable to follow the candidate.
+  const openJobs = jobsInScope(user, jobs).filter((j) => j.status === 'open');
   const people = candidateIds.map((id) => ({ id, name: candidates.find((c) => c.id === id)?.name ?? id }));
 
   const confirm = () => {
@@ -59,7 +62,7 @@ export function AddToPipelineModal({ open, onClose, candidateIds: fixedIds, jobI
       const res = store.addToPipeline(id, jobId, {
         via: 'talent_pool',
         source: source.trim() || DEFAULT_SOURCE,
-        by: CURRENT_USER_ID,
+        by: me(),
       });
       next[id] = res.ok ? { ok: true } : res.reason === 'duplicate' ? { ok: false, stage: res.stage } : { ok: false, closed: true };
     }
@@ -98,13 +101,16 @@ export function AddToPipelineModal({ open, onClose, candidateIds: fixedIds, jobI
             )}
             <div className="flex flex-col gap-1">
               <label htmlFor="atp-source" className="text-xs font-semibold text-[#896a61]">{t('atp.source')}</label>
-              <input id="atp-source" className={FIELD} value={source} onChange={(e) => setSource(e.target.value)} />
+              <input id="atp-source" aria-describedby="atp-source-hint" className={FIELD} value={source} onChange={(e) => setSource(e.target.value)} />
+              <p id="atp-source-hint" className="text-xs text-[#896a61]">{t('atp.sourceHint')}</p>
             </div>
             {searchMode && <PoolSearch jobId={jobId} selected={picked} onChange={setPicked} />}
           </>
         )}
         {(!searchMode || results) && (
-          <ul className="flex flex-col gap-2">
+          <div className="flex flex-col gap-1">
+          <p id="atp-people" className="text-xs font-semibold text-[#896a61]">{t('atp.people')}</p>
+          <ul aria-labelledby="atp-people" className="flex flex-col gap-2">
             {people.map((p) => {
               const r = results?.[p.id];
               return (
@@ -119,6 +125,7 @@ export function AddToPipelineModal({ open, onClose, candidateIds: fixedIds, jobI
               );
             })}
           </ul>
+          </div>
         )}
       </div>
     </Modal>

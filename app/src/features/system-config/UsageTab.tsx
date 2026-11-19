@@ -25,14 +25,14 @@ export function UsageTab({ prompts }: { prompts: Prompt[] }) {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">{t('systemConfig.usage.title')}</h2>
+        <h2 className="ty-section text-lg font-semibold text-gray-900 dark:text-white">{t('systemConfig.usage.title')}</h2>
         <p className="text-sm text-gray-500">{t('systemConfig.usage.desc')}</p>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {cards.map(([label, value]) => (
           <div key={label} className="bg-white dark:bg-[#1e1e1e] p-4 rounded-xl border border-[#e6dddb] dark:border-[#2a2423] shadow-sm">
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">{label}</p>
-            <span className="text-3xl font-bold text-gray-900 dark:text-white">{value}</span>
+            <span className="ty-kpi text-3xl font-bold text-gray-900 dark:text-white">{value}</span>
           </div>
         ))}
       </div>

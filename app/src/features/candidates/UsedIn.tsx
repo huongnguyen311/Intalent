@@ -1,19 +1,24 @@
 import { Link } from 'react-router-dom';
 import { Chip } from '../../components/Chip';
+import { can, jobsInScope } from '../../domain/permissions';
 import { stageLabel } from '../../domain/stages';
 import { userName } from '../../domain/users';
 import { useLang, useT, type TKey } from '../../i18n/i18n';
+import { useMe } from '../../store/session';
 import { useStore } from '../../store/store';
 
 const COLUMNS = ['job', 'stage', 'source', 'via', 'addedBy', 'addedAt'] as const;
 
-/** Every Application of a candidate: job (linked to its pipeline), stage, source, via, who added it and when. */
+/** Every Application of a candidate: job (linked to its pipeline when the user can open it), stage, source, via, who added it and when. */
 export function UsedIn({ candidateId }: { candidateId: string }) {
   const t = useT();
   const [lang] = useLang();
   const applications = useStore((s) => s.applications);
   const jobs = useStore((s) => s.jobs);
   const users = useStore((s) => s.users);
+  const user = useMe();
+  // Link a job only when this user can open its pipeline; otherwise the link would end on "No access" / "Job not found".
+  const linkable = new Set(can(user, 'pipeline') ? jobsInScope(user, jobs).map((j) => j.id) : []);
   const rows = applications
     .filter((a) => a.candidateId === candidateId)
     .sort((a, b) => b.addedAt.localeCompare(a.addedAt));
@@ -38,9 +43,13 @@ export function UsedIn({ candidateId }: { candidateId: string }) {
               {rows.map((a) => (
                 <tr key={a.id} data-testid={`used-in-${a.jobId}`}>
                   <td className="px-3 py-2">
-                    <Link className="font-semibold text-primary hover:underline" to={`/pipeline/${a.jobId}`}>
-                      {jobs.find((j) => j.id === a.jobId)?.title ?? a.jobId}
-                    </Link>
+                    {linkable.has(a.jobId) ? (
+                      <Link className="font-semibold text-primary hover:underline" to={`/pipeline/${a.jobId}`}>
+                        {jobs.find((j) => j.id === a.jobId)?.title ?? a.jobId}
+                      </Link>
+                    ) : (
+                      <span className="font-semibold">{jobs.find((j) => j.id === a.jobId)?.title ?? a.jobId}</span>
+                    )}
                   </td>
                   <td className="px-3 py-2"><Chip>{stageLabel(a.stage, lang)}</Chip></td>
                   <td className="px-3 py-2">{a.source}</td>

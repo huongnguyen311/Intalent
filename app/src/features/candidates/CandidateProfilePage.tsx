@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { AppLayout } from '../../components/AppLayout';
+import { normalizePhone } from '../../domain/normalize';
 import { toast } from '../../components/Toast';
 import { isFixtureMode } from '../../data/fixtureMockup';
 import type { Candidate } from '../../domain/types';
@@ -8,8 +9,15 @@ import { userName } from '../../domain/users';
 import { useShowNew } from '../../hooks';
 import { useT } from '../../i18n/i18n';
 import { useStore } from '../../store/store';
+import { EmailComposer } from '../hiring/EmailComposer';
+import { candidateInScope, homeFor } from '../../domain/permissions';
+import { NotFoundState } from '../../components/NotFoundState';
+import { useCan, useMe } from '../../store/session';
 import { AddToPipelineModal } from './AddToPipelineModal';
+import { CvVersions, ParseReview, SuggestionsReview } from './SelfServicePanels';
+import { PrivacyPanel } from './PrivacyPanel';
 import { CvDocument } from './CvDocument';
+import { OwnerControls } from './OwnerControls';
 import { UsedIn } from './UsedIn';
 
 const INPUT =
@@ -40,6 +48,33 @@ const BTN_GHOST =
 
 const ZOOM_STEP = 0.25;
 
+/** Vietnamese numbers (0xxx / +84xxx) as the international digits chat apps expect. */
+const intlPhone = (phone?: string) => { const d = normalizePhone(phone ?? ''); return d.startsWith('0') ? `84${d.slice(1)}` : d; };
+const zaloUrl = (phone?: string) => (phone ? `https://zalo.me/${normalizePhone(phone)}` : undefined);
+const whatsappUrl = (phone?: string) => (phone ? `https://wa.me/${intlPhone(phone)}` : undefined);
+
+/** The rendered CV page as a standalone HTML document (what Download saves and Open in new tab shows). */
+function cvHtml(node: HTMLElement | null, name: string): string {
+  const page = node?.firstElementChild?.firstElementChild?.outerHTML ?? '';
+  return `<!doctype html><html><head><meta charset="utf-8"><title>${name} - CV</title></head><body style="margin:0;padding:24px 0;background:#525659">${page}</body></html>`;
+}
+
+function cvBlobUrl(node: HTMLElement | null, name: string): string {
+  return URL.createObjectURL(new Blob([cvHtml(node, name)], { type: 'text/html' }));
+}
+
+function downloadCv(node: HTMLElement | null, name: string) {
+  const a = document.createElement('a');
+  a.href = cvBlobUrl(node, name);
+  a.download = `${name.replace(/\s+/g, '-').toLowerCase()}-cv.html`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+function openCv(node: HTMLElement | null, name: string) {
+  window.open(cvBlobUrl(node, name), '_blank', 'noopener');
+}
+
 type Draft = Pick<Candidate, 'name' | 'title' | 'email' | 'phone' | 'seniority' | 'english'> & { summary: string };
 
 const toDraft = (c: Candidate): Draft => ({
@@ -67,13 +102,15 @@ function TextField({ label, value, editing, onChange, testId }: {
   );
 }
 
-function SecretField({ label, value, editing, onChange }: {
+function SecretField({ label, value, editing, onChange, locked = false }: {
   label: string; value: string; editing: boolean; onChange: (v: string) => void;
+  /** No contact-data permission: always masked, no reveal button. */
+  locked?: boolean;
 }) {
   const t = useT();
   const unlocked = useStore((s) => s.ui.piiUnlocked);
   const [shown, setShown] = useState(false);
-  const visible = shown || unlocked || editing;
+  const visible = !locked && (shown || unlocked || editing);
   return (
     <div className="space-y-1.5 ">
       <label className={`${LABEL} flex items-center gap-1`}>{label}</label>
@@ -83,17 +120,18 @@ function SecretField({ label, value, editing, onChange }: {
           aria-label={label}
           className={editing ? SECRET_INPUT_EDIT : SECRET_INPUT}
           type={visible ? 'text' : 'password'}
-          value={value}
+          value={locked ? '••••••••' : value}
           onChange={(e) => onChange(e.target.value)}
         />
-        <button
+        {!locked && <button
           type="button"
           aria-label={t(visible ? 'profile.hide' : 'profile.show')}
           onClick={() => setShown(!shown)}
           className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-primary transition-colors material-symbols-outlined text-[20px]"
         >
           {visible ? 'visibility' : 'visibility_off'}
-        </button>
+        </button>}
+        {locked && <span title={t('access.pii')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 material-symbols-outlined text-[20px]">lock</span>}
       </div>
     </div>
   );
@@ -124,19 +162,36 @@ export function CandidateProfilePage() {
   const { id = '' } = useParams();
   const [params] = useSearchParams();
   const showNew = useShowNew();
-  const candidate = useStore((s) => s.candidates.find((c) => c.id === id));
+  const user = useMe();
+  // Hiring Managers and Interviewers only reach candidates of their own jobs / interviews.
+  const candidate = useStore((s) => {
+    const c = s.candidates.find((x) => x.id === id);
+    return c && candidateInScope(user, c.id, s.applications, s.jobs) ? c : undefined;
+  });
+  const perm = useCan();
+  const full = perm('pool');
+  const pii = perm('pii');
   const users = useStore((s) => s.users);
   const [editing, setEditing] = useState(params.get('edit') === '1');
   const [draft, setDraft] = useState<Draft | null>(null);
   const [zoom, setZoom] = useState(1);
+  const cvRef = useRef<HTMLDivElement>(null);
   const [pipelineOpen, setPipelineOpen] = useState(false);
+  const [mailing, setMailing] = useState(false);
   const fixture = isFixtureMode();
   const search = fixture ? '?fixture=mockup' : '';
 
   if (!candidate) {
+    // Someone outside the user's scope (a Hiring Manager or Interviewer) is "no access", not "not found".
+    const exists = useStore.getState().candidates.some((x) => x.id === id);
     return (
       <AppLayout title={t('profile.title')}>
-        <div className="p-8 text-[#896a61]">{t('profile.notFound')}</div>
+        <NotFoundState
+          icon={exists ? 'lock' : 'search_off'}
+          message={t(exists ? 'profile.noAccess' : 'profile.notFound')}
+          backTo={homeFor(user)}
+          backLabel={t('profile.backHome')}
+        />
       </AppLayout>
     );
   }
@@ -180,14 +235,15 @@ export function CandidateProfilePage() {
           <div className="h-16 px-6 flex items-center justify-between">
             <div className="flex items-center gap-4">
               <nav className="flex items-center text-sm font-medium text-[#896a61]">
-                <button className="hover:text-primary transition-colors" onClick={() => navigate({ pathname: '/candidates', search })}>
-                  {t('nav.candidatePool')}
+                <button className="hover:text-primary transition-colors" onClick={() => (full ? navigate({ pathname: '/candidates', search }) : (window.history.state?.idx ?? 0) > 0 ? navigate(-1) : navigate(homeFor(user)))}>
+                  {/* Without Talent Pool access this goes back where the user came from, so say so. */}
+                  {full ? t('nav.candidatePool') : <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[16px]">arrow_back</span>{t('common.back')}</span>}
                 </button>
                 <span className="material-symbols-outlined text-[16px] mx-2">chevron_right</span>
                 <span className="text-[#181211] dark:text-white">{c.name}</span>
               </nav>
               <div className="h-6 w-px bg-gray-100 dark:bg-gray-700 mx-1"></div>
-              <h2 className="text-lg font-bold text-[#181211] dark:text-white">{t('profile.title')}</h2>
+              <h2 className="ty-section text-lg font-bold text-[#181211] dark:text-white">{t('profile.title')}</h2>
             </div>
           </div>
         </header>
@@ -198,7 +254,7 @@ export function CandidateProfilePage() {
                 <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-800 rounded-lg text-blue-700 dark:text-blue-300 text-xs font-medium w-fit">
                   <span className="material-symbols-outlined text-[16px]">auto_awesome</span>{t('profile.aiNote')}
                 </div>
-                <div className="flex items-center gap-3">
+                {full && <div className="flex items-center gap-3">
                   {showNew && (
                     <button className={BTN_GHOST} onClick={() => setPipelineOpen(true)}>
                       <span className="material-symbols-outlined text-[18px]">add_task</span>{t('atp.title')}
@@ -216,29 +272,33 @@ export function CandidateProfilePage() {
                       <span className="material-symbols-outlined text-[18px]">edit</span>{t('profile.edit')}
                     </button>
                   )}
-                </div>
+                </div>}
               </div>
+              {showNew && full && <SuggestionsReview candidate={c} />}
+              {showNew && full && <ParseReview candidate={c} />}
               <section>
                 <SectionTitle icon="person">{t('profile.section.personal')}</SectionTitle>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <TextField label={t('profile.field.fullName')} value={form.name} editing={editing} onChange={set('name')} />
                   <TextField label={t('profile.field.role')} value={form.title} editing={editing} onChange={set('title')} />
-                  <SecretField label={t('profile.field.email')} value={form.email} editing={editing} onChange={set('email')} />
-                  <div className="flex items-end">
-                    <button className="w-full flex items-center justify-center gap-2 px-6 py-2.5 text-sm font-semibold rounded-xl shadow-sm transition-all whitespace-nowrap bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-blue-500/20" title={t('profile.tip.sendEmail')}>
+                  <SecretField label={t('profile.field.email')} value={form.email} editing={editing} onChange={set('email')} locked={!pii} />
+                  {pii && perm('email.send') ? <div className="flex items-end">
+                    <button onClick={() => setMailing(true)} className="w-full flex items-center justify-center gap-2 px-6 py-2.5 text-sm font-semibold rounded-xl shadow-sm transition-all whitespace-nowrap bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-blue-500/20" title={t('profile.tip.sendEmail')}>
                       <span className="material-symbols-outlined text-[20px]">mail</span>{t('profile.sendEmail')}
                     </button>
-                  </div>
-                  <SecretField label={t('profile.field.phone')} value={form.phone} editing={editing} onChange={set('phone')} />
+                  </div> : <div></div>}
+                  <SecretField label={t('profile.field.phone')} value={form.phone} editing={editing} onChange={set('phone')} locked={!pii} />
                   <div></div>
-                  <button className="h-auto flex-1 flex items-center justify-center gap-2 px-6 py-2.5 text-sm font-semibold rounded-xl shadow-sm transition-all whitespace-nowrap bg-gradient-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600 text-white shadow-green-500/20" title={t('profile.tip.zalo')}>
+                  {pii && <><a href={zaloUrl(c.phone)} target="_blank" rel="noopener noreferrer" aria-disabled={!c.phone || undefined} className={`${c.phone ? "" : "pointer-events-none opacity-50 "}h-auto flex-1 flex items-center justify-center gap-2 px-6 py-2.5 text-sm font-semibold rounded-xl shadow-sm transition-all whitespace-nowrap bg-gradient-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600 text-white shadow-green-500/20`} title={t('profile.tip.zalo')}>
                     <span className="material-symbols-outlined text-[20px]">open_in_new</span>{t('profile.openZalo')}
-                  </button>
-                  <button className="flex-1 flex items-center justify-center gap-2 px-6 py-2.5 text-sm font-semibold rounded-xl shadow-sm transition-all whitespace-nowrap bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white shadow-emerald-500/20" title={t('profile.tip.whatsapp')}>
+                  </a>
+                  <a href={whatsappUrl(c.phone)} target="_blank" rel="noopener noreferrer" aria-disabled={!c.phone || undefined} className={`${c.phone ? "" : "pointer-events-none opacity-50 "}flex-1 flex items-center justify-center gap-2 px-6 py-2.5 text-sm font-semibold rounded-xl shadow-sm transition-all whitespace-nowrap bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white shadow-emerald-500/20`} title={t('profile.tip.whatsapp')}>
                     <span className="material-symbols-outlined text-[20px]">call</span>{t('profile.openWhatsapp')}
-                  </button>
+                  </a></>}
                 </div>
               </section>
+              {showNew && full && <CvVersions candidate={c} />}
+              {showNew && full && <PrivacyPanel candidate={c} />}
               <hr className={HR} />
               <section>
                 <SectionTitle icon="short_text">{t('profile.section.summary')}</SectionTitle>
@@ -310,10 +370,7 @@ export function CandidateProfilePage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
                   <div className="space-y-2">
                     <TextField label={t('profile.field.cvOwner')} value={userName(users, c.cvOwner)} editing={false} testId="candidate-detail-cvowner-input" />
-                    <div className="flex items-center gap-4">
-                      <button type="button" data-testid="candidate-detail-change-owner" className="text-sm font-semibold text-primary hover:underline">{fixture ? 'Đổi owner' : t('profile.changeOwner')}</button>
-                      <button type="button" className="text-sm font-semibold text-[#896a61] hover:underline">{fixture ? 'Lịch sử đổi owner' : t('profile.ownerHistory')}</button>
-                    </div>
+                    {full && <OwnerControls c={c} fixture={fixture} />}
                   </div>
                   <TextField label={t('profile.field.lastUpdatedBy')} value="—" editing={false} testId="candidate-detail-lastupdatedby-input" />
                 </div>
@@ -402,23 +459,25 @@ export function CandidateProfilePage() {
                     <span className="material-symbols-outlined text-[18px]">add</span>
                   </button>
                 </div>
-                <a href="#" target="_blank" rel="noopener noreferrer" className="size-8 flex items-center justify-center rounded-lg hover:bg-[#f8f6f6] dark:hover:bg-[#251f1e] text-[#896a61] transition-colors" title={t('profile.doc.openTab')}>
+                {pii && <a href="#" onClick={(e) => { e.preventDefault(); openCv(cvRef.current, c.name); }} className="size-8 flex items-center justify-center rounded-lg hover:bg-[#f8f6f6] dark:hover:bg-[#251f1e] text-[#896a61] transition-colors" title={t('profile.doc.openTab')}>
                   <span className="material-symbols-outlined text-[20px]">open_in_new</span>
-                </a>
+                </a>}
               </div>
             </div>
             <div className="flex-1 overflow-auto custom-scrollbar flex justify-center bg-[#525659] dark:bg-[#121212]">
               <div className="relative w-full h-full" style={{ overflow: 'hidden' }}>
-                <CvDocument c={c} zoom={zoom} />
-                <a className="absolute top-4 right-4 size-10 flex items-center justify-center bg-white dark:bg-gray-800 rounded-full shadow-lg hover:shadow-xl transition-shadow text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white cursor-pointer z-10" title={t('profile.doc.download')}>
+                <div ref={cvRef}><CvDocument c={c} zoom={zoom} maskContact={!pii} /></div>
+                {/* The original file carries contact data, so only users allowed to see it can download it. */}
+                {pii && <a href="#" onClick={(e) => { e.preventDefault(); downloadCv(cvRef.current, c.name); }} className="absolute top-4 right-4 size-10 flex items-center justify-center bg-white dark:bg-gray-800 rounded-full shadow-lg hover:shadow-xl transition-shadow text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white cursor-pointer z-10" title={t('profile.doc.download')}>
                   <span className="material-symbols-outlined text-[20px]">download</span>
-                </a>
+                </a>}
               </div>
             </div>
           </div>
         </div>
       </div>
       {showNew && <AddToPipelineModal open={pipelineOpen} onClose={() => setPipelineOpen(false)} candidateIds={[c.id]} />}
+      {mailing && <EmailComposer open candidateId={c.id} onClose={() => setMailing(false)} />}
     </AppLayout>
   );
 }

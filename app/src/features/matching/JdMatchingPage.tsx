@@ -10,12 +10,14 @@ import type { MatchRow } from '../../domain/types';
 import { useT } from '../../i18n/i18n';
 import { useStore } from '../../store/store';
 import { MatchPager, MatchRowItem } from './MatchList';
+import { AddToPipelineModal } from '../candidates/AddToPipelineModal';
+import { useShowNew } from '../../hooks';
 
 const PAGE_SIZE = 8;
 const BTN =
   'flex items-center gap-2 px-3 py-2 bg-white border border-[#e6dddb] rounded-lg text-sm font-medium text-[#181211] hover:border-primary/50 transition-colors whitespace-nowrap';
 const CARD = 'bg-white p-6 rounded-[2rem] border border-gray-100 shadow-sm';
-const LABEL = 'text-[10px] font-bold text-gray-400 uppercase tracking-widest';
+const LABEL = 'text-2xs font-bold text-muted uppercase tracking-widest';
 const THRESHOLDS = [80, 60, 40, 0];
 
 function Stat({ icon, tone, label, value, sub }: { icon: string; tone: string; label: string; value: string | number; sub?: string }) {
@@ -27,7 +29,7 @@ function Stat({ icon, tone, label, value, sub }: { icon: string; tone: string; l
         </div>
         <div>
           <p className={LABEL}>{label}</p>
-          <h3 className="text-2xl font-bold text-slate-900">{value}</h3>
+          <h3 className="ty-kpi text-2xl font-bold text-slate-900">{value}</h3>
           {sub && <p className="text-xs text-[#896a61]">{sub}</p>}
         </div>
       </div>
@@ -72,15 +74,26 @@ const clock = (d: Date) => ({
 export function JdMatchingPage() {
   const t = useT();
   const navigate = useNavigate();
-  const [params] = useSearchParams();
+  const [params, setParams] = useSearchParams();
   const jds = useStore((s) => s.jds);
   const candidates = useStore((s) => s.candidates);
   const taxonomy = useStore((s) => s.taxonomy);
   const fixture = useStore((s) => s.meta?.matching);
 
-  const [jdId, setJdId] = useState(() => params.get('jd') ?? fixture?.jdId ?? (jds.find((j) => j.status === 'Published') ?? jds[0])?.id);
-  const [min, setMin] = useState(60);
-  const [page, setPage] = useState(1);
+  // JD, score threshold and page live in the URL so Back from a profile returns to the same list.
+  const jdId = params.get('jd') ?? fixture?.jdId ?? (jds.find((j) => j.status === 'Published') ?? jds[0])?.id;
+  const min = Number(params.get('min') ?? 60);
+  const page = Number(params.get('page') ?? 1);
+  const patch = (next: Record<string, string>) => {
+    const q = new URLSearchParams(params);
+    for (const [k, v] of Object.entries(next)) q.set(k, v);
+    setParams(q, { replace: true });
+  };
+  const setJdId = (id: string) => patch({ jd: id, page: '1' });
+  const setMin = (n: number) => patch({ min: String(n), page: '1' });
+  const setPage = (n: number) => patch({ page: String(n) });
+  const showNew = useShowNew();
+  const [adding, setAdding] = useState<string | null>(null);
   const [runAt, setRunAt] = useState(() => new Date());
   const search = isFixtureMode() ? '?fixture=mockup' : '';
 
@@ -93,6 +106,7 @@ export function JdMatchingPage() {
   const partial = fixture?.partial ?? all.filter((r) => r.score >= 60 && r.score < 80).length;
   const scanned = fixture?.scanned ?? candidates.length;
   const shown = all.filter((r) => r.score >= min);
+  const lower = THRESHOLDS.find((n) => n < min && all.some((r) => r.score >= n));
   const total = fixture ? strong + partial : shown.length;
   const last = fixture?.lastRun ?? clock(runAt);
   const rows = shown.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -115,7 +129,7 @@ export function JdMatchingPage() {
 
   return (
     <AppLayout title={t('nav.jdMatching')} subtitle={t('matching.subtitle')}>
-      <div className="p-8 max-w-[1400px] mx-auto space-y-6 min-h-full bg-[#f9fafb]">
+      <div className="p-8 max-w-[1400px] mx-auto space-y-6 min-h-full bg-canvas">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <Stat icon="groups" tone="bg-blue-50 text-blue-600" label={t('matching.scanned')} value={scanned} />
           <Stat icon="verified" tone="bg-emerald-50 text-emerald-600" label={t('matching.strong')} value={strong} />
@@ -134,7 +148,7 @@ export function JdMatchingPage() {
                 trigger={({ toggle }) => (
                   <button onClick={toggle} className="w-full flex items-center justify-between gap-2 px-4 py-3 bg-white border border-[#e6dddb] rounded-xl text-left hover:border-primary/50 transition-colors">
                     <div>
-                      <div className="font-bold text-[#181211]">{jd?.title ?? t('matching.noJds')}</div>
+                      <div className="ty-section font-bold text-[#181211]">{jd?.title ?? t('matching.noJds')}</div>
                       {jd && <div className="text-xs text-[#896a61]">{t('jds.id', { code: jd.code })} · {t(jd.status === 'Published' ? 'jds.status.published' : 'jds.status.draft')}</div>}
                     </div>
                     <span className="material-symbols-outlined text-[20px] text-[#896a61]">expand_more</span>
@@ -142,7 +156,7 @@ export function JdMatchingPage() {
                 )}
               >
                 {(close) => jds.map((j) => (
-                  <MenuItem key={j.id} active={j.id === jdId} onClick={() => { setJdId(j.id); setPage(1); close(); }}>{j.title}</MenuItem>
+                  <MenuItem key={j.id} active={j.id === jdId} onClick={() => { setJdId(j.id); close(); }}>{j.title}</MenuItem>
                 ))}
               </Popover>
               <div className="space-y-2">
@@ -165,7 +179,7 @@ export function JdMatchingPage() {
                 <Weight label={t('matching.w.domain')} pct={WEIGHTS.domain} />
                 <Weight label={t('matching.w.english')} pct={WEIGHTS.english} />
               </div>
-              <button onClick={rerun} className="w-full h-11 bg-[#F97316] hover:bg-[#EA580C] text-white rounded-full font-bold shadow-lg shadow-orange-500/20 flex items-center justify-center gap-2 transition-all active:scale-95 text-sm">
+              <button onClick={rerun} className="w-full h-11 bg-brand-accent hover:bg-brand-strong text-white rounded-full font-bold shadow-lg shadow-orange-500/20 flex items-center justify-center gap-2 transition-all active:scale-95 text-sm">
                 <span className="material-symbols-outlined text-[20px]">auto_awesome</span> {t('matching.rerun')}
               </button>
             </div>
@@ -174,7 +188,7 @@ export function JdMatchingPage() {
           <div className="bg-white rounded-[2rem] border border-gray-100 shadow-sm overflow-hidden">
             <div className="px-6 py-5 flex items-center justify-between gap-4 border-b border-[#f4f1f0]">
               <div>
-                <h3 className="text-lg font-bold text-slate-900">{t('matching.ranked')}</h3>
+                <h3 className="ty-section text-lg font-bold text-slate-900">{t('matching.ranked')}</h3>
                 <p className="text-xs text-[#896a61]">{t('matching.top', { n: total, total: scanned })}</p>
               </div>
               <div className="flex items-center gap-2">
@@ -189,7 +203,7 @@ export function JdMatchingPage() {
                   )}
                 >
                   {(close) => THRESHOLDS.map((n) => (
-                    <MenuItem key={n} active={n === min} onClick={() => { setMin(n); setPage(1); close(); }}>
+                    <MenuItem key={n} active={n === min} onClick={() => { setMin(n); close(); }}>
                       {n ? t('matching.score', { n }) : t('matching.scoreAll')}
                     </MenuItem>
                   ))}
@@ -202,14 +216,31 @@ export function JdMatchingPage() {
             </div>
             <div className="divide-y divide-[#f4f1f0]">
               {rows.map((r, i) => (
-                <MatchRowItem key={`${r.candidateId}-${i}`} row={r} rank={(page - 1) * PAGE_SIZE + i + 1} onOpen={() => navigate({ pathname: `/candidates/${r.candidateId}`, search })} />
+                <MatchRowItem
+                  key={`${r.candidateId}-${i}`}
+                  row={r}
+                  rank={(page - 1) * PAGE_SIZE + i + 1}
+                  onOpen={() => navigate({ pathname: `/candidates/${r.candidateId}`, search })}
+                  onAdd={showNew ? () => setAdding(r.candidateId) : undefined}
+                />
               ))}
-              {rows.length === 0 && <div className="px-6 py-10 text-center text-sm text-[#896a61]">{t(jd || fixture ? 'matching.empty' : 'matching.noJds')}</div>}
+              {rows.length === 0 && (
+                <div className="px-6 py-10 text-center text-sm text-[#896a61] space-y-3">
+                  <p>{t(jd || fixture ? 'matching.empty' : 'matching.noJds')}</p>
+                  {/* Not a dead end: offer the highest threshold that has results. */}
+                  {showNew && lower !== undefined && (
+                    <button onClick={() => setMin(lower)} className="px-4 py-2 rounded-full border border-primary text-primary font-bold hover:bg-primary/5">
+                      {lower ? t('matching.lower', { n: lower }) : t('matching.lowerAll')}
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
             <MatchPager page={page} pageSize={PAGE_SIZE} total={total} onPage={setPage} />
           </div>
         </div>
       </div>
+      <AddToPipelineModal open={adding !== null} onClose={() => setAdding(null)} candidateIds={adding ? [adding] : []} />
     </AppLayout>
   );
 }

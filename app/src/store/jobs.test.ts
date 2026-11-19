@@ -46,3 +46,44 @@ describe('job actions', () => {
     expect(s.getState().setJobStatus('nope', 'open')).toBe(false);
   });
 });
+
+describe('job approval', () => {
+  it('draft -> pending -> approved publishes the job and logs each step', () => {
+    const s = setup();
+    const job = s.getState().createJob(input);
+    expect(s.getState().approveJob(job.id)).toBe(false);
+    expect(s.getState().requestJobApproval(job.id)).toBe(true);
+    expect(s.getState().jobs[0]).toMatchObject({ status: 'pending_approval', approval: { requestedBy: 'u-admin' } });
+    clock = '2026-11-18T08:00:00.000Z';
+    expect(s.getState().approveJob(job.id)).toBe(true);
+    expect(s.getState().jobs[0]).toMatchObject({ status: 'open', openedAt: clock, updatedAt: clock, approval: { decidedAt: clock } });
+    const types = s.getState().activities.filter((a) => a.jobId === job.id).map((a) => a.type);
+    expect(types).toEqual(['job_created', 'job_approval_requested', 'job_approved']);
+  });
+
+  it('sending back needs a reason and returns the job to draft with it', () => {
+    const s = setup();
+    expect(s.getState().rejectJob('job-5', '  ')).toBe(false);
+    expect(s.getState().rejectJob('job-5', 'Salary band missing')).toBe(true);
+    expect(s.getState().jobs.find((j) => j.id === 'job-5')).toMatchObject({ status: 'draft', approval: { rejectedReason: 'Salary band missing' } });
+    expect(s.getState().rejectJob('job-5', 'again')).toBe(false);
+  });
+
+  it('a job created straight into pending approval is stamped with the requester', () => {
+    const s = setup();
+    const job = s.getState().createJob({ ...input, status: 'pending_approval' });
+    expect(job.approval).toMatchObject({ requestedBy: 'u-admin', requestedAt: clock });
+  });
+});
+
+describe('job templates', () => {
+  it('saves and deletes templates', () => {
+    const s = setup();
+    const before = s.getState().jobTemplates!.length;
+    const tpl = s.getState().saveJobTemplate(' Data · Middle ', { department: 'Data', location: 'Hanoi', level: 'Middle', employment: 'Full-time', stageSla: {}, hiringManager: 'u-thu', minYears: 3 });
+    expect(tpl).toMatchObject({ name: 'Data · Middle', createdBy: 'u-admin' });
+    expect(s.getState().jobTemplates).toHaveLength(before + 1);
+    expect(s.getState().deleteJobTemplate(tpl.id)).toBe(true);
+    expect(s.getState().deleteJobTemplate(tpl.id)).toBe(false);
+  });
+});

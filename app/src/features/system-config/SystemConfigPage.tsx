@@ -1,14 +1,15 @@
 import { useState, type ReactNode } from 'react';
 import { AppLayout } from '../../components/AppLayout';
+import { useShowNew } from '../../hooks';
 import { useT, type TKey } from '../../i18n/i18n';
 import { useStore } from '../../store/store';
 import { PromptsTable } from './PromptsTable';
 import { UsageTab } from './UsageTab';
 
-type Tab = 'prompts' | 'email' | 'usage';
+type Tab = 'prompts' | 'email' | 'content' | 'usage';
 
-const TAB_ON = 'flex items-center gap-2 px-6 py-3 border-b-2 transition-colors border-primary text-primary font-medium';
-const TAB_OFF = 'flex items-center gap-2 px-6 py-3 border-b-2 transition-colors border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200';
+const TAB_ON = 'ty-tab flex items-center gap-2 px-6 py-3 border-b-2 transition-colors border-primary text-primary font-medium';
+const TAB_OFF = 'ty-tab flex items-center gap-2 px-6 py-3 border-b-2 transition-colors border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200';
 
 function Icon({ name, children }: { name: string; children: ReactNode }) {
   return (
@@ -38,9 +39,17 @@ const ChartIcon = () => (
   </Icon>
 );
 
+const DocIcon = () => (
+  <Icon name="file-text">
+    <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path>
+    <path d="M10 9H8"></path><path d="M16 13H8"></path><path d="M16 17H8"></path>
+  </Icon>
+);
+
 const TABS: Array<{ id: Tab; label: TKey; icon: () => ReactNode }> = [
   { id: 'prompts', label: 'systemConfig.tab.prompts', icon: CpuIcon },
   { id: 'email', label: 'systemConfig.tab.email', icon: MailIcon },
+  { id: 'content', label: 'systemConfig.tab.content', icon: DocIcon },
   { id: 'usage', label: 'systemConfig.tab.usage', icon: ChartIcon },
 ];
 
@@ -48,8 +57,12 @@ export function SystemConfigPage() {
   const t = useT();
   const prompts = useStore((s) => s.prompts);
   const [tab, setTab] = useState<Tab>('prompts');
-  // Email templates share the prompt store and are told apart by their `email-` id prefix.
+  // The mockup has no Job content tab, so fixture mode keeps the original three.
+  const tabs = useShowNew() ? TABS : TABS.filter((x) => x.id !== 'content');
+  // Email and job-content templates share the prompt store and are told apart by their id prefix.
   const isEmail = (id: string) => id.startsWith('email-');
+  const isContent = (id: string) => id.startsWith('content-');
+  const isPrompt = (id: string) => !isEmail(id) && !isContent(id);
 
   return (
     <AppLayout title={t('systemConfig.title')}>
@@ -57,7 +70,7 @@ export function SystemConfigPage() {
         <div className="flex-1 overflow-y-auto p-6">
           <div className="max-w-7xl mx-auto">
             <div className="flex border-b border-gray-200 dark:border-gray-800 mb-6">
-              {TABS.map(({ id, label, icon: TabIcon }) => (
+              {tabs.map(({ id, label, icon: TabIcon }) => (
                 <button key={id} onClick={() => setTab(id)} className={id === tab ? TAB_ON : TAB_OFF}>
                   <TabIcon />
                   {t(label)}
@@ -66,12 +79,15 @@ export function SystemConfigPage() {
             </div>
             <div className="bg-white dark:bg-[#1e1e1e] rounded-xl shadow-sm border border-[#e6dddb] dark:border-[#2a2423] p-6">
               {tab === 'prompts' && (
-                <PromptsTable items={prompts.filter((p) => !isEmail(p.id))} title="systemConfig.prompts.title" desc="systemConfig.prompts.desc" noun="items" />
+                <PromptsTable items={prompts.filter((p) => isPrompt(p.id))} title="systemConfig.prompts.title" desc="systemConfig.prompts.desc" noun="items" />
               )}
               {tab === 'email' && (
                 <PromptsTable items={prompts.filter((p) => isEmail(p.id))} title="systemConfig.email.title" desc="systemConfig.email.desc" noun="items" />
               )}
-              {tab === 'usage' && <UsageTab prompts={prompts.filter((p) => !isEmail(p.id))} />}
+              {tab === 'content' && (
+                <PromptsTable items={prompts.filter((p) => isContent(p.id))} title="systemConfig.content.title" desc="systemConfig.content.desc" noun="items" />
+              )}
+              {tab === 'usage' && <UsageTab prompts={prompts.filter((p) => isPrompt(p.id))} />}
             </div>
           </div>
         </div>

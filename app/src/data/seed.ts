@@ -1,11 +1,14 @@
+import { evaluateApplication, requirementsForJob } from '../domain/aiEvaluation';
 import type {
-  Activity, Application, ApplicationComment, ApplicationRating, Campaign, Candidate, DemoState, Job, Jd, Note,
-  Prompt, Stage, StageHistoryEntry, TaxonomyItem, User, Via,
+  Activity, Application, ApplicationComment, ApplicationRating, Campaign, Candidate, DemoState, Interview, Job, JobTemplate, Jd, Note,
+  Offer, Prompt, Stage, StageHistoryEntry, TaxonomyItem, User, Via,
 } from '../domain/types';
 import { campaignLinks, CHANNEL_SOURCE, DEMO_ORIGIN, type Channel } from '../domain/campaigns';
 import { SOURCE_CAREERS, SOURCE_CV_UPLOAD, SOURCE_MANUAL, SOURCE_REFERRAL, SOURCE_TALENT_POOL } from '../domain/sources';
+import { HANDOFF_TARGET } from '../domain/hiring';
 import { STAGES } from '../domain/stages';
 import { normalizeEmail } from '../domain/normalize';
+import { withFlowDetail, withProfiles } from './seedDetail';
 import {
   COMMENTS, DOMAINS, ENGLISH, FIRST_NAMES, GROUPS, LAST_NAMES, MIDDLE_NAMES, NOTE_TEXTS,
   REJECT_REASONS, SENIORITY, SKILLS, TAGS, TITLES,
@@ -94,14 +97,37 @@ export function buildJds(): Jd[] {
 export function buildEmailTemplates(): Prompt[] {
   const row = (id: string, name: string, description: string, text: string): Prompt =>
     ({ id: `email-${id}`, name, description, text, updatedAt: '2026-03-10T09:00:00' });
-  const sign = '\n\nThe InApps Talent team';
+  const sign = '\n\nThe InTalent team';
   return [
     row('application-received', 'Application Received', 'Sent when a candidate applies on the careers site',
       `Hi {{name}},\n\nThanks for applying for {{job}}. We received your application and will be in touch soon.${sign}`),
-    row('interview-invite', 'Interview Invitation', 'Sent when a candidate moves to Interview',
-      `Hi {{name}},\n\nWe would like to invite you to an interview for {{job}}. Please reply with a time that suits you.${sign}`),
+    row('interview-invite', 'Interview Invitation', 'Sent when an interview is scheduled',
+      `Hi {{name}},\n\nWe would like to invite you to an interview for {{job}}.\n\nTime: {{time}}\nWhere: {{place}}\n\nPlease reply to confirm.${sign}`),
+    row('offer', 'Offer Letter', 'Sent with the job offer',
+      `Hi {{name}},\n\nWe are happy to offer you the {{job}} position.\n\nSalary: {{salary}} (gross / month)\nStart date: {{startDate}}\n\nThis offer is valid until {{validUntil}}.\n\nAccept or decline online: {{portalLink}} (sign in with this email address), or simply reply to this email.${sign}`),
+    row('stage-update', 'Application Update', 'General update when the application moves forward',
+      `Hi {{name}},\n\nA quick update on your application for {{job}}: you are now at the {{stage}} step. We will be in touch with next steps.${sign}`),
     row('rejection', 'Rejection', 'Sent when a candidate is moved to Rejected',
       `Hi {{name}},\n\nThank you for your interest in {{job}}. We will not move forward this time, but we will keep your profile on file.${sign}`),
+  ];
+}
+
+/** Company defaults for job-post sections (id prefix `content-`), edited on System Config > Job content. */
+export function buildContentTemplates(): Prompt[] {
+  const row = (id: string, name: string, description: string, text: string): Prompt =>
+    ({ id: `content-${id}`, name, description, text, updatedAt: '2026-03-10T09:00:00' });
+  return [
+    row('why-love', "Why you'll love working here", 'Prefilled into every new job; editable per job',
+      [
+        '- Competitive salary with a 13th-month bonus and yearly performance review',
+        '- Work with international clients on modern stacks',
+        '- Hybrid working and flexible hours',
+        '- Premium health insurance and a yearly health check',
+        '- Learning budget for courses and certifications',
+        '- Team trips, sports clubs and monthly team events',
+      ].join('\n')),
+    row('additional-info', 'Additional information', 'Added under the job facts when AI drafts the section',
+      ['- Working hours: Monday to Friday, 8:30 to 17:30', '- Interview process: HR screening, technical interview, final interview'].join('\n')),
   ];
 }
 
@@ -140,13 +166,13 @@ function buildTaxonomy(candidates: Candidate[]): TaxonomyItem[] {
 
 const USER_ROWS: Array<[id: string, name: string, email: string, role: string]> = [
   ['u-admin', 'Super Admin', 'admin@company.demo', 'Super Admin'],
-  ['u-thu', 'Mai Anh Thu', 'thu.mai@company.demo', 'Admin'],
-  ['u-huy', 'Pham Gia Huy', 'huy.pham@company.demo', 'User'],
-  ['u-linh', 'Do Khanh Linh', 'linh.do@company.demo', 'User'],
-  ['u-nam', 'Vu Hoang Nam', 'nam.vu@company.demo', 'User'],
-  ['u-tam', 'Bui Thanh Tam', 'tam.bui@company.demo', 'Admin'],
-  ['u-quang', 'Ly Quoc Quang', 'quang.ly@company.demo', 'User'],
-  ['u-chau', 'Dang Minh Chau', 'chau.dang@company.demo', 'User'],
+  ['u-thu', 'Mai Anh Thu', 'thu.mai@company.demo', 'Recruitment Lead'],
+  ['u-huy', 'Pham Gia Huy', 'huy.pham@company.demo', 'Recruiter'],
+  ['u-linh', 'Do Khanh Linh', 'linh.do@company.demo', 'Recruiter'],
+  ['u-nam', 'Vu Hoang Nam', 'nam.vu@company.demo', 'Hiring Manager'],
+  ['u-tam', 'Bui Thanh Tam', 'tam.bui@company.demo', 'Recruitment Lead'],
+  ['u-quang', 'Ly Quoc Quang', 'quang.ly@company.demo', 'Interviewer'],
+  ['u-chau', 'Dang Minh Chau', 'chau.dang@company.demo', 'Recruiter'],
 ];
 const STAFF = USER_ROWS.slice(1).map((u) => u[0]);
 
@@ -161,7 +187,7 @@ const JOB_ROWS: Array<[id: string, jdId: string, title: string, status: Job['sta
   ['job-2', 'jd-2026-003', 'Tech Lead / Senior Engineer', 'open', 'Engineering', 'Lead'],
   ['job-3', 'jd-2026-001', 'Senior Flutter & Java Engineer', 'open', 'Engineering', 'Senior'],
   ['job-4', 'jd-2026-004', 'Senior Growth Marketing Lead', 'open', 'Marketing', 'Senior'],
-  ['job-5', 'jd-2026-001', 'Mobile Engineer (Flutter)', 'draft', 'Engineering', 'Middle'],
+  ['job-5', 'jd-2026-001', 'Mobile Engineer (Flutter)', 'pending_approval', 'Engineering', 'Middle'],
   ['job-6', 'jd-2026-004', 'Growth Marketing Manager', 'closed', 'Marketing', 'Middle'],
 ];
 
@@ -170,10 +196,143 @@ function buildJobs(clock: Clock): Job[] {
     id, jdId, title, department, level, status,
     location: i % 2 ? 'Ho Chi Minh City' : 'Hanoi',
     employment: 'Full-time',
-    stageSla: { new: 2, screening: 5, interview: 7, offer: 3 },
+    stageSla: { new: 2, ai_screening: 1, screening: 5, interview: 7, assessment: 5, final_interview: 5, offer: 3 },
     openedAt: clock.daysAgo(90 - i * 10),
     hiringManager: i % 2 ? 'u-nam' : 'u-thu',
+    ...JOB_EXTRAS[i],
+    ...(JOB_EXTRAS[i].approval ? { approval: { ...JOB_EXTRAS[i].approval!, requestedAt: clock.daysAgo(1) } } : {}),
   }));
+}
+
+const MIL = 1_000_000;
+/** Salary, collaborators and application questions per JOB_ROWS index (no rng draws, so the rest of the seed is unchanged). */
+const JOB_EXTRAS: Array<Partial<Job>> = [
+  { workplace: 'hybrid', headcount: 2, salaryMin: 40 * MIL, salaryMax: 60 * MIL, currency: 'VND', showSalary: true, collaborators: ['u-huy', 'u-linh'],
+    questions: [
+      { id: 'q-notice', label: 'What is your notice period?', type: 'text', required: false },
+      { id: 'q-onsite', label: 'Can you work onsite 3 days a week?', type: 'yesno', required: false },
+    ] },
+  { workplace: 'remote', headcount: 1, salaryMin: 3000, salaryMax: 4500, currency: 'USD', showSalary: false, collaborators: ['u-huy'],
+    questions: [
+      { id: 'q-lead', label: 'How many engineers have you led?', type: 'text', required: true },
+      { id: 'q-english', label: 'Are you comfortable working in English daily?', type: 'yesno', required: true },
+    ] },
+  { workplace: 'onsite', headcount: 3, salaryMin: 35 * MIL, salaryMax: 50 * MIL, currency: 'VND', showSalary: true, collaborators: ['u-linh'], questions: [] },
+  { workplace: 'hybrid', headcount: 1, salaryMin: 30 * MIL, salaryMax: 45 * MIL, currency: 'VND', showSalary: true, collaborators: ['u-chau'], questions: [] },
+  { workplace: 'onsite', headcount: 2, collaborators: ['u-huy'], education: 'college', approval: { requestedBy: 'u-huy', requestedAt: '' } },
+  { workplace: 'onsite', headcount: 1, collaborators: ['u-chau'] },
+];
+
+/** Starting points for new jobs (Job Templates). */
+function buildJobTemplates(clock: Clock): JobTemplate[] {
+  const sla = { new: 2, ai_screening: 1, screening: 5, interview: 7, assessment: 5, final_interview: 5, offer: 3 };
+  return [
+    {
+      id: 'jtpl-eng-senior', name: 'Engineering · Senior · Hybrid', createdAt: clock.daysAgo(60), createdBy: 'u-thu',
+      fields: {
+        department: 'Engineering', location: 'Hanoi', level: 'Senior', employment: 'Full-time', workplace: 'hybrid', headcount: 1,
+        hiringManager: 'u-thu', stageSla: sla, salaryMin: 40 * MIL, salaryMax: 60 * MIL, currency: 'VND', showSalary: true,
+        minYears: 5, education: 'bachelor',
+        questions: [{ id: 'q-notice', label: 'What is your notice period?', type: 'text', required: false }],
+      },
+    },
+    {
+      id: 'jtpl-mkt-middle', name: 'Marketing · Middle · Onsite', createdAt: clock.daysAgo(40), createdBy: 'u-nam',
+      fields: {
+        department: 'Marketing', location: 'Ho Chi Minh City', level: 'Middle', employment: 'Full-time', workplace: 'onsite', headcount: 1,
+        hiringManager: 'u-nam', stageSla: sla, currency: 'VND', minYears: 3, education: 'bachelor', questions: [],
+      },
+    },
+  ];
+}
+
+/**
+ * Two candidates with a login (one in Interview, one at Offer), each with CV versions; the first also has
+ * pending proposals so the HR review flow can be demoed straight away. Deterministic, no rng.
+ */
+function withCandidateAccounts(candidates: Candidate[], apps: Application[], clock: Clock): { candidates: Candidate[]; users: User[] } {
+  const withEmail = (a: Application) => !!candidates.find((c) => c.id === a.candidateId)?.email;
+  const pickFor = (stage: Stage) => apps.find((a) => a.stage === stage && withEmail(a))?.candidateId;
+  // The Offer login needs a sent offer so accept / decline can be demoed (fall back to any Offer card).
+  // and only one offer, so the portal shows a single Accept / Decline.
+  const offersOf = (cid: string) => apps.filter((a) => a.candidateId === cid && a.offer).length;
+  const sentOffer = apps.find((a) => a.stage === 'offer' && a.offer?.status === 'sent' && withEmail(a) && offersOf(a.candidateId) === 1)?.candidateId;
+  const ids = [pickFor('interview'), sentOffer ?? pickFor('offer')].filter((x, i, xs): x is string => !!x && xs.indexOf(x) === i);
+  const users: User[] = ids.map((cid, i) => {
+    const c = candidates.find((x) => x.id === cid)!;
+    return { id: `u-cand-${i + 1}`, name: c.name, email: c.email, role: 'Candidate', status: 'Active', createdAt: clock.daysAgo(30).slice(0, 10), candidateId: cid };
+  });
+  const updated = candidates.map((c) => {
+    const i = ids.indexOf(c.id);
+    if (i < 0) return c;
+    const by = `u-cand-${i + 1}`;
+    const file = (v: number) => `${fold(c.name).replace(/\s+/g, '-')}-cv-v${v}.pdf`;
+    return {
+      ...c,
+      cvVersions: [
+        { id: `cv-${c.id}-1`, fileName: file(1), at: clock.daysAgo(30), by },
+        { id: `cv-${c.id}-2`, fileName: file(2), at: clock.daysAgo(2), by },
+      ],
+      ...(i === 0
+        ? { suggestions: [
+            { id: `sg-${c.id}-1`, field: 'seniority' as const, value: c.seniority === 'Senior' ? 'Lead' : 'Senior', at: clock.daysAgo(1) },
+            { id: `sg-${c.id}-2`, field: 'skills' as const, value: [...c.skills, 'Docker'], at: clock.daysAgo(1) },
+          ] }
+        : {}),
+    };
+  });
+  return { candidates: updated, users };
+}
+
+/** Interviews, offers and hand-offs that match each seeded application's stage (deterministic, no rng). */
+/** Seeded applications were scored when they entered the pipeline: one evaluation each, nothing pending. */
+function withAiEvaluations(apps: Application[], candidates: Candidate[], jobs: Job[], jds: Jd[], taxonomy: TaxonomyItem[]): Application[] {
+  return apps.map((a) => {
+    const c = candidates.find((x) => x.id === a.candidateId);
+    const job = jobs.find((j) => j.id === a.jobId);
+    if (!c || !job) return a;
+    return { ...a, aiEvaluations: [evaluateApplication(c, requirementsForJob(job, jds, taxonomy), a.addedAt, `ai-${a.id}-1`)] };
+  });
+}
+
+function withHiringRecords(apps: Application[], clock: Clock): Application[] {
+  const at = (hoursFromNow: number) => {
+    const d = new Date(Date.parse(clock.iso(hoursFromNow)));
+    d.setMinutes(0, 0, 0);
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:00`;
+  };
+  return apps.map((a, i) => {
+    const interviewer = STAFF[i % STAFF.length];
+    const past = (n: number): Interview => ({
+      id: `int-${a.id}-${n}`, round: n === 1 ? 'Technical interview' : 'Final interview', at: at(-24 * (6 - n)),
+      durationMin: 60, mode: n === 1 ? 'online' : 'onsite', place: n === 1 ? 'https://meet.example.com/intalent' : 'Meeting room 3',
+      interviewers: [interviewer], status: 'done', createdBy: a.addedBy,
+      scorecards: [{
+        by: interviewer, at: clock.iso(-24 * (6 - n) + 2),
+        scores: { technical: 4, communication: 3 + (i % 3), problem: 4, culture: 4 }, recommendation: i % 3 ? 'yes' : 'strong_yes',
+        note: 'Solid fundamentals, clear communication.',
+      }],
+    });
+    const offer = (status: Offer['status']): Offer => ({
+      salary: 45 * MIL, currency: 'VND', startDate: clock.daysAgo(-21).slice(0, 10), contract: 'Full-time',
+      validUntil: clock.daysAgo(-5).slice(0, 10), status, createdBy: 'u-thu', updatedAt: clock.daysAgo(2),
+      sentAt: clock.daysAgo(2), ...(status === 'accepted' ? { respondedAt: clock.daysAgo(1) } : {}),
+    });
+    if (a.stage === 'interview') {
+      return { ...a, interviews: [{
+        id: `int-${a.id}-1`, round: 'Technical interview', at: at(24 * (1 + (i % 4)) + 2), durationMin: 60,
+        mode: i % 2 ? 'online' : 'onsite', place: i % 2 ? 'https://meet.example.com/intalent' : 'Meeting room 2',
+        interviewers: [interviewer], status: 'scheduled', scorecards: [], createdBy: a.addedBy,
+      }] };
+    }
+    if (a.stage === 'offer') return { ...a, interviews: [past(1), past(2)], offer: offer(i % 2 ? 'sent' : 'draft') };
+    if (a.stage === 'hired') {
+      return { ...a, interviews: [past(1), past(2)], offer: offer('accepted'),
+        ...(i % 2 ? { handoff: { at: clock.daysAgo(1), by: 'u-thu', target: HANDOFF_TARGET } } : {}) };
+    }
+    return a;
+  });
 }
 
 function buildCampaigns(clock: Clock): Campaign[] {
@@ -262,12 +421,25 @@ function buildCandidates(rng: Rng, count: number, contacts: Contacts, clock: Clo
   });
 }
 
-const STAGE_COUNTS: Record<Stage, number> = { new: 18, screening: 16, interview: 14, offer: 7, hired: 6, rejected: 9 };
+/** The original six-stage order; seed paths keep it so the rng draws (and so the demo data) stay the same. */
+const LEGACY_PATH: Stage[] = ['new', 'screening', 'interview', 'offer', 'hired', 'rejected'];
+
+/** A few interviews move on to the 2nd interview so every default column has demo cards (optional columns start empty). */
+const EXTRA_STAGES: [from: Stage, to: Stage, count: number][] = [
+  ['interview', 'final_interview', 4],
+];
+
+/** Demo applications across the open jobs (cut 30% from 70 so the All jobs board stays readable). */
+const APP_COUNT = 49;
+
+const STAGE_COUNTS: Record<Stage, number> = {
+  new: 13, ai_screening: 0, screening: 11, interview: 10, assessment: 0, final_interview: 0, custom_1: 0, custom_2: 0, custom_3: 0, custom_4: 0, custom_5: 0, custom_6: 0, offer: 5, hired: 4, rejected: 6, withdrawn: 0,
+};
 
 function buildApplications(rng: Rng, candidates: Candidate[], jobs: Job[], campaigns: Campaign[], clock: Clock) {
   const openJobs = jobs.filter((j) => j.status === 'open');
   const closedJob = jobs.find((j) => j.status === 'closed')!;
-  const stages = sample(rng, STAGES.flatMap((s) => Array<Stage>(STAGE_COUNTS[s]).fill(s)), 70);
+  const stages = sample(rng, STAGES.flatMap((s) => Array<Stage>(STAGE_COUNTS[s]).fill(s)), APP_COUNT);
   const apps: Application[] = [];
   const activities: Activity[] = [];
   const pairs = new Set<string>();
@@ -294,8 +466,8 @@ function buildApplications(rng: Rng, candidates: Candidate[], jobs: Job[], campa
     const addedBy = pick(rng, STAFF);
 
     const path: Stage[] = stage === 'rejected'
-      ? [...STAGES.slice(0, int(rng, 1, 3)), 'rejected']
-      : STAGES.slice(0, STAGES.indexOf(stage) + 1);
+      ? [...LEGACY_PATH.slice(0, int(rng, 1, 3)), 'rejected']
+      : LEGACY_PATH.slice(0, LEGACY_PATH.indexOf(stage) + 1);
     // Same rng draws, in the same order, as before: one for the time in the current stage, then one gap per step.
     const dwellDraw = int(rng, 2, 60);
     const gaps = path.slice(1).map(() => int(rng, 12, 72));
@@ -335,6 +507,23 @@ function buildApplications(rng: Rng, candidates: Candidate[], jobs: Job[], campa
       });
     }
   });
+
+  for (const [from, to, count] of EXTRA_STAGES) {
+    for (const app of apps.filter((a) => a.stage === from).slice(-count)) {
+      // A withdrawal replaces the rejection rather than following it.
+      if (from === 'rejected') app.history.pop();
+      const last = app.history[app.history.length - 1];
+      const at = new Date(Date.parse(last.at) + 3_600_000).toISOString();
+      app.stage = to;
+      app.stageEnteredAt = at;
+      app.history.push({ stage: to, at, by: last.by });
+      if (to === 'withdrawn') delete app.rejectedReason;
+      activities.push({
+        type: 'stage_changed', candidateId: app.candidateId, applicationId: app.id, jobId: app.jobId,
+        by: last.by, at, detail: `Moved to ${to}`,
+      });
+    }
+  }
   return { apps, activities };
 }
 
@@ -360,7 +549,8 @@ function buildNotes(rng: Rng, contacts: Contacts, clock: Clock): Note[] {
 export function buildSeed(rng: Rng = mulberry32(20261116), base: number = SEED_BASE_TIME): DemoState {
   const clock = clockAt(base);
   const contacts = contactFactory(rng);
-  const candidates = buildCandidates(rng, 150, contacts, clock);
+  // Full CV profiles go on before the AI evaluations run, so the stored scores match what the profile shows.
+  const candidates = withProfiles(buildCandidates(rng, 150, contacts, clock), base);
   const jobs = buildJobs(clock);
   const campaigns = buildCampaigns(clock);
   const { apps, activities } = buildApplications(rng, candidates, jobs, campaigns, clock);
@@ -372,18 +562,24 @@ export function buildSeed(rng: Rng = mulberry32(20261116), base: number = SEED_B
   const noted: Activity[] = notes.map((n) => ({
     type: 'note_added', by: n.createdBy, at: n.createdAt, detail: `Note added for ${n.name}`,
   }));
-  return {
-    candidates,
-    applications: apps,
+  const jds = buildJds();
+  const taxonomy = buildTaxonomy(candidates);
+  const applications = withAiEvaluations(withHiringRecords(apps, clock), candidates, jobs, jds, taxonomy);
+  const portal = withCandidateAccounts(candidates, applications, clock);
+  return withFlowDetail({
+    candidates: portal.candidates,
+    applications,
     jobs,
     campaigns,
     notes,
     activities: [...created, ...activities, ...noted].sort((a, b) => a.at.localeCompare(b.at)),
-    users: buildUsers(clock),
-    jds: buildJds(),
-    taxonomy: buildTaxonomy(candidates),
-    prompts: [...buildPrompts(), ...buildEmailTemplates()],
+    users: [...buildUsers(clock), ...portal.users],
+    jds,
+    taxonomy,
+    prompts: [...buildPrompts(), ...buildEmailTemplates(), ...buildContentTemplates()],
     chats: [],
+    emails: [],
+    jobTemplates: buildJobTemplates(clock),
     ui: { lang: 'en', careersLang: 'vi', piiUnlocked: false },
-  };
+  }, base);
 }

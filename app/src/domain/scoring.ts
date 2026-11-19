@@ -12,6 +12,8 @@ export interface Requirements {
 
 export interface ScoreResult {
   score: number;
+  /** Points per criterion (rounded); they sum to `score`. */
+  breakdown: { stack: number; experience: number; domain: number; english: number };
   have: string[];
   miss: string[];
   reason: string;
@@ -79,12 +81,13 @@ export function scoreCandidate(c: Candidate, req: Requirements): ScoreResult {
   const lack = req.english ? englishRank(req.english) - englishRank(c.english) : 0;
   const english = lack <= 0 ? 1 : lack === 1 ? 0.5 : 0;
 
-  const score = Math.round(
-    stack * WEIGHTS.stack +
-      (seniority + years) * (WEIGHTS.experience / 2) +
-      domain * WEIGHTS.domain +
-      english * WEIGHTS.english,
-  );
+  const breakdown = {
+    stack: Math.round(stack * WEIGHTS.stack),
+    experience: Math.round((seniority + years) * (WEIGHTS.experience / 2)),
+    domain: Math.round(domain * WEIGHTS.domain),
+    english: Math.round(english * WEIGHTS.english),
+  };
+  const score = breakdown.stack + breakdown.experience + breakdown.domain + breakdown.english;
 
   const parts: string[] = [];
   if (req.stack.length) {
@@ -93,7 +96,7 @@ export function scoreCandidate(c: Candidate, req: Requirements): ScoreResult {
   }
   const facts = [c.seniority, `${estimateYears(c)} yrs`, c.english && `English ${c.english}`].filter(Boolean);
   if (domainHits.length) facts.push(domainHits.join(', '));
-  return { score, have, miss, reason: `${parts.join('; ')}${parts.length ? '. ' : ''}${facts.join(' · ')}` };
+  return { score, breakdown, have, miss, reason: `${parts.join('; ')}${parts.length ? '. ' : ''}${facts.join(' · ')}` };
 }
 
 const SENIORITY_WORDS: Array<[canon: string, words: string[]]> = [

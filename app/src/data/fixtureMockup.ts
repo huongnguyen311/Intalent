@@ -195,6 +195,7 @@ export function buildMockupFixture(): DemoState {
     taxonomy: buildEnglishTaxonomy(),
     prompts: buildPrompts(),
     chats: MOCKUP_CHATS,
+    emails: [],
     // The mockup's candidate list shows contact details unlocked.
     ui: { lang: 'en', careersLang: 'vi', piiUnlocked: true },
     meta: { totals: buildTotals(), matching: MOCKUP_MATCHING },

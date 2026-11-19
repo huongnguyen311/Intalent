@@ -1,18 +1,23 @@
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { AppLayout } from '../../components/AppLayout';
-import { toast } from '../../components/Toast';
+import { NotFoundState } from '../../components/NotFoundState';
+import { salaryRange } from '../../domain/hiring';
 import { userName } from '../../domain/users';
 import { useT, type TKey } from '../../i18n/i18n';
+import { can, jobsInScope } from '../../domain/permissions';
+import { useMe } from '../../store/session';
 import { useStore } from '../../store/store';
 import { fullDate } from '../jds/format';
 import { JobStatusBadge } from './JobBits';
 import { JobDrawer } from './JobDrawer';
 import { PipelineWorkspace } from '../pipeline/PipelineWorkspace';
 import { CampaignsTab, CandidatesTab, CareersPreviewTab } from './JobTabs';
+import { ago } from './jobForm';
+import { useJobActions } from './useJobActions';
 
 const SECONDARY =
-  'px-5 py-2.5 bg-white dark:bg-[#2a2423] border border-[#e6dddb] dark:border-[#3a3433] text-slate-700 dark:text-white text-sm font-bold rounded-full shadow-sm hover:border-primary/50 transition-colors flex items-center gap-2';
+  'px-5 py-2.5 bg-white dark:bg-[#2a2423] border border-[#e6dddb] dark:border-[#3a3433] text-slate-700 dark:text-white text-sm font-bold rounded-full shadow-sm hover:border-primary/50 transition-colors flex items-center gap-2 whitespace-nowrap';
 
 const TABS: Array<['pipeline' | 'candidates' | 'campaigns' | 'careers', TKey]> = [
   ['pipeline', 'jobs.tab.pipeline'],
@@ -25,24 +30,34 @@ export function JobDetailPage() {
   const t = useT();
   const navigate = useNavigate();
   const { id } = useParams();
-  const job = useStore((s) => s.jobs.find((j) => j.id === id));
+  const user = useMe();
+  const job = useStore((s) => jobsInScope(user, s.jobs).find((j) => j.id === id));
+  const canEdit = can(user, 'job.edit');
   const jd = useStore((s) => s.jds.find((j) => j.id === job?.jdId));
   const users = useStore((s) => s.users);
   const [tab, setTab] = useState<(typeof TABS)[number][0]>('pipeline');
   const [editing, setEditing] = useState(false);
+  const [duplicating, setDuplicating] = useState(false);
+  const { actionsFor, dialog } = useJobActions();
 
   if (!job) {
+    // A job that exists but is outside the user's scope is "no access", not "not found".
+    const exists = useStore.getState().jobs.some((j) => j.id === id);
     return (
       <AppLayout title={t('nav.jobs')}>
-        <div className="p-8 text-[#896a61]">{t('jobs.detail.notFound')}</div>
+        <NotFoundState
+          icon={exists ? 'lock' : 'search_off'}
+          message={t(exists ? 'jobs.detail.noAccess' : 'jobs.detail.notFound')}
+          backTo="/jobs"
+          backLabel={t('jobs.detail.back')}
+        />
       </AppLayout>
     );
   }
 
-  const setStatus = (next: 'open' | 'closed') => {
-    useStore.getState().setJobStatus(job.id, next);
-    toast(t(next === 'open' ? 'jobs.toast.published' : 'jobs.toast.closed'));
-  };
+  const actions = actionsFor(job);
+  const approval = job.approval;
+  const asked = approval ? ago(approval.requestedAt) : undefined;
 
   return (
     <AppLayout title={t('nav.jobs')} subtitle={t('jobs.subtitle')}>
@@ -50,41 +65,67 @@ export function JobDetailPage() {
         <div className="p-8 max-w-[1400px] mx-auto space-y-8">
           <div className="flex items-end justify-between">
             <div className="flex items-center gap-4">
-              <button aria-label={t('common.back')} onClick={() => navigate('/jobs')} className="size-10 rounded-full bg-white dark:bg-[#2a2423] border border-[#e6dddb] dark:border-[#3a3433] flex items-center justify-center text-[#896a61] hover:text-[#ff6b00] transition-colors shadow-sm">
+              <button aria-label={t('common.back')} onClick={() => navigate('/jobs')} className="size-10 rounded-full bg-white dark:bg-[#2a2423] border border-[#e6dddb] dark:border-[#3a3433] flex items-center justify-center text-[#896a61] hover:text-brand-vivid transition-colors shadow-sm">
                 <span className="material-symbols-outlined">arrow_back</span>
               </button>
               <div>
-                <h1 className="text-[22px] font-bold tracking-tight text-[#181211] dark:text-white mb-1">{job.title}</h1>
+                <h1 className="ty-title text-[22px] font-bold tracking-tight text-[#181211] dark:text-white mb-1">{job.title}</h1>
                 <p className="text-[#896a61] text-sm flex items-center gap-3 flex-wrap">
                   <span>{t('jobs.detail.meta', { department: job.department, location: job.location, level: job.level })}</span>
                   <span>• {t('jobs.detail.opened', { date: fullDate(job.openedAt) })}</span>
                   {jd && <span>• {t('jobs.detail.jd', { code: jd.code })}</span>}
                   <span>• {userName(users, job.hiringManager)}</span>
+                  {!!job.collaborators?.length && (
+                    <span title={`${t('jobs.drawer.collaborators')}: ${job.collaborators.map((u) => userName(users, u)).join(', ')}`}>+{job.collaborators.length}</span>
+                  )}
+                  {job.workplace && <span>• {t(`workplace.${job.workplace}`)}</span>}
+                  {job.headcount && <span>• {t('jobs.detail.headcount', { n: job.headcount })}</span>}
+                  {salaryRange(job) && <span>• {salaryRange(job)}</span>}
                   <JobStatusBadge status={job.status} />
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-3">
-              <button onClick={() => setEditing(true)} className={SECONDARY}>
-                <span className="material-symbols-outlined text-[20px]">edit</span>{t('jobs.menu.edit')}
-              </button>
-              {job.status === 'open' ? (
-                <button onClick={() => setStatus('closed')} className={SECONDARY}>
-                  <span className="material-symbols-outlined text-[20px]">lock</span>{t('jobs.menu.close')}
-                </button>
-              ) : (
-                <button onClick={() => setStatus('open')} className="px-6 py-2.5 bg-[#F97316] hover:bg-[#EA580C] text-white rounded-full font-bold shadow-lg shadow-orange-500/20 flex items-center gap-2 text-sm">
-                  <span className="material-symbols-outlined text-[20px]">publish</span>{t(job.status === 'closed' ? 'jobs.menu.reopen' : 'jobs.menu.publish')}
-                </button>
+            {(canEdit || actions.length > 0) && <div className="flex items-center gap-3">
+              {canEdit && (
+                <>
+                  <button onClick={() => setEditing(true)} className={SECONDARY}>
+                    <span className="material-symbols-outlined text-[20px]">edit</span>{t('jobs.menu.edit')}
+                  </button>
+                  <button onClick={() => setDuplicating(true)} className={SECONDARY}>
+                    <span className="material-symbols-outlined text-[20px]">content_copy</span>{t('jobs.menu.duplicate')}
+                  </button>
+                </>
               )}
-            </div>
+              {actions.map((a) => (
+                <button
+                  key={a.id}
+                  onClick={a.run}
+                  className={a.primary ? 'px-6 py-2.5 bg-brand-accent hover:bg-brand-strong text-white rounded-full font-bold shadow-lg shadow-orange-500/20 flex items-center gap-2 text-sm whitespace-nowrap' : SECONDARY}
+                >
+                  <span className="material-symbols-outlined text-[20px]">{a.icon}</span>{a.label}
+                </button>
+              ))}
+            </div>}
           </div>
+
+          {job.status === 'pending_approval' && approval && asked && (
+            <div role="status" className="flex items-center gap-2 p-3 rounded-xl bg-violet-50 text-violet-700 text-sm">
+              <span className="material-symbols-outlined text-[18px]">hourglass_top</span>
+              {t('jobs.approval.pending', { name: userName(users, approval.requestedBy), when: t(`jobs.ago.${asked.unit}`, { n: asked.n }) })}
+            </div>
+          )}
+          {job.status === 'draft' && approval?.rejectedReason && approval.decidedBy && (
+            <div role="alert" className="flex items-center gap-2 p-3 rounded-xl bg-red-50 text-red-700 text-sm">
+              <span className="material-symbols-outlined text-[18px]">undo</span>
+              {t('jobs.approval.rejected', { name: userName(users, approval.decidedBy), reason: approval.rejectedReason })}
+            </div>
+          )}
 
           <div role="tablist" className="flex gap-8 border-b border-[#e6dddb] dark:border-[#2a2423]">
             {TABS.map(([key, label]) => (
               <button
                 key={key} role="tab" aria-selected={tab === key} onClick={() => setTab(key)}
-                className={`pb-3 text-sm font-bold border-b-2 transition-colors ${tab === key ? 'border-primary text-primary' : 'border-transparent text-[#896a61] hover:text-slate-800'}`}
+                className={`ty-tab pb-3 text-sm font-bold border-b-2 transition-colors ${tab === key ? 'border-primary text-primary' : 'border-transparent text-[#896a61] hover:text-slate-800'}`}
               >
                 {t(label)}
               </button>
@@ -98,6 +139,8 @@ export function JobDetailPage() {
         </div>
       </div>
       <JobDrawer open={editing} job={job} onClose={() => setEditing(false)} />
+      <JobDrawer open={duplicating} copyFrom={job} onClose={() => setDuplicating(false)} onSaved={(created) => navigate(`/jobs/${created.id}`)} />
+      {dialog}
     </AppLayout>
   );
 }

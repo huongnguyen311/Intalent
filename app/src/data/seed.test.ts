@@ -1,12 +1,17 @@
+import { jobStages } from '../domain/pipelineConfig';
 import { buildSeed, mulberry32, SEED_BASE_TIME } from './seed';
 import { isOverSla } from '../domain/pipeline';
 import { buildMockupFixture, isFixtureMode } from './fixtureMockup';
 import { normalizeEmail, normalizePhone } from '../domain/normalize';
 import { SOURCE_CAREERS, SOURCE_CV_UPLOAD, SOURCE_MANUAL, SOURCE_REFERRAL } from '../domain/sources';
-import { STAGES } from '../domain/stages';
 import { createDemoStore } from '../store/store';
 
 describe('seed', () => {
+  it('every seeded application has one AI evaluation and none are pending', () => {
+    const s = buildSeed();
+    expect(s.applications.every((a) => a.aiEvaluations?.length === 1 && !a.aiPending)).toBe(true);
+  });
+
   it('seed source labels match the live flows', () => {
     const s = buildSeed();
     const known = new Set([SOURCE_CAREERS, SOURCE_CV_UPLOAD, SOURCE_REFERRAL, SOURCE_MANUAL]);
@@ -20,14 +25,18 @@ describe('seed', () => {
   it('seed volumes match spec', () => {
     const s = buildSeed();
     expect(s.candidates).toHaveLength(150);
-    expect(s.users).toHaveLength(8);
+    // 8 staff (one demo account per internal role at least) + 2 candidate logins.
+    expect(s.users.filter((u) => u.role !== 'Candidate')).toHaveLength(8);
+    expect(s.users.filter((u) => u.role === 'Candidate' && u.candidateId)).toHaveLength(2);
     expect(s.users.some((u) => u.email === 'admin@company.demo' && u.role === 'Super Admin')).toBe(true);
     expect(s.jobs).toHaveLength(6);
     expect(s.jobs.filter((j) => j.status === 'open')).toHaveLength(4);
-    expect(s.jobs.filter((j) => j.status === 'draft')).toHaveLength(1);
+    // The one unpublished job waits for approval, so the approval flow can be demoed straight away.
+    expect(s.jobs.filter((j) => j.status === 'pending_approval')).toHaveLength(1);
     expect(s.jobs.filter((j) => j.status === 'closed')).toHaveLength(1);
-    expect(s.applications).toHaveLength(70);
-    for (const stage of STAGES) {
+    expect(s.applications).toHaveLength(49);
+    // Every column of the default board has cards; optional columns (AI Screening, Assessment, custom...) start empty.
+    for (const stage of jobStages({})) {
       expect(s.applications.some((a) => a.stage === stage)).toBe(true);
     }
     expect(s.campaigns).toHaveLength(3);
@@ -41,7 +50,7 @@ describe('seed', () => {
     expect(s.taxonomy.filter((t) => t.kind === 'english').map((t) => t.label)).toEqual([
       'Advanced', 'Intermediate', 'Basic', 'Fluent',
     ]);
-    expect(s.prompts.filter((p) => !p.id.startsWith('email-')).map((p) => p.name)).toEqual([
+    expect(s.prompts.filter((p) => !/^(email|content)-/.test(p.id)).map((p) => p.name)).toEqual([
       'Candidate Evaluation', 'Jd Matching', 'Jd Generation', 'Cv Extraction Batch',
     ]);
     expect(s.meta).toBeUndefined();

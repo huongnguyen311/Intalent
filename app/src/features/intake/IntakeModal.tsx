@@ -2,11 +2,12 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { Modal } from '../../components/Modal';
 import { toast } from '../../components/Toast';
 import { mulberry32 } from '../../data/seed';
+import { findDuplicate } from '../../domain/dedupe';
 import { cvPrefill, hashString, UPLOAD_LIMITS, validateFiles } from '../../domain/parseCv';
 import { SOURCE_MANUAL } from '../../domain/sources';
 import { stageLabel } from '../../domain/stages';
-import { CURRENT_USER_ID } from '../../domain/users';
 import { useLang, useT, type TKey } from '../../i18n/i18n';
+import { me } from '../../store/session';
 import { useStore } from '../../store/store';
 
 type Mode = 'choose' | 'pool' | 'note';
@@ -62,12 +63,15 @@ export function IntakeModal({ open, onClose, initialMode }: Props) {
   const [pool, setPool] = useState(EMPTY_POOL);
   const [note, setNote] = useState(EMPTY_NOTE);
   const [errors, setErrors] = useState<Partial<Record<string, TKey>>>({});
+  /** Profile the entered email/phone already belongs to, once HR has been warned (merging needs a second click). */
+  const [dup, setDup] = useState<{ id: string; name: string } | null>(null);
 
   const reset = () => {
     setMode(initialMode ?? 'choose');
     setPool(EMPTY_POOL);
     setNote(EMPTY_NOTE);
     setErrors({});
+    setDup(null);
   };
   useEffect(() => {
     if (open) reset();
@@ -79,7 +83,7 @@ export function IntakeModal({ open, onClose, initialMode }: Props) {
     onClose();
   };
 
-  const submitPool = () => {
+  const submitPool = (confirmMerge = false) => {
     const next: typeof errors = {};
     if (!pool.name.trim()) next.name = 'intake.err.name';
     if (!pool.email.trim() && !pool.phone.trim()) next.contact = 'intake.err.contact';
@@ -87,6 +91,12 @@ export function IntakeModal({ open, onClose, initialMode }: Props) {
     if (Object.keys(next).length) return;
     const source = pool.source.trim() || SOURCE_MANUAL;
     const store = useStore.getState();
+    // PRD AC-11: warn on an email/phone match and merge only after HR confirms.
+    const existing = findDuplicate(store.candidates, { email: pool.email.trim(), phone: pool.phone.trim() });
+    if (existing && !confirmMerge) {
+      setDup({ id: existing.id, name: existing.name });
+      return;
+    }
     const { candidate, created } = store.upsertCandidate(
       {
         name: pool.name.trim(),
@@ -99,11 +109,11 @@ export function IntakeModal({ open, onClose, initialMode }: Props) {
         tags: list(pool.tags),
         ...(pool.cv ? { cv: pool.cv } : {}),
       },
-      { source, by: CURRENT_USER_ID },
+      { source, by: me() },
     );
     toast(t(created ? 'intake.toast.created' : 'intake.toast.merged'), created ? 'success' : 'info');
     if (pool.jobId) {
-      const res = store.addToPipeline(candidate.id, pool.jobId, { via: 'manual', source, by: CURRENT_USER_ID });
+      const res = store.addToPipeline(candidate.id, pool.jobId, { via: 'manual', source, by: me() });
       if (!res.ok) toast(res.reason === 'duplicate' ? t('intake.toast.alreadyInJob', { stage: stageLabel(res.stage, lang) }) : t('pipeline.jobNotOpen'), 'error');
     }
     finish();
@@ -117,15 +127,18 @@ export function IntakeModal({ open, onClose, initialMode }: Props) {
     if (Object.keys(next).length) return;
     useStore.getState().addNote(
       { name: note.name.trim(), contact: note.contact.trim(), text: note.text.trim() },
-      CURRENT_USER_ID,
+      me(),
     );
     toast(t('intake.toast.note'), 'info');
     finish();
   };
 
   const err = (k: string) => (errors[k] ? t(errors[k]!) : undefined);
-  const setP = (k: keyof typeof EMPTY_POOL) => (e: { target: { value: string } }) =>
+  const setP = (k: keyof typeof EMPTY_POOL) => (e: { target: { value: string } }) => {
+    // A changed email/phone may no longer match: ask again before merging.
+    if (k === 'email' || k === 'phone') setDup(null);
     setPool((p) => ({ ...p, [k]: e.target.value }));
+  };
   const setN = (k: keyof typeof EMPTY_NOTE) => (e: { target: { value: string } }) =>
     setNote((p) => ({ ...p, [k]: e.target.value }));
   /** Simulated CV pick: type and size are checked, nothing is uploaded; only empty fields are prefilled (never the email). */
@@ -156,9 +169,13 @@ export function IntakeModal({ open, onClose, initialMode }: Props) {
         <button className={BTN_GHOST} onClick={initialMode ? finish : () => setMode('choose')}>
           {t(initialMode ? 'common.cancel' : 'common.back')}
         </button>
-        <button className={BTN_PRIMARY} onClick={mode === 'pool' ? submitPool : submitNote}>
-          {t(mode === 'pool' ? 'intake.submit.pool' : 'intake.submit.note')}
-        </button>
+        {mode === 'pool' && dup ? (
+          <button className={BTN_PRIMARY} onClick={() => submitPool(true)}>{t('intake.dup.merge')}</button>
+        ) : (
+          <button className={BTN_PRIMARY} onClick={mode === 'pool' ? () => submitPool() : submitNote}>
+            {t(mode === 'pool' ? 'intake.submit.pool' : 'intake.submit.note')}
+          </button>
+        )}
       </>
     );
 
@@ -172,6 +189,12 @@ export function IntakeModal({ open, onClose, initialMode }: Props) {
       )}
       {mode === 'pool' && (
         <div className="flex flex-col gap-3">
+          {dup && (
+            <p role="alert" className="rounded-lg bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-200 px-3 py-2 text-sm">
+              {t('intake.dup.warning', { name: dup.name })}{' '}
+              <a href={`/candidates/${dup.id}`} target="_blank" rel="noreferrer" className="font-bold underline">{t('intake.dup.view')}</a>
+            </p>
+          )}
           <Field id="ip-name" label={t('intake.field.fullName')} error={err('name')}>
             <input id="ip-name" className={FIELD} value={pool.name} onChange={setP('name')} />
           </Field>

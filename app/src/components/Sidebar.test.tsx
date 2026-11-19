@@ -51,9 +51,20 @@ describe('Sidebar', () => {
     }
     expect(screen.queryByRole('link', { name: /Notes/ })).toBeNull();
     expect(screen.queryByRole('link', { name: /Ultra/ })).toBeNull();
-    expect(screen.getByRole('link', { name: /Careers page/ })).toHaveAttribute('href', '/published');
+    const careers = screen.getByRole('link', { name: /Careers page/ });
+    expect(careers).toHaveAttribute('href', '/careers');
+    expect(careers).toHaveAttribute('target', '_blank');
     expect(screen.getByText('Recruitment')).toBeInTheDocument();
     expect(screen.getByText('Talent Pool')).toBeInTheDocument();
+  });
+
+  it('puts JD Management under Recruitment and JD Matching under Talent Pool', () => {
+    renderAt('/');
+    fireEvent.click(screen.getByRole('button', { name: /Recruitment/ }));
+    expect(screen.queryByRole('link', { name: /JD Management/ })).toBeNull();
+    expect(screen.getByRole('link', { name: /JD Matching/ })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Talent Pool/ }));
+    expect(screen.queryByRole('link', { name: /JD Matching/ })).toBeNull();
   });
 
   it('user menu offers language toggle, reset and log out', () => {
@@ -88,7 +99,7 @@ describe('Sidebar', () => {
 
   it('folded group shows item count and is persisted', () => {
     renderAt('/');
-    expect(screen.getByRole('button', { name: /Configuration/ })).toHaveTextContent('(4)');
+    expect(screen.getByRole('button', { name: /Configuration/ })).toHaveTextContent('(6)');
     expect(screen.queryByRole('link', { name: /Taxonomy/ })).toBeNull();
     expect(window.localStorage.getItem('intalent-ui-nav')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: /Talent Pool/ }));

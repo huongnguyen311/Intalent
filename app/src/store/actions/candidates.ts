@@ -7,7 +7,7 @@ function union(a: string[], b: string[] = []): string[] {
   return [...new Set([...a, ...b])];
 }
 
-export function candidateActions(set: Set, get: Get, env: Env): Pick<DemoActions, 'upsertCandidate' | 'updateCandidate'> {
+export function candidateActions(set: Set, get: Get, env: Env): Pick<DemoActions, 'upsertCandidate' | 'updateCandidate' | 'anonymizeCandidate'> {
   return {
     updateCandidate(id, patch) {
       const existing = get().candidates.find((c) => c.id === id);
@@ -23,6 +23,30 @@ export function candidateActions(set: Set, get: Get, env: Env): Pick<DemoActions
       if (conflict) return { ok: false, reason: 'duplicate', conflictId: conflict.id };
       set((s) => ({ candidates: s.candidates.map((c) => (c.id === id ? updated : c)) }));
       return { ok: true, candidate: updated };
+    },
+
+    anonymizeCandidate(id, by) {
+      const c = get().candidates.find((x) => x.id === id);
+      if (!c || c.anonymizedAt) return false;
+      const at = env.now();
+      // Keep only what reporting needs (skills, seniority, source, dates); everything that identifies the person goes.
+      const anon: Candidate = {
+        id: c.id, name: `Anonymized #${c.id.slice(-4)}`, title: '', email: '', phone: '',
+        seniority: c.seniority, english: c.english, skills: c.skills, domains: c.domains, tags: [], groups: [],
+        cvOwner: c.cvOwner, source: c.source, inTalentPool: true, createdAt: c.createdAt, cv: '',
+        consents: (c.consents ?? []).map((x) => (x.withdrawnAt ? x : { ...x, withdrawnAt: at })),
+        anonymizedAt: at,
+      };
+      const activity: Activity = { type: 'candidate_anonymized', candidateId: id, by, at, detail: 'Personal data erased on request' };
+      set((s) => ({
+        candidates: s.candidates.map((x) => (x.id === id ? anon : x)),
+        emails: s.emails.filter((e) => e.candidateId !== id),
+        applications: s.applications.map((a) => (a.candidateId === id ? { ...a, answers: undefined, comments: [] } : a)),
+        // A candidate login for this profile can no longer sign in.
+        users: s.users.map((u) => (u.candidateId === id ? { ...u, status: 'Inactive', email: '' } : u)),
+        activities: [...s.activities, activity],
+      }));
+      return true;
     },
 
     upsertCandidate(input, ctx) {
@@ -43,6 +67,7 @@ export function candidateActions(set: Set, get: Get, env: Env): Pick<DemoActions
           domains: union(existing.domains, input.domains),
           tags: union(existing.tags, input.tags),
           groups: union(existing.groups, input.groups),
+          ...(input.parse ? { parse: input.parse } : {}),
         };
         const activity: Activity = {
           type: 'candidate_merged',
@@ -75,6 +100,7 @@ export function candidateActions(set: Set, get: Get, env: Env): Pick<DemoActions
         createdAt: at,
         cv: input.cv ?? '',
         ...(input.linkedin ? { linkedin: input.linkedin } : {}),
+        ...(input.parse ? { parse: input.parse } : {}),
       };
       const activity: Activity = {
         type: 'candidate_created',

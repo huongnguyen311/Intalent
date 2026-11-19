@@ -29,7 +29,7 @@ export function PromptsTable({ items, title, desc, noun }: { items: Prompt[]; ti
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">{t(title)}</h2>
+          <h2 className="ty-section text-lg font-semibold text-gray-900 dark:text-white">{t(title)}</h2>
           <p className="text-sm text-gray-500">{t(desc)}</p>
         </div>
       </div>

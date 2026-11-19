@@ -4,6 +4,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { buildSeed } from '../../data/seed';
 import { toast } from '../../components/Toast';
 import { campaignStats } from '../../domain/campaigns';
+import { jobsInScope } from '../../domain/permissions';
+import { signInAs } from '../../store/session';
 import { useStore } from '../../store/store';
 import { CampaignDetailPage } from './CampaignDetailPage';
 import { CampaignsPage } from './CampaignsPage';
@@ -85,7 +87,9 @@ describe('CampaignsPage', () => {
     fireEvent.click(within(dlg).getByRole('checkbox', { name: 'Referral' }));
     fireEvent.click(within(dlg).getByRole('button', { name: 'Next' }));
 
-    expect(within(dlg).getAllByRole('button', { name: /Copy link/ })).toHaveLength(2);
+    // Links only work once the campaign exists, so the review step shows them without Copy.
+    expect(within(dlg).queryAllByRole('button', { name: /Copy link/ })).toHaveLength(0);
+    expect(within(dlg).getByText('These links start working once you create the campaign.')).toBeInTheDocument();
     expect(within(dlg).getAllByText(/careers\/.*\?src=camp-.*-topcv/).length).toBeGreaterThan(0);
     expect(within(dlg).getByText(/We're hiring/)).toBeInTheDocument();
     expect(within(dlg).getByText(/Know someone great/)).toBeInTheDocument();
@@ -94,7 +98,22 @@ describe('CampaignsPage', () => {
     const created = useStore.getState().campaigns[0];
     expect(created).toMatchObject({ name: 'Autumn Push', jobIds: [job.id], channels: ['topcv', 'referral'], goal: 30, start: '2026-12-01', end: '2026-12-31', status: 'active' });
     expect(screen.queryByRole('dialog')).toBeNull();
-    expect(screen.getByText('Autumn Push')).toBeInTheDocument();
+    // Lands on the new campaign, where its links can be copied.
+    expect(screen.getAllByText('Autumn Push').length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('button', { name: /Copy link/ })).toHaveLength(2);
+  });
+
+  it('a recruiter can only pick the open jobs they work on', () => {
+    signInAs('u-huy');
+    renderAt('/campaigns');
+    fireEvent.click(screen.getByRole('button', { name: /New Campaign/ }));
+    const dlg = screen.getByRole('dialog');
+    const s = useStore.getState();
+    const mine = new Set(jobsInScope(s.users.find((u) => u.id === 'u-huy'), s.jobs).map((j) => j.id));
+    for (const j of s.jobs.filter((x) => x.status === 'open')) {
+      expect(Boolean(within(dlg).queryByRole('checkbox', { name: j.title }))).toBe(mine.has(j.id));
+    }
+    signInAs(undefined);
   });
 
   it('rejects an end date before the start date', () => {

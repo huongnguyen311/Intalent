@@ -39,7 +39,9 @@ afterEach(() => {
 describe('UploadPage', () => {
   it('renders the empty queue like the mockup', () => {
     renderPage(<UploadPage />);
-    expect(screen.getByText('Upload Resumes')).toBeInTheDocument();
+    // Outside fixture mode the title and subtitle live in the page header only (no repeated in-page heading).
+    expect(screen.queryByText('Upload Resumes')).toBeNull();
+    expect(screen.getByText('Batch ingestion for candidate pool')).toBeInTheDocument();
     expect(screen.getByText('Max 5MB per file • Max 10 files/batch')).toBeInTheDocument();
     expect(screen.getByText('No files in queue')).toBeInTheDocument();
   });
@@ -81,17 +83,60 @@ describe('UploadPage', () => {
     expect(screen.getByRole('link', { name: 'View profile' })).toHaveAttribute('href', `/candidates/${created.id}`);
   });
 
-  it('parsed duplicate merges instead of creating', () => {
+  it('a parsed duplicate waits for HR to merge it', () => {
     const fileFor = (name: string) => `${name.replace(/ /g, '_')}_CV.pdf`;
     const existing = useStore.getState().candidates.find((c) => parseCvFile({ name: fileFor(c.name), size: 1 }, mulberry32(1)).email === c.email)!;
     const { container } = renderPage(<UploadPage />);
     const before = useStore.getState().candidates.length;
+    const merges = () => useStore.getState().activities.filter((a) => a.type === 'candidate_merged').length;
+    const mergedBefore = merges();
     pick(container, [mk(fileFor(existing.name))]);
     advance(5_000);
+    expect(screen.getByText(`Possible duplicate of ${existing.name}`)).toBeInTheDocument();
+    expect(merges()).toBe(mergedBefore);
+    fireEvent.click(screen.getByRole('button', { name: 'Merge' }));
     expect(useStore.getState().candidates).toHaveLength(before);
     expect(screen.getByText('Merged into existing profile')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'View profile' })).toHaveAttribute('href', `/candidates/${existing.id}`);
     expect(useStore.getState().activities.slice(-1)[0]?.type).toBe('candidate_merged');
+  });
+
+  it('a skipped duplicate leaves the existing profile untouched', () => {
+    const fileFor = (name: string) => `${name.replace(/ /g, '_')}_CV.pdf`;
+    const existing = useStore.getState().candidates.find((c) => parseCvFile({ name: fileFor(c.name), size: 1 }, mulberry32(1)).email === c.email)!;
+    const snapshot = JSON.stringify(existing);
+    const { container } = renderPage(<UploadPage />);
+    pick(container, [mk(fileFor(existing.name))]);
+    advance(5_000);
+    fireEvent.click(screen.getByRole('button', { name: 'Skip' }));
+    expect(screen.getByText('Skipped')).toBeInTheDocument();
+    expect(JSON.stringify(useStore.getState().candidates.find((c) => c.id === existing.id))).toBe(snapshot);
+  });
+
+  it('files over the batch limit can be retried', () => {
+    const { container } = renderPage(<UploadPage />);
+    pick(container, Array.from({ length: 11 }, (_, i) => mk(`Tran_Van_Cv${String.fromCharCode(97 + i)}.pdf`)));
+    advance(60_000);
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    advance(5_000);
+    expect(screen.getAllByText('Added to Talent Pool')).toHaveLength(11);
+  });
+
+  it('can add uploaded CVs straight to a job', () => {
+    const { container } = renderPage(<UploadPage />);
+    fireEvent.change(screen.getByLabelText('Add to job (optional)'), { target: { value: 'job-1' } });
+    pick(container, [mk('Zzz_Qqq_Xx_CV.pdf')]);
+    advance(5_000);
+    const s = useStore.getState();
+    const created = s.candidates.find((c) => c.name === 'Zzz Qqq Xx')!;
+    expect(s.applications.some((a) => a.candidateId === created.id && a.jobId === 'job-1')).toBe(true);
+  });
+
+  it('shows a summary of the batch', () => {
+    const { container } = renderPage(<UploadPage />);
+    pick(container, [mk('Zzz_Qqq_Xx_CV.pdf'), mk('bad.exe')]);
+    advance(5_000);
+    expect(screen.getByText('1 added · 0 to review · 1 failed')).toBeInTheDocument();
   });
 
   it('clears its timer on unmount', () => {
@@ -151,11 +196,12 @@ describe('Upload mode switch', () => {
 
   it('upload mode switch navigates to ultra and back', () => {
     renderAt('/upload');
-    expect(screen.getByText('Upload Resumes')).toBeInTheDocument();
+    const standard = 'Max 5MB per file • Max 10 files/batch';
+    expect(screen.getByText(standard)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('link', { name: 'Bulk (Ultra)' }));
-    expect(screen.queryByText('Upload Resumes')).toBeNull();
+    expect(screen.queryByText(standard)).toBeNull();
     fireEvent.click(screen.getByRole('link', { name: 'Standard' }));
-    expect(screen.getByText('Upload Resumes')).toBeInTheDocument();
+    expect(screen.getByText(standard)).toBeInTheDocument();
   });
 
   it('fixture mode shows no tabs or switch', () => {

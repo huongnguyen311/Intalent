@@ -10,7 +10,11 @@ export function usePaginationLabels(): PaginationLabels {
   return { showing: t('pagination.showing'), of: t('pagination.of'), prev: t('pagination.prev'), next: t('pagination.next') };
 }
 
-type Props = { page: number; pageSize: number; total: number; noun?: string; labels?: PaginationLabels; onPage: (page: number) => void };
+type Props = {
+  page: number; pageSize: number; total: number; noun?: string; labels?: PaginationLabels; onPage: (page: number) => void;
+  /** With both set, a "Rows per page" picker shows on the right and the page numbers move to the middle. */
+  pageSizes?: number[]; onPageSize?: (size: number) => void; rowsLabel?: string;
+};
 
 const NAV = 'size-8 flex items-center justify-center rounded-lg border border-[#e6dddb] dark:border-[#3a3433] text-[#896a61] disabled:opacity-50 disabled:cursor-not-allowed';
 const NEXT = `${NAV} bg-white dark:bg-[#251f1e] text-[#181211] dark:text-white hover:border-primary transition-colors`;
@@ -31,7 +35,7 @@ export function pageItems(page: number, pages: number): (number | '...')[] {
   return out;
 }
 
-export function Pagination({ page, pageSize, total, noun = 'results', labels = EN_LABELS, onPage }: Props) {
+export function Pagination({ page, pageSize, total, noun = 'results', labels = EN_LABELS, onPage, pageSizes, onPageSize, rowsLabel }: Props) {
   const pages = Math.max(1, Math.ceil(total / pageSize));
   const from = total === 0 ? 0 : (page - 1) * pageSize + 1;
   const to = Math.min(page * pageSize, total);
@@ -56,6 +60,18 @@ export function Pagination({ page, pageSize, total, noun = 'results', labels = E
           <span className="material-symbols-outlined text-[18px]">chevron_right</span>
         </button>
       </div>
+      {pageSizes && onPageSize && (
+        <label className="flex items-center gap-2 text-xs text-[#896a61]">
+          {rowsLabel}
+          <select
+            value={pageSize}
+            onChange={(e) => onPageSize(Number(e.target.value))}
+            className="h-8 pl-2 pr-7 rounded-lg border border-[#e6dddb] dark:border-[#3a3433] bg-white dark:bg-[#251f1e] text-xs font-medium text-[#181211] dark:text-white"
+          >
+            {pageSizes.map((n) => <option key={n} value={n}>{n}</option>)}
+          </select>
+        </label>
+      )}
     </div>
   );
 }

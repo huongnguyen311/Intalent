@@ -5,7 +5,7 @@ import { useT } from '../../i18n/i18n';
 import type { TKey } from '../../i18n/en';
 
 export const PRIMARY_BTN =
-  'px-6 py-2.5 bg-[#F97316] hover:bg-[#EA580C] text-white rounded-full font-bold shadow-lg shadow-orange-500/20 flex items-center gap-2 transition-all transform active:scale-95 text-sm shrink-0';
+  'px-6 py-2.5 bg-brand-accent hover:bg-brand-strong text-white rounded-full font-bold shadow-lg shadow-orange-500/20 flex items-center gap-2 transition-all transform active:scale-95 text-sm shrink-0';
 export const SECONDARY_BTN =
   'px-5 py-2.5 bg-white dark:bg-[#2a2423] border border-[#e6dddb] dark:border-[#3a3433] text-slate-700 dark:text-white text-sm font-bold rounded-full shadow-sm hover:border-primary/50 transition-colors flex items-center gap-2';
 
@@ -41,7 +41,7 @@ export function CampaignStatusBadge({ status }: { status: CampaignStatus }) {
   const t = useT();
   const s = STATUS_STYLE[status] ?? STATUS_STYLE.ended;
   return (
-    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold ${s.pill}`}>
+    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-2xs font-bold ${s.pill}`}>
       <span className={`size-1.5 rounded-full ${s.dot}`}></span>
       {t(`campaigns.status.${status}`)}
     </span>
@@ -70,7 +70,8 @@ export function CopyButton({ url, label }: { url: string; label: string }) {
 }
 
 /** One tracking link: channel icon and name, job, the URL and a copy button. */
-export function LinkRow({ channel, jobTitle, url }: { channel: string; jobTitle: string; url: string }) {
+/** `copyable` is off while the campaign is still a draft in the wizard: its links do not resolve yet. */
+export function LinkRow({ channel, jobTitle, url, copyable = true }: { channel: string; jobTitle: string; url: string; copyable?: boolean }) {
   const label = useChannelLabel();
   return (
     <div className="flex items-center gap-3 py-3">
@@ -79,7 +80,7 @@ export function LinkRow({ channel, jobTitle, url }: { channel: string; jobTitle:
         <div className="text-xs font-bold text-slate-800 dark:text-gray-200">{label(channel)} · {jobTitle}</div>
         <div className="text-xs text-[#896a61] break-all">{url}</div>
       </div>
-      <CopyButton url={url} label={`${label(channel)} ${jobTitle}`} />
+      {copyable && <CopyButton url={url} label={`${label(channel)} ${jobTitle}`} />}
     </div>
   );
 }

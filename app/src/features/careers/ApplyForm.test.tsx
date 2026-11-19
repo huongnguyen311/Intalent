@@ -1,8 +1,9 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { buildSeed } from '../../data/seed';
 import { AppRoutes } from '../../routes';
+import { signInAs } from '../../store/session';
 import { useStore } from '../../store/store';
 
 const renderAt = (url: string) =>
@@ -17,6 +18,7 @@ let closedId: string;
 let campaignId: string;
 
 beforeEach(() => {
+  sessionStorage.clear();
   const seed = buildSeed();
   useStore.setState({ ...seed, applications: [], activities: [], ui: { ...seed.ui, careersLang: 'en' } });
   jobId = seed.jobs.find((j) => j.status === 'open')!.id;
@@ -27,6 +29,8 @@ beforeEach(() => {
 const fill = (name: string, email: string) => {
   fireEvent.change(screen.getByLabelText('Full name'), { target: { value: name } });
   fireEvent.change(screen.getByLabelText('Email'), { target: { value: email } });
+  // A CV is required (PRD AC-04).
+  fireEvent.change(screen.getByLabelText(/^CV/), { target: { files: [new File(['x'], 'Applicant_CV.pdf')] } });
 };
 const consent = () => fireEvent.click(screen.getByRole('checkbox'));
 const submit = () => fireEvent.click(screen.getByRole('button', { name: 'Submit application' }));
@@ -61,6 +65,64 @@ describe('Careers site', () => {
     expect(useStore.getState().applications).toHaveLength(0);
   });
 
+  it('asks the job questions: required ones block submit, answers are saved', () => {
+    renderAt('/careers/job-2/apply');
+    fill('Tran Van Q', 'tran.q@example.com');
+    consent();
+    submit();
+    expect(screen.getAllByText('Please answer this question')).toHaveLength(2);
+    expect(useStore.getState().applications).toHaveLength(0);
+    fireEvent.change(screen.getByLabelText('How many engineers have you led? *'), { target: { value: '4 engineers' } });
+    fireEvent.click(screen.getByRole('radio', { name: 'Yes' }));
+    submit();
+    expect(screen.getByTestId('careers-applied')).toBeInTheDocument();
+    expect(useStore.getState().applications[0].answers).toEqual([
+      { questionId: 'q-lead', label: 'How many engineers have you led?', answer: '4 engineers' },
+      { questionId: 'q-english', label: 'Are you comfortable working in English daily?', answer: 'Yes' },
+    ]);
+  });
+
+  it('shows the job post sections from the JD and the job', () => {
+    const { jobs, jds } = useStore.getState();
+    const job = jobs.find((j) => j.id === 'job-1')!;
+    useStore.setState({
+      jobs: jobs.map((j) => (j.id === 'job-1' ? { ...j, whyLove: '- Hybrid work', additionalInfo: 'Office in District 1' } : j)),
+      jds: jds.map((d) => (d.id === job.jdId ? { ...d, skillsExperience: '- 5+ years of React' } : d)),
+    });
+    renderAt('/careers/job-1');
+    for (const h of ['Your skills and experience', "Why you'll love working here", 'Additional information']) {
+      expect(screen.getByRole('heading', { name: h })).toBeInTheDocument();
+    }
+    expect(screen.getByText('5+ years of React')).toBeInTheDocument();
+    expect(screen.getByText('Hybrid work')).toBeInTheDocument();
+    expect(screen.getByText('Office in District 1')).toBeInTheDocument();
+  });
+
+  it('shows the salary range only when the job allows it', () => {
+    renderAt('/careers/job-1');
+    expect(screen.getByText('40.000.000 ₫ – 60.000.000 ₫')).toBeInTheDocument();
+  });
+
+  it('requires a CV before applying', () => {
+    renderAt(`/careers/${jobId}/apply`);
+    fireEvent.change(screen.getByLabelText('Full name'), { target: { value: 'No Cv' } });
+    fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'no.cv@example.com' } });
+    consent();
+    submit();
+    expect(screen.getByText('Please attach your CV')).toBeInTheDocument();
+    expect(useStore.getState().applications).toHaveLength(0);
+  });
+
+  it('keeps what was typed when the applicant leaves the form and comes back', () => {
+    const first = renderAt(`/careers/${jobId}/apply`);
+    fireEvent.change(screen.getByLabelText('Full name'), { target: { value: 'Draft Person' } });
+    fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'draft@example.com' } });
+    first.unmount();
+    renderAt(`/careers/${jobId}/apply`);
+    expect(screen.getByLabelText('Full name')).toHaveValue('Draft Person');
+    expect(screen.getByLabelText('Email')).toHaveValue('draft@example.com');
+  });
+
   it('rejects a CV that is not PDF or DOCX', () => {
     renderAt(`/careers/${jobId}/apply`);
     fireEvent.change(screen.getByLabelText(/^CV/), { target: { files: [new File(['x'], 'cv.exe')] } });
@@ -87,12 +149,21 @@ describe('Careers site', () => {
     expect(useStore.getState().applications).toHaveLength(1);
   });
 
-  it('status check lists applications with friendly stage words', () => {
+  it('the old status link leads to candidate sign-in, which shows the application with a friendly stage word', () => {
     useStore.getState().applyFromCareers({ name: 'Pham Thi Test', email: 'pham.test@example.com' }, jobId);
     renderAt('/careers/status');
-    fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'pham.test@example.com' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Check status' }));
-    expect(screen.getByText('Received')).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Email or phone number'), { target: { value: 'pham.test@example.com' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+    expect(within(screen.getByTestId('candidate-portal')).getByText('Received')).toBeInTheDocument();
+    signInAs(undefined);
+  });
+
+  it('the confirmation page says how to follow the application', () => {
+    renderAt(`/careers/${jobId}/apply`);
+    fill('Follow Up', 'follow.up@example.com');
+    consent();
+    submit();
+    expect(screen.getByRole('link', { name: 'Follow my application' })).toHaveAttribute('href', '/careers/login');
   });
 
   it('filters jobs by keyword, department, location and level, with an empty message', () => {
@@ -159,22 +230,24 @@ describe('Careers site', () => {
     expect(c.cv).toBe('Tran_Van_Binh_CV.pdf');
   });
 
-  it('status check shows only careers and campaign applications', () => {
+  it('a signed-in candidate sees only the jobs they applied to, not ones HR added them to', () => {
     const s = useStore.getState();
     const r = s.applyFromCareers({ name: 'Pham Thi Test', email: 'pham.test@example.com' }, jobId);
     const other = s.jobs.filter((j) => j.status === 'open').find((j) => j.id !== jobId)!;
     if (!r.ok) throw new Error('expected ok');
     s.addToPipeline(r.application.candidateId, other.id, { via: 'manual', source: 'Manual', by: 'u-admin' });
-    renderAt('/careers/status');
-    fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'pham.test@example.com' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Check status' }));
-    expect(screen.getByTestId('careers-status-list').children).toHaveLength(1);
+    renderAt('/careers/login');
+    fireEvent.change(screen.getByLabelText('Email or phone number'), { target: { value: 'pham.test@example.com' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+    const portal = screen.getByTestId('candidate-portal');
+    expect(within(portal).queryByText(other.title)).toBeNull();
+    signInAs(undefined);
   });
 
   it('language toggle switches the careers scope to Vietnamese', () => {
     renderAt('/careers');
     fireEvent.click(screen.getByRole('button', { name: /^vi$/i }));
     expect(useStore.getState().ui.careersLang).toBe('vi');
-    expect(screen.getAllByText('Tra cứu hồ sơ').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Đăng nhập ứng viên').length).toBeGreaterThan(0);
   });
 });

@@ -21,9 +21,14 @@ export function Applied() {
           ? t('careers.applied.dupBody', { job: jobTitle, stage: stage ? t(`careers.stage.${stage}`) : '' })
           : t('careers.applied.body', { job: jobTitle })}
       </p>
-      <Link to="/careers" className="inline-block mt-6 px-6 py-3 rounded-full bg-primary text-white font-bold text-sm">
-        {t('careers.applied.browse')}
-      </Link>
+      <div className="mt-6 flex flex-wrap justify-center gap-3">
+        <Link to="/careers/login" className="px-6 py-3 rounded-full bg-primary text-white font-bold text-sm">
+          {t('careers.applied.follow')}
+        </Link>
+        <Link to="/careers" className="px-6 py-3 rounded-full ring-1 ring-[#e6dddb] font-bold text-sm hover:ring-primary/50">
+          {t('careers.applied.browse')}
+        </Link>
+      </div>
     </div>
   );
 }

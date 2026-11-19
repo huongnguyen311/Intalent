@@ -18,6 +18,12 @@ describe('scoreCandidate', () => {
     expect(partial.score).toBeLessThan(full.score);
   });
 
+  it('breakdown sums to score', () => {
+    const r = scoreCandidate({ ...base, skills: ['React'], english: 'Basic' }, req);
+    const { stack, experience, domain, english } = r.breakdown;
+    expect(stack + experience + domain + english).toBe(r.score);
+  });
+
   it('missing skills listed', () => {
     const r = scoreCandidate({ ...base, skills: ['react', 'Node.js'] }, req);
     expect(r.have).toEqual(['React']);

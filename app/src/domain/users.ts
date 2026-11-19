@@ -8,8 +8,7 @@ export function userName(users: User[], idOrName: string): string {
   return users.find((u) => u.id === idOrName)?.name ?? idOrName;
 }
 
-export const ROLES = ['Super Admin', 'Admin', 'User', 'Candidate'] as const;
-export type Role = (typeof ROLES)[number];
+export { ROLES, type Role } from './permissions';
 
 /** Who can own a CV: active staff, not candidate accounts. */
 export const assignableUsers = (users: User[]): User[] => users.filter((u) => u.status === 'Active' && u.role !== 'Candidate');

@@ -1,4 +1,5 @@
 import { pageItems } from '../../components/Pagination';
+import { aiTone } from '../pipeline/aiTone';
 import type { MatchRow } from '../../domain/types';
 import { useT } from '../../i18n/i18n';
 
@@ -9,8 +10,7 @@ const AVATARS = [
   'bg-amber-100 text-amber-600 border-amber-200',
 ];
 
-const tone = (s: number): [string, string, string] =>
-  s >= 80 ? ['#ecfdf5', '#059669', '#10b981'] : s >= 60 ? ['#fffbeb', '#d97706', '#f59e0b'] : ['#fef2f2', '#dc2626', '#ef4444'];
+const tone = aiTone;
 
 const initialsOf = (name: string) => {
   const p = name.trim().split(/\s+/);
@@ -25,7 +25,7 @@ function SkillChip({ label, ok }: { label: string; ok: boolean }) {
   );
 }
 
-export function MatchRowItem({ row, rank, onOpen }: { row: MatchRow; rank: number; onOpen: () => void }) {
+export function MatchRowItem({ row, rank, onOpen, onAdd }: { row: MatchRow; rank: number; onOpen: () => void; onAdd?: () => void }) {
   const t = useT();
   const [bg, fg, bar] = tone(row.score);
   return (
@@ -34,7 +34,7 @@ export function MatchRowItem({ row, rank, onOpen }: { row: MatchRow; rank: numbe
       <div className={`size-10 rounded-full flex items-center justify-center font-bold text-sm border shrink-0 ${AVATARS[(rank - 1) % 4]}`}>{initialsOf(row.name)}</div>
       <div className="flex-1 min-w-0 space-y-2">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="font-bold text-[#181211]">{row.name}</span>
+          <span className="ty-cell-main font-bold text-[#181211]">{row.name}</span>
           <span className="text-xs text-[#896a61]">· {row.title}</span>
         </div>
         <div className="flex items-center gap-1.5 flex-wrap">
@@ -49,6 +49,15 @@ export function MatchRowItem({ row, rank, onOpen }: { row: MatchRow; rank: numbe
       <div className="flex flex-col items-end gap-2 shrink-0" style={{ width: 120 }}>
         <div className="jm-score" style={{ background: bg, color: fg }}>{row.score}</div>
         <div className="jm-bar w-full"><div style={{ width: `${row.score}%`, background: bar }}></div></div>
+        {onAdd && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onAdd(); }}
+            onKeyDown={(e) => e.stopPropagation()}
+            className="mt-1 px-3 py-1 rounded-full border border-[#e6dddb] text-xs font-bold text-primary hover:border-primary/50 whitespace-nowrap"
+          >
+            {t('matching.addToJob')}
+          </button>
+        )}
       </div>
     </div>
   );

@@ -3,7 +3,7 @@ import { buildSeed } from '../data/seed';
 import type { DemoState } from '../domain/types';
 
 export const PERSIST_KEY = 'intalent-demo';
-export const PERSIST_VERSION = 3;
+export const PERSIST_VERSION = 7;
 
 /** Only data is persisted; actions are re-attached by the store. */
 export function pickData(s: DemoState): DemoState {
@@ -19,7 +19,10 @@ export function pickData(s: DemoState): DemoState {
     taxonomy: s.taxonomy,
     prompts: s.prompts,
     chats: s.chats,
+    emails: s.emails,
+    ...(s.jobTemplates ? { jobTemplates: s.jobTemplates } : {}),
     ui: s.ui,
+    ...(s.company ? { company: s.company } : {}),
   };
 }
 
@@ -35,6 +38,8 @@ export function isValidState(s: unknown): s is DemoState {
   if (typeof s !== 'object' || s === null) return false;
   const o = s as Record<string, unknown>;
   if (!COLLECTIONS.every((k) => Array.isArray(o[k]))) return false;
+  // `emails` arrived later: older saves lack it (filled on merge) but it must be a list when present.
+  if (o.emails !== undefined && !Array.isArray(o.emails)) return false;
   const ui = o.ui as Record<string, unknown> | null | undefined;
   return (
     typeof ui === 'object' && ui !== null &&
@@ -44,18 +49,36 @@ export function isValidState(s: unknown): s is DemoState {
   );
 }
 
-export function persistOptions<T extends DemoState>(storage: Storage): PersistOptions<T, DemoState> {
+/**
+ * `name` is the active workspace's storage key; `fallback` builds its starting data when nothing valid is saved
+ * (the demo seed for the original workspace, an empty workspace otherwise).
+ */
+export function persistOptions<T extends DemoState>(
+  storage: Storage,
+  name: string = PERSIST_KEY,
+  fallback: () => DemoState = () => buildSeed(undefined, Date.now()),
+): PersistOptions<T, DemoState> {
   return {
     // Same-version payloads skip migrate, so shape-validate here; invalid -> seed.
-    merge: (persisted, current) =>
-      isValidState(persisted)
-        ? { ...current, ...persisted, ui: { ...buildSeed(undefined, Date.now()).ui, ...persisted.ui } }
-        : { ...current, ...buildSeed(undefined, Date.now()) },
-    name: PERSIST_KEY,
+    merge: (persisted, current) => {
+      if (!isValidState(persisted)) return { ...current, ...fallback() };
+      const seed = buildSeed(undefined, Date.now());
+      // Saves from before the hiring features get the email log and the new email templates added, keeping everything else.
+      const missingTemplates = seed.prompts.filter((p) => /^(email|content)-/.test(p.id) && !persisted.prompts.some((x) => x.id === p.id));
+      return {
+        ...current,
+        ...persisted,
+        emails: persisted.emails ?? [],
+        jobTemplates: persisted.jobTemplates ?? fallback().jobTemplates ?? [],
+        prompts: [...persisted.prompts, ...missingTemplates],
+        ui: { ...seed.ui, ...persisted.ui },
+      };
+    },
+    name,
     version: PERSIST_VERSION,
     storage: createJSONStorage(() => storage),
     partialize: (s) => pickData(s),
     // Any version mismatch (including a missing/garbled payload) resets to seed.
-    migrate: () => buildSeed(undefined, Date.now()),
+    migrate: () => fallback(),
   };
 }

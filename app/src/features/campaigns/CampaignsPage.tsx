@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { AppLayout } from '../../components/AppLayout';
 import { Pagination, usePaginationLabels } from '../../components/Pagination';
 import { MenuItem, Popover } from '../../components/Popover';
@@ -21,6 +21,7 @@ const TD = 'px-6 py-4 whitespace-nowrap text-sm font-semibold text-slate-600 dar
 const STATUSES: CampaignStatus[] = ['active', 'paused', 'ended'];
 
 export function CampaignsPage() {
+  const navigate = useNavigate();
   const t = useT();
   const paginationLabels = usePaginationLabels();
   const { campaigns, applications, jobs } = useStore();
@@ -117,7 +118,8 @@ export function CampaignsPage() {
           <Pagination labels={paginationLabels} page={page} pageSize={PAGE_SIZE} total={filtered.length} noun={t('campaigns.noun')} onPage={setPage} />
         </div>
       </div>
-      <CampaignWizard open={creating} onClose={() => setCreating(false)} />
+      {/* After creating, open the campaign: its tracking links are ready to copy there. */}
+      <CampaignWizard open={creating} onClose={() => setCreating(false)} onSaved={(c) => navigate(`/campaigns/${c.id}`)} />
     </AppLayout>
   );
 }

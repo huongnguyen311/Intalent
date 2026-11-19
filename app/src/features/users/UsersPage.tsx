@@ -6,18 +6,21 @@ import { Pagination } from '../../components/Pagination';
 import { toast } from '../../components/Toast';
 import { isFixtureMode } from '../../data/fixtureMockup';
 import type { User } from '../../domain/types';
+import { normalizeRole } from '../../domain/permissions';
 import { ROLES } from '../../domain/users';
 import { useT, type TKey } from '../../i18n/i18n';
 import { useStore } from '../../store/store';
 import { fullDate } from '../jds/format';
 import { UserDialog } from './UserDialog';
+import { currentUser } from '../../store/session';
+import { sendInvitation } from '../auth/accounts';
 
 const PAGE_SIZE = 10;
 type SortKey = 'name' | 'email' | 'role' | 'status' | 'createdAt';
 
 const CARD = 'bg-white dark:bg-surface-dark p-4 rounded-[24px] border border-gray-200 dark:border-border-dark shadow-sm';
 const CARD_LABEL = 'text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1';
-const CARD_NUM = 'text-3xl font-bold text-gray-900 dark:text-white';
+const CARD_NUM = 'ty-kpi text-3xl font-bold text-gray-900 dark:text-white';
 const FILTER_BTN =
   'flex w-full items-center gap-2 px-3 py-2 bg-white dark:bg-[#2a2423] border border-gray-200 dark:border-[#3a3433] rounded-[16px] text-sm font-medium text-gray-700 dark:text-gray-300 hover:border-gray-400 transition-colors focus:outline-none focus:border-gray-500 disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1';
 const TH = 'px-6 py-4 text-xs font-bold text-[#896a61] uppercase tracking-wider border-b border-[#e6dddb] dark:border-[#2a2423] cursor-pointer hover:text-primary group ';
@@ -25,10 +28,15 @@ const CHECK = 'rounded border-gray-300 text-primary focus:ring-primary dark:bg-[
 const CHIP = 'inline-flex items-center px-2.5 py-0.5 rounded text-xs font-medium border ';
 const ROLE_CHIP: Record<string, string> = {
   'Super Admin': 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300 border-orange-200 dark:border-orange-800',
-  Admin: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 border-blue-200 dark:border-blue-800',
+  'Recruitment Lead': 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 border-blue-200 dark:border-blue-800',
   Candidate: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300 border-purple-200 dark:border-purple-800',
-  User: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300 border-gray-200 dark:border-gray-700',
+  Recruiter: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300 border-gray-200 dark:border-gray-700',
+  'Hiring Manager': 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800',
+  Interviewer: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 border-amber-200 dark:border-amber-800',
 };
+/** Older data still says Admin / User; those keep their original colours. */
+ROLE_CHIP.Admin = ROLE_CHIP['Recruitment Lead'];
+ROLE_CHIP.User = ROLE_CHIP.Recruiter;
 const COLS: Array<[SortKey, TKey]> = [
   ['name', 'users.col.name'], ['email', 'users.col.email'], ['role', 'users.col.role'], ['status', 'users.col.status'], ['createdAt', 'users.col.created'],
 ];
@@ -74,15 +82,21 @@ export function UsersPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [dialog, setDialog] = useState<{ user?: User } | null>(null);
 
-  const count = (r: string) => users.filter((u) => u.role === r).length;
-  const stats = totals ?? { total: users.length, superAdmins: count('Super Admin'), admins: count('Admin'), users: count('User') };
+  const count = (r: string) => users.filter((u) => normalizeRole(u.role) === r).length;
+  // Admins = Recruitment Leads; Users = every other staff role (candidates excluded).
+  const stats = totals ?? {
+    total: users.length, superAdmins: count('Super Admin'), admins: count('Recruitment Lead'),
+    users: count('Recruiter') + count('Hiring Manager') + count('Interviewer'),
+  };
+
+  const staff = users.length - count('Candidate');
 
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();
     const out = users.filter(
       (u) =>
         (!needle || u.name.toLowerCase().includes(needle) || u.email.toLowerCase().includes(needle)) &&
-        (!role || u.role === role) &&
+        (!role || normalizeRole(u.role) === role) &&
         (!status || u.status === status),
     );
     if (sort) out.sort((a, b) => a[sort.key].localeCompare(b[sort.key]) * sort.dir);
@@ -117,15 +131,27 @@ export function UsersPage() {
     <AppLayout title={t('nav.userManagement')} subtitle={t('users.subtitle')}>
       <div className="p-8 max-w-7xl mx-auto space-y-8">
         <div className="flex items-center justify-end">
-          <button onClick={() => setDialog({})} className="px-6 py-2.5 bg-primary hover:bg-primary-hover text-white rounded-[24px] font-bold shadow-lg shadow-primary/20 flex items-center gap-2 transition-all">
+          <button onClick={() => setDialog({})} className="px-6 py-2.5 bg-primary hover:bg-primary-hover text-white rounded-[24px] font-bold ty-btn shadow-lg shadow-primary/20 flex items-center gap-2 transition-all">
             <span className="material-symbols-outlined text-[20px]" style={{ fontVariationSettings: '"FILL" 1' }}>person_add</span> {t('users.new')}
           </button>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Stat label={t('users.stat.total')} value={stats.total} />
-          <Stat label={t('users.stat.superAdmins')} value={stats.superAdmins} total={stats.total} bar="bg-primary" />
-          <Stat label={t('users.stat.admins')} value={stats.admins} total={stats.total} bar="bg-blue-500" />
-          <Stat label={t('users.stat.users')} value={stats.users} total={stats.total} bar="bg-purple-500" />
+          {totals ? (
+            <>
+              <Stat label={t('users.stat.total')} value={stats.total} />
+              <Stat label={t('users.stat.superAdmins')} value={stats.superAdmins} total={stats.total} bar="bg-primary" />
+              <Stat label={t('users.stat.admins')} value={stats.admins} total={stats.total} bar="bg-blue-500" />
+              <Stat label={t('users.stat.users')} value={stats.users} total={stats.total} bar="bg-purple-500" />
+            </>
+          ) : (
+            // The app's six roles, grouped by what they do (the mockup's Super Admin / Admin / User split is gone).
+            <>
+              <Stat label={t('users.stat.staff')} value={staff} />
+              <Stat label={t('users.stat.recruitment')} value={count('Super Admin') + count('Recruitment Lead') + count('Recruiter')} total={staff} bar="bg-primary" />
+              <Stat label={t('users.stat.panel')} value={count('Hiring Manager') + count('Interviewer')} total={staff} bar="bg-blue-500" />
+              <Stat label={t('users.stat.candidates')} value={count('Candidate')} />
+            </>
+          )}
         </div>
         <div className="bg-white dark:bg-surface-dark rounded-xl border border-gray-200 dark:border-border-dark shadow-sm p-5">
           <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
@@ -148,12 +174,13 @@ export function UsersPage() {
                   </>
                 )}
               </Popover>
-              <Popover wrapperClass="w-full" trigger={({ toggle: tg }) => <FilterButton icon="toggle_on" label={t('users.filter.status', { value: status ? t(status === 'Active' ? 'users.active' : 'users.inactive') : t('users.filter.all') })} onClick={tg} />}>
+              <Popover wrapperClass="w-full" trigger={({ toggle: tg }) => <FilterButton icon="toggle_on" label={t('users.filter.status', { value: status ? t(status === 'Active' ? 'users.active' : status === 'Invited' ? 'users.invited' : 'users.inactive') : t('users.filter.all') })} onClick={tg} />}>
                 {(close) => (
                   <>
                     <MenuItem active={!status} onClick={() => { reset(setStatus)(''); close(); }}>{t('users.filter.all')}</MenuItem>
                     <MenuItem active={status === 'Active'} onClick={() => { reset(setStatus)('Active'); close(); }}>{t('users.active')}</MenuItem>
                     <MenuItem active={status === 'Inactive'} onClick={() => { reset(setStatus)('Inactive'); close(); }}>{t('users.inactive')}</MenuItem>
+                    <MenuItem active={status === 'Invited'} onClick={() => { reset(setStatus)('Invited'); close(); }}>{t('users.invited')}</MenuItem>
                   </>
                 )}
               </Popover>
@@ -187,16 +214,16 @@ export function UsersPage() {
                       <td className="px-6 py-4 whitespace-nowrap"><input className={CHECK} type="checkbox" checked={selected.has(u.id)} onChange={() => toggle(u.id)} /></td>
                       <td className="px-6 py-4 whitespace-nowrap ">
                         <div className="flex items-center gap-3">
-                          <div className={`size-8 rounded-full flex items-center justify-center text-xs font-bold ${active ? 'bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary-hover' : 'bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-500'}`}>{initials(u.name)}</div>
+                          <div className={`size-8 rounded-full flex items-center justify-center text-xs font-bold ${active ? 'bg-primary/10 text-primary-ink dark:bg-primary/20 dark:text-primary-hover' : 'bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-500'}`}>{initials(u.name)}</div>
                           <span className={`font-semibold text-sm ${active ? 'text-gray-900 dark:text-white' : 'text-gray-400'}`}>{u.name}</span>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap "><span className="text-sm text-gray-600 dark:text-gray-400">{u.email}</span></td>
-                      <td className="px-6 py-4 whitespace-nowrap "><span className={CHIP + (ROLE_CHIP[u.role] ?? ROLE_CHIP.User)}>{u.role}</span></td>
+                      <td className="px-6 py-4 whitespace-nowrap "><span className={CHIP + (ROLE_CHIP[u.role] ?? ROLE_CHIP.Recruiter)}>{u.role}</span></td>
                       <td className="px-6 py-4 whitespace-nowrap ">
                         <div className="flex items-center gap-2">
-                          <span className={`size-2 rounded-full ${active ? 'bg-emerald-500' : 'bg-gray-400'}`}></span>
-                          <span className={`text-sm font-medium ${active ? 'text-gray-900 dark:text-white' : 'text-gray-500'}`}>{t(active ? 'users.active' : 'users.inactive')}</span>
+                          <span className={`size-2 rounded-full ${active ? 'bg-emerald-500' : u.status === 'Invited' ? 'bg-amber-400' : 'bg-gray-400'}`}></span>
+                          <span className={`text-sm font-medium ${active ? 'text-gray-900 dark:text-white' : 'text-gray-500'}`}>{t(active ? 'users.active' : u.status === 'Invited' ? 'users.invited' : 'users.inactive')}</span>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap "><span className="text-sm text-gray-500">{fullDate(u.createdAt)}</span></td>
@@ -213,6 +240,8 @@ export function UsersPage() {
                           {(close) => (
                             <>
                               <MenuItem onClick={() => { close(); setDialog({ user: u }); }}>{t('users.menu.edit')}</MenuItem>
+                              {u.status === 'Invited' && <MenuItem onClick={() => { close(); sendInvitation(u, currentUser().name); toast(t('users.inviteResent', { email: u.email })); }}>{t('users.menu.resend')}</MenuItem>}
+                              {u.status === 'Invited' && <MenuItem onClick={() => { close(); useStore.getState().acceptInvitation(u.id); toast(t('users.joined', { name: u.name })); }}>{t('users.menu.accept')}</MenuItem>}
                               <MenuItem onClick={() => { close(); setActive(u); }}>{t(active ? 'users.menu.deactivate' : 'users.menu.activate')}</MenuItem>
                             </>
                           )}

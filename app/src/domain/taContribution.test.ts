@@ -88,6 +88,6 @@ describe('taContribution', () => {
     expect(store.getState().transferOwner(c.id, a.id, 'u-admin')).toEqual({ ok: false, reason: 'not_assignable' });
     expect(store.getState().transferOwner(c.id, b.id, 'u-admin')).toEqual({ ok: false, reason: 'not_assignable' });
     expect(store.getState().candidates[0].cvOwner).toBe(c.cvOwner);
-    expect(store.getState().activities.some((x) => x.type === 'owner_transferred')).toBe(false);
+    expect(store.getState().activities.some((x) => x.type === 'owner_transferred' && x.candidateId === c.id)).toBe(false);
   });
 });

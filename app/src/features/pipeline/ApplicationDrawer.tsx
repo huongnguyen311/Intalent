@@ -1,14 +1,20 @@
+import { useStageName } from './jobStageContext';
 import { useEffect, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { Avatar, toneFor } from '../../components/Avatar';
 import { Drawer } from '../../components/Drawer';
+import { awaitsScorecardFrom } from '../../domain/hiring';
+import { normalizeRole } from '../../domain/permissions';
 import { averageRating, daysInStage } from '../../domain/pipeline';
-import { stageLabel } from '../../domain/stages';
-import type { Application, Job, Stage } from '../../domain/types';
-import { CURRENT_USER_ID, userName } from '../../domain/users';
-import { useLang, useT } from '../../i18n/i18n';
+import type { Application, Candidate, Job, Stage } from '../../domain/types';
+import { userName } from '../../domain/users';
+import { useT } from '../../i18n/i18n';
+import { me, useCan, useMe } from '../../store/session';
 import { useStore } from '../../store/store';
 import { fullDate } from '../jds/format';
+import { EmailComposer } from '../hiring/EmailComposer';
+import { AnswersSection, EmailsSection, HandoffBanner, HandoffSection, InterviewsSection, OfferSection } from '../hiring/HiringSections';
+import { AiEvaluationSection } from './AiEvaluationSection';
 import { MoveToMenu } from './CandidateCard';
 
 type Props = { appId: string | null; job: Job; onClose: () => void; onMove: (appId: string, to: Stage) => void };
@@ -43,30 +49,37 @@ export function ApplicationDrawer({ appId, job, onClose, onMove }: Props) {
   const name = candidate?.name ?? app.candidateId;
   return (
     <Drawer open title={name} onClose={onClose}>
-      <DrawerBody app={app} job={job} name={name} title={candidate?.title} onMove={(to) => onMove(app.id, to)} />
+      <DrawerBody app={app} job={job} name={name} candidate={candidate} onMove={(to) => onMove(app.id, to)} />
     </Drawer>
   );
 }
 
-type BodyProps = { app: Application; job: Job; name: string; title?: string; onMove: (to: Stage) => void };
+type BodyProps = { app: Application; job: Job; name: string; candidate?: Candidate; onMove: (to: Stage) => void };
 
-function DrawerBody({ app, job, name, title, onMove }: BodyProps) {
+function DrawerBody({ app, job, name, candidate, onMove }: BodyProps) {
+  const title = candidate?.title;
   const t = useT();
-  const [lang] = useLang();
+  const label = useStageName();
   const users = useStore((s) => s.users);
   const [comment, setComment] = useState('');
+  const [mailing, setMailing] = useState(false);
+  const perm = useCan();
+  const user = useMe();
+  // Interviewers judge through their scorecard only, and see the team's ratings and comments after sending it.
+  const interviewer = normalizeRole(user.role) === 'Interviewer';
+  const blind = interviewer && awaitsScorecardFrom(app, user.id);
   useEffect(() => setComment(''), [app.id]);
   const who = (id: string) => userName(users, id);
   const ratings = app.ratings ?? [];
   const avg = averageRating(app);
-  const mine = ratings.find((r) => r.by === CURRENT_USER_ID)?.stars ?? 0;
+  const mine = ratings.find((r) => r.by === me())?.stars ?? 0;
 
   const post = () => {
-    if (useStore.getState().addComment(app.id, comment, CURRENT_USER_ID)) setComment('');
+    if (useStore.getState().addComment(app.id, comment, me())) setComment('');
   };
 
   const facts: [string, string][] = [
-    [t('pipeline.drawer.stage'), stageLabel(app.stage, lang)],
+    [t('pipeline.drawer.stage'), label(app.stage)],
     [t('pipeline.drawer.inStage'), t('jobs.days', { n: daysInStage(app) })],
     [t('pipeline.drawer.source'), app.source],
     [t('pipeline.drawer.via'), t(`jobs.via.${app.via}`)],
@@ -83,15 +96,25 @@ function DrawerBody({ app, job, name, title, onMove }: BodyProps) {
             <div className="font-bold text-slate-800 dark:text-white">{name}</div>
             <div className="text-xs text-[#896a61]">{title}</div>
           </div>
-          <MoveToMenu
-            current={app.stage}
-            onMove={onMove}
-            button={(toggle) => (
-              <button onClick={toggle} className="px-4 py-2 rounded-full border border-[#e6dddb] dark:border-[#3a3433] text-sm font-bold flex items-center gap-1 hover:border-primary/50 transition-colors">
-                {t('pipeline.moveTo')}<span className="material-symbols-outlined text-[18px]">expand_more</span>
-              </button>
-            )}
-          />
+          {perm('email.send') && <button
+            aria-label={t('email.title')}
+            title={t('email.title')}
+            onClick={() => setMailing(true)}
+            className="size-9 rounded-full border border-[#e6dddb] dark:border-[#3a3433] flex items-center justify-center text-[#896a61] hover:border-primary/50 hover:text-primary transition-colors"
+          >
+            <span className="material-symbols-outlined text-[18px]">mail</span>
+          </button>}
+          {!app.handoff && (
+            <MoveToMenu
+              current={app.stage}
+              onMove={onMove}
+              button={(toggle) => (
+                <button onClick={toggle} className="px-4 py-2 rounded-full border border-[#e6dddb] dark:border-[#3a3433] text-sm font-bold flex items-center gap-1 hover:border-primary/50 transition-colors">
+                  {t('pipeline.moveTo')}<span className="material-symbols-outlined text-[18px]">expand_more</span>
+                </button>
+              )}
+            />
+          )}
         </div>
         <dl className="grid grid-cols-2 gap-x-6 gap-y-3">
           {facts.map(([k, v]) => (
@@ -101,17 +124,27 @@ function DrawerBody({ app, job, name, title, onMove }: BodyProps) {
             </div>
           ))}
         </dl>
-        {app.stage === 'rejected' && app.rejectedReason && (
+        {app.stage === 'rejected' && (app.rejectedReason || app.rejectedCode) && (
           <p className="mt-3 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-300 px-3 py-2">
-            <span className="font-bold">{t('pipeline.drawer.reason')}:</span> {app.rejectedReason}
+            <span className="font-bold">{t('pipeline.drawer.reason')}:</span>{' '}
+            {[app.rejectedCode && t(`reject.${app.rejectedCode}`), app.rejectedReason].filter(Boolean).join(' · ')}
           </p>
         )}
+        <HandoffBanner app={app} />
         <Link to={`/candidates/${app.candidateId}`} className="inline-flex items-center gap-1 mt-4 font-bold text-primary hover:underline">
           {t('pipeline.drawer.profile')}<span className="material-symbols-outlined text-[18px]">arrow_forward</span>
         </Link>
       </Section>
 
-      <Section title={t('pipeline.drawer.ratings')}>
+      <HandoffSection app={app} candidate={candidate} job={job} />
+      {/* In the Offer stage the offer is the next thing to act on, so it comes first (like Hand-off once Hired). */}
+      {app.stage === 'offer' && <OfferSection app={app} candidate={candidate} job={job} />}
+      <AnswersSection app={app} />
+      {!blind && <AiEvaluationSection app={app} />}
+      <InterviewsSection app={app} candidate={candidate} job={job} />
+      {app.stage !== 'offer' && <OfferSection app={app} candidate={candidate} job={job} />}
+
+      {perm('review') && !interviewer && <Section title={t('pipeline.drawer.ratings')}>
         <p className="text-[#896a61] mb-3">
           {avg === undefined ? t('pipeline.drawer.noRatings') : t('pipeline.drawer.average', { avg, count: ratings.length })}
         </p>
@@ -131,7 +164,7 @@ function DrawerBody({ app, job, name, title, onMove }: BodyProps) {
                 key={n}
                 aria-label={t('pipeline.drawer.rate', { n })}
                 aria-pressed={n <= mine}
-                onClick={() => useStore.getState().rateApplication(app.id, CURRENT_USER_ID, n)}
+                onClick={() => useStore.getState().rateApplication(app.id, me(), n)}
                 className={`material-symbols-outlined text-[22px] hover:scale-110 transition-transform ${n <= mine ? 'text-amber-400' : 'text-gray-300'}`}
                 style={FILLED}
               >
@@ -140,13 +173,21 @@ function DrawerBody({ app, job, name, title, onMove }: BodyProps) {
             ))}
           </span>
         </div>
-      </Section>
+      </Section>}
 
       <Section title={t('pipeline.drawer.history')}>
         <ol className="space-y-3 border-l-2 border-[#f4f1f0] dark:border-[#2a2423] pl-4">
           {[...app.history].reverse().map((h, i) => (
             <li key={`${h.at}-${i}`}>
-              <div className="font-bold">{stageLabel(h.stage, lang)}</div>
+              <div className="font-bold flex items-center gap-1.5">
+                {label(h.stage)}
+                {h.ruleId && (
+                  <span className="inline-flex items-center gap-0.5 px-1.5 rounded-full bg-violet-50 dark:bg-violet-500/10 text-violet-600 dark:text-violet-300 text-2xs font-bold">
+                    <span aria-hidden="true" className="material-symbols-outlined text-[12px]">bolt</span>
+                    {t('pipeline.drawer.auto')}
+                  </span>
+                )}
+              </div>
               <div className="text-xs text-[#896a61]">{fullDate(h.at)} · {who(h.by)}</div>
               {h.note && !(h.stage === 'rejected' && h.note === app.rejectedReason) && <div className="text-sm mt-1 whitespace-pre-wrap">{h.note}</div>}
             </li>
@@ -154,7 +195,14 @@ function DrawerBody({ app, job, name, title, onMove }: BodyProps) {
         </ol>
       </Section>
 
+      {perm('email.send') && <EmailsSection app={app} />}
+
       <Section title={t('pipeline.drawer.comments')}>
+        {blind ? (
+          <p className="text-[#896a61] flex items-center gap-1">
+            <span className="material-symbols-outlined text-[18px]">visibility_off</span>{t('pipeline.drawer.hiddenUntilScored')}
+          </p>
+        ) : (<>
         <ul className="space-y-3 mb-4">
           {app.comments.map((c, i) => (
             <li key={`${c.at}-${i}`} className="rounded-xl bg-[#f8f6f6] dark:bg-[#251f1e] px-3 py-2">
@@ -182,7 +230,9 @@ function DrawerBody({ app, job, name, title, onMove }: BodyProps) {
             {t('pipeline.drawer.post')}
           </button>
         </div>
+        </>)}
       </Section>
+      {mailing && <EmailComposer open candidateId={app.candidateId} applicationId={app.id} onClose={() => setMailing(false)} />}
     </div>
   );
 }

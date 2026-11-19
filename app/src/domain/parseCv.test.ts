@@ -22,6 +22,13 @@ describe('validateFiles', () => {
     ]);
   });
 
+  it('invalid files do not use up the batch limit', () => {
+    const files = [f('big.pdf', 6 * 1024 * 1024), f('bad.exe'), ...Array.from({ length: 10 }, (_, i) => f(`cv${i}.pdf`))];
+    const { accepted, rejected } = validateFiles(files, UPLOAD_LIMITS);
+    expect(accepted).toHaveLength(10);
+    expect(rejected.map((r) => r.reason)).toEqual(['size', 'type']);
+  });
+
   it('Ultra does not accept TXT', () => {
     expect(validateFiles([f('a.txt')], ULTRA_LIMITS).rejected[0].reason).toBe('type');
   });

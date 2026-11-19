@@ -102,3 +102,34 @@ describe('JdDetailPage', () => {
     expect(screen.getByText('JD not found')).toBeInTheDocument();
   });
 });
+
+describe('JdDetailPage jobs', () => {
+  it('lists the jobs that use the JD, linking to each', () => {
+    renderAt('/jds/jd-2026-001');
+    const card = screen.getByRole('heading', { name: /Jobs using this JD/ }).parentElement!;
+    expect(within(card).getByRole('link', { name: /Senior Flutter & Java Engineer/ })).toHaveAttribute('href', '/jobs/job-3');
+    expect(within(card).getByRole('link', { name: /Mobile Engineer \(Flutter\)/ })).toHaveAttribute('href', '/jobs/job-5');
+  });
+
+  it('says when no job uses the JD', () => {
+    useStore.setState({ jobs: [] });
+    renderAt('/jds/jd-2026-001');
+    expect(screen.getByText('No job uses this JD yet.')).toBeInTheDocument();
+  });
+});
+
+describe('JdEditor skills and experience', () => {
+  it('drafts the section from the JD fields and saves it', () => {
+    renderAt('/jds');
+    fireEvent.click(screen.getByRole('button', { name: /Create New JD/ }));
+    const drawer = screen.getByRole('dialog');
+    fireEvent.change(within(drawer).getByLabelText('Title'), { target: { value: 'Senior Go Engineer' } });
+    fireEvent.change(within(drawer).getByLabelText(/Tech stack/), { target: { value: 'Go, PostgreSQL' } });
+    fireEvent.click(within(drawer).getByRole('button', { name: 'Draft: Your skills and experience' }));
+    const field = within(drawer).getByLabelText('Your skills and experience') as HTMLTextAreaElement;
+    expect(field.value).toContain('- Strong hands-on skills in Go and PostgreSQL');
+    expect(field.value).toContain('Senior-level');
+    fireEvent.click(within(drawer).getByRole('button', { name: /Save/ }));
+    expect(useStore.getState().jds.find((j) => j.title === 'Senior Go Engineer')!.skillsExperience).toBe(field.value);
+  });
+});

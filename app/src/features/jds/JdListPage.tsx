@@ -27,7 +27,7 @@ export function StatusBadge({ status }: { status: string }) {
   const t = useT();
   const published = status === 'Published';
   return (
-    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold ${published ? 'bg-[#ECFDF5] text-[#10B981]' : 'bg-gray-100 text-gray-500'}`}>
+    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-2xs font-bold ${published ? 'bg-[#ECFDF5] text-[#10B981]' : 'bg-gray-100 text-gray-500'}`}>
       <span className={`size-1.5 rounded-full ${published ? 'bg-[#10B981]' : 'bg-gray-400'}`}></span>
       {t(published ? 'jds.status.published' : 'jds.status.draft')}
     </span>
@@ -106,7 +106,7 @@ export function JdListPage() {
             </span>
             <input placeholder={t('jds.filter.client')} className={INPUT} type="text" value={client} onChange={(e) => reset(setClient)(e.target.value)} />
           </div>
-          <button onClick={() => setEditor({})} className="px-6 py-2.5 bg-[#F97316] hover:bg-[#EA580C] text-white rounded-full font-bold shadow-lg shadow-orange-500/20 flex items-center gap-2 transition-all transform active:scale-95 text-sm shrink-0">
+          <button onClick={() => setEditor({})} className="px-6 py-2.5 bg-brand-accent hover:bg-brand-strong text-white rounded-full font-bold shadow-lg shadow-orange-500/20 flex items-center gap-2 transition-all transform active:scale-95 text-sm shrink-0">
             <span className="material-symbols-outlined text-[20px]">add</span> {t('jds.create')}
           </button>
         </div>
@@ -171,7 +171,7 @@ export function JdListPage() {
                           </div>
                           <div>
                             <div onClick={() => open(jd)} className="font-bold text-sm text-slate-800 dark:text-gray-200 group-hover:text-primary transition-colors cursor-pointer">{jd.title}</div>
-                            <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{t('jds.id', { code: jd.code })}</div>
+                            <div className="text-2xs font-bold text-muted uppercase tracking-wider">{t('jds.id', { code: jd.code })}</div>
                           </div>
                         </div>
                       </td>
@@ -184,10 +184,10 @@ export function JdListPage() {
                       <td className={TD}>
                         <div className="flex gap-1.5 flex-wrap max-w-[200px]">
                           {jd.skills.slice(0, 2).map((s) => (
-                            <span key={s} className="px-2.5 py-1 rounded-lg bg-gray-100 dark:bg-white/10 text-[10px] font-bold text-slate-600 dark:text-gray-400 border border-transparent">{s}</span>
+                            <span key={s} className="px-2.5 py-1 rounded-lg bg-gray-100 dark:bg-white/10 text-2xs font-bold text-slate-600 dark:text-muted border border-transparent">{s}</span>
                           ))}
                           {jd.skills.length > 2 && (
-                            <span className="px-2.5 py-1 rounded-lg bg-gray-50 dark:bg-white/5 text-[10px] font-bold text-gray-400">+{jd.skills.length - 2}</span>
+                            <span className="px-2.5 py-1 rounded-lg bg-gray-50 dark:bg-white/5 text-2xs font-bold text-muted">+{jd.skills.length - 2}</span>
                           )}
                         </div>
                       </td>
@@ -195,7 +195,7 @@ export function JdListPage() {
                       <td className="px-6 py-4 whitespace-nowrap text-right">
                         <div className="text-right">
                           <div className="text-xs font-bold text-gray-500">{monthDay(jd.updatedAt)}</div>
-                          <div className="text-[10px] font-bold text-gray-400">{year(jd.updatedAt)}</div>
+                          <div className="text-2xs font-bold text-muted">{year(jd.updatedAt)}</div>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-center">

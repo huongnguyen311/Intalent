@@ -1,6 +1,10 @@
 import { DOMAINS, ENGLISH, FIRST_NAMES, LAST_NAMES, MIDDLE_NAMES, SENIORITY, SKILLS, TITLES } from '../data/names';
 import type { Rng } from '../data/seed';
-import type { CandidateInput } from './types';
+import { PARSE_FIELDS, type CandidateInput, type ParseField, type ParseResult } from './types';
+
+export const PARSE_MODEL = 'intalent-parse-v1';
+/** Fields below this confidence are flagged for HR to check. */
+export const LOW_CONFIDENCE = 0.7;
 
 export interface UploadLimits {
   /** Accepted file extensions, lower-case, without the dot. */
@@ -27,17 +31,20 @@ export function extensionOf(name: string): string {
   return dot < 0 ? '' : name.slice(dot + 1).toLowerCase();
 }
 
-/** Splits one selection into accepted files and rejected ones (with the reason). Files past `maxFiles` are rejected. */
+/**
+ * Splits one selection into accepted files and rejected ones (with the reason). Only valid files count toward
+ * `maxFiles`, so a wrong type or an oversized file never pushes a good one out of the batch.
+ */
 export function validateFiles<T extends FileLike>(
   files: T[],
   limits: UploadLimits,
 ): { accepted: T[]; rejected: { file: T; reason: RejectReason }[] } {
   const accepted: T[] = [];
   const rejected: { file: T; reason: RejectReason }[] = [];
-  files.forEach((file, i) => {
-    if (i >= limits.maxFiles) rejected.push({ file, reason: 'batch' });
-    else if (!limits.extensions.includes(extensionOf(file.name))) rejected.push({ file, reason: 'type' });
+  files.forEach((file) => {
+    if (!limits.extensions.includes(extensionOf(file.name))) rejected.push({ file, reason: 'type' });
     else if (file.size > limits.maxBytes) rejected.push({ file, reason: 'size' });
+    else if (accepted.length >= limits.maxFiles) rejected.push({ file, reason: 'batch' });
     else accepted.push(file);
   });
   return { accepted, rejected };
@@ -106,4 +113,31 @@ export function parseCvFile(file: FileLike, rng: Rng): CandidateInput {
     domains: [pick(rng, DOMAINS)],
     cv: file.name,
   };
+}
+
+/**
+ * Simulated parse quality for a file: confidence per field from a hash of the file name (no rng draws, so the
+ * extracted values above stay the same), and fields that came back empty listed as missing.
+ */
+export function parseReport(fileName: string, input: CandidateInput, at: string): ParseResult {
+  const h = hashString(`${fileName}#parse`);
+  const confidence: Partial<Record<ParseField, number>> = {};
+  const missing: ParseField[] = [];
+  PARSE_FIELDS.forEach((f, i) => {
+    const v = input[f];
+    if (Array.isArray(v) ? v.length === 0 : !v) {
+      missing.push(f);
+      return;
+    }
+    // Contact details are usually clean; seniority/English are inferred and less certain.
+    const floor = f === 'name' || f === 'email' || f === 'phone' ? 0.8 : 0.5;
+    confidence[f] = Math.round((floor + (((h >>> (i * 3)) & 0xff) / 255) * (0.99 - floor)) * 100) / 100;
+  });
+  return { model: PARSE_MODEL, at, confidence, missing };
+}
+
+/** Fields HR should check: low confidence first, then missing. */
+export function fieldsToCheck(parse: ParseResult): { low: ParseField[]; missing: ParseField[] } {
+  const low = PARSE_FIELDS.filter((f) => (parse.confidence[f] ?? 1) < LOW_CONFIDENCE);
+  return { low, missing: parse.missing };
 }

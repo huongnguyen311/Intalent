@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { toast } from '../../components/Toast';
 import { inPeriod, type Period } from '../../domain/taContribution';
-import { assignableUsers, CURRENT_USER_ID, userName } from '../../domain/users';
+import { assignableUsers, userName } from '../../domain/users';
 import { useT } from '../../i18n/i18n';
+import { me } from '../../store/session';
 import { useStore } from '../../store/store';
 
 const SELECT = 'px-3 py-1.5 text-sm rounded-lg border border-gray-200 bg-white text-gray-700';
@@ -25,7 +26,7 @@ export function TransfersTab({ period }: { period: Period }) {
   const candidateName = (id?: string) => candidates.find((c) => c.id === id)?.name ?? '-';
 
   const transfer = () => {
-    const res = useStore.getState().transferOwner(candidateId, toId, CURRENT_USER_ID);
+    const res = useStore.getState().transferOwner(candidateId, toId, me());
     if (res.ok) {
       toast(t('ta.transferred'));
       setCandidateId('');

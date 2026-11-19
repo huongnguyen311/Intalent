@@ -2,12 +2,15 @@ import { normalizeEmail } from '../../domain/normalize';
 import type { User } from '../../domain/types';
 import { CURRENT_USER_ID, ROLES } from '../../domain/users';
 import type { DemoActions, Env, Get, Set } from './types';
+import { logAudit } from './audit';
+import { companyOf } from '../../domain/company';
+import { updateWorkspaceEntry } from '../platform';
 
 export function userActions(
   set: Set,
   get: Get,
   env: Env,
-): Pick<DemoActions, 'addUser' | 'updateUser' | 'setUserRole' | 'setUserActive'> {
+): Pick<DemoActions, 'addUser' | 'updateUser' | 'setUserRole' | 'setUserActive' | 'acceptInvitation' | 'updateCompany' | 'setUserPassword'> {
   const emailTaken = (email: string, exceptId?: string) =>
     get().users.some((u) => u.id !== exceptId && normalizeEmail(u.email) === email);
   const patchUser = (id: string, change: Partial<User>) =>
@@ -19,8 +22,9 @@ export function userActions(
       const email = normalizeEmail(input.email);
       if (!name || !email || !ROLES.includes(input.role)) return { ok: false, reason: 'invalid' };
       if (emailTaken(email)) return { ok: false, reason: 'duplicate' };
-      const user: User = { id: env.id('user'), name, email, role: input.role, status: 'Active', createdAt: env.now().slice(0, 10) };
+      const user: User = { id: env.id('user'), name, email, role: input.role, status: 'Invited', createdAt: env.now().slice(0, 10) };
       set((s) => ({ users: [...s.users, user] }));
+      logAudit(set, get, env.now(), { type: 'user_invited', userId: user.id, detail: `${user.email} as ${user.role}` });
       return { ok: true, user };
     },
 
@@ -41,7 +45,37 @@ export function userActions(
       if (!user) return { ok: false, reason: 'not_found' };
       if (id === CURRENT_USER_ID && role !== 'Super Admin') return { ok: false, reason: 'protected' };
       patchUser(id, { role });
+      if (user.role !== role) logAudit(set, get, env.now(), { type: 'user_role_changed', userId: id, detail: `${user.role} → ${role}` });
       return { ok: true, user: { ...user, role } };
+    },
+
+    acceptInvitation(id, patch = {}) {
+      const user = get().users.find((u) => u.id === id);
+      if (!user) return { ok: false, reason: 'not_found' };
+      if (user.status !== 'Invited') return { ok: false, reason: 'invalid' };
+      const change = { status: 'Active', ...(patch.name?.trim() ? { name: patch.name.trim() } : {}), ...(patch.passwordHash ? { passwordHash: patch.passwordHash } : {}) };
+      patchUser(id, change);
+      logAudit(set, get, env.now(), { type: 'user_joined', userId: id, by: id, detail: `${user.email} accepted the invitation` });
+      return { ok: true, user: { ...user, ...change } };
+    },
+
+    setUserPassword(id, passwordHash) {
+      const user = get().users.find((u) => u.id === id);
+      if (!user) return { ok: false, reason: 'not_found' };
+      patchUser(id, { passwordHash });
+      logAudit(set, get, env.now(), { type: 'user_status_changed', userId: id, by: id, detail: 'Password changed' });
+      return { ok: true, user: { ...user, passwordHash } };
+    },
+
+    updateCompany(patch) {
+      set((s) => ({
+        company: { ...companyOf(s), ...patch },
+        // The careers site starts in the company's default language.
+        ...(patch.language ? { ui: { ...s.ui, careersLang: patch.language } } : {}),
+      }));
+      const c = companyOf(get());
+      updateWorkspaceEntry(c.workspaceId, { name: c.name, slug: c.careersSlug });
+      logAudit(set, get, env.now(), { type: 'settings_updated', detail: `Company settings: ${Object.keys(patch).join(', ')}` });
     },
 
     setUserActive(id, active) {
@@ -50,6 +84,7 @@ export function userActions(
       if (id === CURRENT_USER_ID && !active) return { ok: false, reason: 'protected' };
       const status = active ? 'Active' : 'Inactive';
       patchUser(id, { status });
+      if (user.status !== status) logAudit(set, get, env.now(), { type: 'user_status_changed', userId: id, detail: `${user.status} → ${status}` });
       return { ok: true, user: { ...user, status } };
     },
   };

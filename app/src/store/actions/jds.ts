@@ -37,6 +37,7 @@ export function jdActions(
         body: input.body,
         status: input.status ?? 'Draft',
         ...(input.mustHave ? { mustHave: input.mustHave } : {}),
+        ...(input.skillsExperience ? { skillsExperience: input.skillsExperience } : {}),
         createdAt: at,
         updatedAt: at,
       };

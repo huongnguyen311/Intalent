@@ -42,7 +42,7 @@ describe('campaign apply, end to end', () => {
     const state = useStore.getState();
     // Dashboard recruitment sources.
     const sources = dashboardMetrics(state, 'all', new Date()).recruitment.topSources;
-    expect(sources).toEqual(expect.arrayContaining([{ source: 'LinkedIn', count: 1 }, { source: 'Careers page', count: 1 }]));
+    expect(sources).toEqual(expect.arrayContaining([expect.objectContaining({ source: 'LinkedIn', count: 1 }), expect.objectContaining({ source: 'Careers page', count: 1 })]));
     // Campaign stats count it under its channel.
     const stats = campaignStats(state, campaign.id);
     expect(stats.applicants).toBe(1);

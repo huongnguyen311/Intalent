@@ -4,7 +4,10 @@ import { stageLabel } from '../../domain/stages';
 import type { Application, Campaign, Job, Jd } from '../../domain/types';
 import { useLang, useT } from '../../i18n/i18n';
 import { useStore } from '../../store/store';
+import { useMe } from '../../store/session';
+import { can } from '../../domain/permissions';
 import { useChannelLabel } from '../campaigns/CampaignBits';
+import { PostSection } from '../careers/PostSection';
 import { fullDate } from '../jds/format';
 
 const TH = 'px-6 py-4 text-xs font-bold text-[#896a61] uppercase tracking-wider border-b border-[#e6dddb] dark:border-[#2a2423]';
@@ -58,6 +61,7 @@ export function CampaignsTab({ job }: { job: Job }) {
   const t = useT();
   const channelLabel = useChannelLabel();
   const campaigns = useStore((s) => s.campaigns).filter((c: Campaign) => c.jobIds.includes(job.id));
+  const canCampaign = can(useMe(), 'campaign');
   return (
     <div className="bg-white dark:bg-surface-dark rounded-[1.5rem] shadow-sm border border-gray-100 dark:border-white/10 overflow-hidden">
       <table className="w-full text-left border-collapse">
@@ -72,7 +76,7 @@ export function CampaignsTab({ job }: { job: Job }) {
           {campaigns.map((c) => (
             <tr key={c.id} className="hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
               <td className={TD}>
-                <Link to={`/campaigns/${c.id}`} className="font-bold text-slate-800 dark:text-gray-200 hover:text-primary transition-colors">{c.name}</Link>
+                {canCampaign ? <Link to={`/campaigns/${c.id}`} className="font-bold text-slate-800 dark:text-gray-200 hover:text-primary transition-colors">{c.name}</Link> : <span className="font-bold text-slate-800 dark:text-gray-200">{c.name}</span>}
               </td>
               <td className={TD}><div className="flex gap-1.5 flex-wrap">{c.channels.map((ch) => <Chip key={ch}>{channelLabel(ch)}</Chip>)}</div></td>
               <td className={TD}>{fullDate(c.start)} – {fullDate(c.end)}</td>
@@ -98,14 +102,27 @@ export function CareersPreviewTab({ job, jd }: { job: Job; jd?: Jd }) {
         {job.status !== 'open' && <span className="ml-2 text-orange-500 font-bold">{t('jobs.preview.unpublished')}</span>}
       </p>
       <div data-testid="careers-preview" className="rounded-[2rem] border-2 border-dashed border-[#e6dddb] dark:border-[#3a3433] bg-white dark:bg-[#1e1e1e] p-10 max-w-3xl">
-        <h2 className="text-2xl font-bold text-slate-800 dark:text-white">{job.title}</h2>
+        <h2 className="ty-title text-2xl font-bold text-slate-800 dark:text-white">{job.title}</h2>
         <div className="flex gap-2 flex-wrap mt-3">
-          {[job.location, job.level, job.employment].filter(Boolean).map((x) => <Chip key={x}>{x}</Chip>)}
+          {[
+            job.location, job.level, job.employment,
+            job.minYears ? t('jobs.req.years', { n: job.minYears }) : '',
+            job.education && job.education !== 'any' ? t(`education.${job.education}`) : '',
+          ].filter(Boolean).map((x) => <Chip key={x}>{x}</Chip>)}
         </div>
         <div className="mt-6 text-sm text-slate-600 dark:text-gray-300 whitespace-pre-line leading-relaxed">
           {jd?.body || t('jobs.preview.noJd')}
         </div>
-        <span className="inline-block mt-8 px-6 py-2.5 bg-[#F97316] text-white rounded-full font-bold text-sm shadow-lg shadow-orange-500/20">
+        {[
+          [t('jds.editor.skillsExperience'), jd?.skillsExperience],
+          [t('jobs.drawer.whyLove'), job.whyLove],
+          [t('jobs.drawer.additionalInfo'), job.additionalInfo],
+        ].filter((x): x is [string, string] => !!x[1]).map(([heading, text]) => (
+          <div key={heading} className="mt-6 text-sm text-slate-600 dark:text-gray-300 leading-relaxed">
+            <PostSection heading={heading} text={text} headingClass="text-base font-bold text-slate-800 dark:text-white mb-2" />
+          </div>
+        ))}
+        <span className="inline-block mt-8 px-6 py-2.5 bg-brand-accent text-white rounded-full font-bold text-sm shadow-lg shadow-orange-500/20">
           {t('jobs.preview.apply')}
         </span>
       </div>

@@ -9,6 +9,7 @@ import { filterCandidates, PAGE_SIZE, seniorityRank, type CandidateQuery, type C
 import type { Candidate } from '../../domain/types';
 import { userName } from '../../domain/users';
 import { useShowNew } from '../../hooks';
+import { PoolInsights } from './PoolInsights';
 import { useT, type TKey } from '../../i18n/i18n';
 import { useStore } from '../../store/store';
 import { NotesPanel } from '../notes/NotesPage';
@@ -19,6 +20,9 @@ const FILTER_BTN =
   'flex items-center gap-2 px-3 py-2 bg-white dark:bg-[#251f1e] border border-[#e6dddb] dark:border-[#3a3433] rounded-lg text-sm font-medium text-[#181211] dark:text-white hover:border-primary/50 transition-colors whitespace-nowrap ';
 const TH = 'px-6 py-4 text-xs font-bold text-[#896a61] uppercase tracking-wider border-b border-[#e6dddb] dark:border-[#2a2423]  ';
 const TD = 'px-6 py-4 whitespace-nowrap ';
+/** The table is wider than a 1440px screen: keep the row menu (Add to pipeline, Edit…) in view without scrolling sideways. */
+const STICKY_HEAD = 'sticky right-0 bg-[#f8f6f6] dark:bg-[#251f1e] shadow-[-8px_0_8px_-8px_rgba(0,0,0,0.12)]';
+const STICKY_CELL = 'sticky right-0 bg-white dark:bg-surface-dark group-hover:bg-gray-50 dark:group-hover:bg-[#2a2423] shadow-[-8px_0_8px_-8px_rgba(0,0,0,0.12)]';
 const CHIP = 'px-2 py-0.5 text-xs font-medium bg-[#f4f1f0] dark:bg-[#2a2423] text-[#181211] dark:text-[#e6dddb] rounded border border-[#e6dddb] dark:border-[#3a3433]';
 const BADGE = 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs';
 const CHECKBOX = 'rounded border-gray-300 text-primary focus:ring-primary dark:bg-[#1e1e1e] dark:border-[#3a3433]';
@@ -40,11 +44,11 @@ const ENGLISH_BADGE: Record<string, keyof typeof BADGES> = { advanced: 'green', 
 /** Skill chips are shown while their names fit this budget (at least one), the rest collapse into "+N". */
 const SKILL_CHAR_BUDGET = 24;
 
-function splitSkills(skills: string[]): { shown: string[]; hidden: number } {
+function splitSkills(skills: string[], budget = SKILL_CHAR_BUDGET): { shown: string[]; hidden: number } {
   let used = 0;
   let n = 0;
   for (const s of skills) {
-    if (n > 0 && used + s.length > SKILL_CHAR_BUDGET) break;
+    if (n > 0 && used + s.length > budget) break;
     used += s.length;
     n += 1;
   }
@@ -118,6 +122,11 @@ export function CandidatePoolPage() {
   const t = useT();
   const navigate = useNavigate();
   const showNew = useShowNew();
+  // App mode: tighter cell padding and a smaller skill budget so every column fits at 1440 without hiding under the pinned Actions column.
+  const th = showNew ? TH.replace('px-6', 'px-4') : TH;
+  const td = showNew ? TD.replace('px-6', 'px-4') : TD;
+  const tdAction = showNew ? TD.replace('px-6', 'px-3') : TD;
+  const skillBudget = showNew ? 12 : SKILL_CHAR_BUDGET;
   const [params, setParams] = useSearchParams();
   const notesTab = showNew && params.get('tab') === 'notes';
   const candidates = useStore((s) => s.candidates);
@@ -144,7 +153,13 @@ export function CandidatePoolPage() {
     setPage(1);
   };
 
-  const filtered = useMemo(() => filterCandidates(candidates, q, sort), [candidates, q, sort]);
+  // ?pending=1: only profiles with candidate-proposed changes waiting for review.
+  const pendingOnly = showNew && params.get('pending') === '1';
+  const pendingCount = useMemo(() => candidates.filter((c) => c.suggestions?.length).length, [candidates]);
+  const filtered = useMemo(() => {
+    const base = filterCandidates(candidates, q, sort);
+    return pendingOnly ? base.filter((c) => c.suggestions?.length) : base;
+  }, [candidates, q, sort, pendingOnly]);
   const filtersActive = Object.values(q).some((v) => (Array.isArray(v) ? v.length : Boolean(v)));
   // The mockup fixture shows a 781-row pool while only holding the first 10 rows.
   const overrideTotal = fixtureTotal !== undefined && !filtersActive ? fixtureTotal : undefined;
@@ -202,6 +217,19 @@ export function CandidatePoolPage() {
     <AppLayout title={t('nav.candidatePool')}>
       <div className="flex flex-col h-full bg-background-light dark:bg-background-dark overflow-hidden">
         {showNew && <PoolTabs notes={false} onChange={(v: boolean) => setParams(v ? { tab: 'notes' } : {}, { replace: true })} />}
+        {showNew && <PoolInsights />}
+        {showNew && (pendingCount > 0 || pendingOnly) && (
+          <div className="px-4 py-2 bg-amber-50 dark:bg-amber-900/10 border-b border-amber-100 dark:border-amber-900/30 flex items-center gap-3 text-sm text-amber-800 dark:text-amber-300">
+            <span className="material-symbols-outlined text-[18px]">rule</span>
+            <span className="flex-1">{t('suggest.poolBanner', { n: pendingCount })}</span>
+            <button
+              onClick={() => { setParams(pendingOnly ? {} : { pending: '1' }, { replace: true }); setPage(1); }}
+              className="px-3 py-1 rounded-full text-xs font-bold bg-white dark:bg-[#1e1e1e] border border-amber-200 dark:border-amber-800 hover:border-amber-400"
+            >
+              {t(pendingOnly ? 'suggest.showAll' : 'suggest.showPending')}
+            </button>
+          </div>
+        )}
         <div className="bg-white dark:bg-[#1e1e1e] border-b border-[#e6dddb] dark:border-[#2a2423] p-4 flex flex-col gap-4 z-10 shadow-soft">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4 w-full">
             <div className="relative w-full md:w-64 group">
@@ -275,13 +303,13 @@ export function CandidatePoolPage() {
               <table className="w-full text-left border-collapse">
                 <thead className="bg-[#f8f6f6] dark:bg-[#251f1e] sticky top-0 z-10">
                   <tr>
-                    <th className="px-6 py-4 w-12 border-b border-[#e6dddb] dark:border-[#2a2423]">
+                    <th className={`${showNew ? 'pl-6 pr-2' : 'px-6'} py-4 w-12 border-b border-[#e6dddb] dark:border-[#2a2423]`}>
                       <div className="flex items-center">
                         <input className={CHECKBOX} type="checkbox" checked={allOnPage} onChange={toggleAll} aria-label="Select all" />
                       </div>
                     </th>
-                    <th className={TH}><div className="flex items-center gap-1">{t('candidates.col.name')}</div></th>
-                    <th className={TH}>
+                    <th className={th}><div className="flex items-center gap-1">{t('candidates.col.name')}</div></th>
+                    <th className={th}>
                       <div className="flex items-center gap-1">
                         <div className="flex items-center gap-1">
                           {t('candidates.col.contact')}{' '}
@@ -289,32 +317,32 @@ export function CandidatePoolPage() {
                         </div>
                       </div>
                     </th>
-                    <th className={TH}><div className="flex items-center gap-1">{t('candidates.col.seniority')}</div></th>
-                    <th className={TH}><div className="flex items-center gap-1">{t('candidates.col.stack')}</div></th>
-                    <th className={TH}><div className="flex items-center gap-1">{t('candidates.col.english')}</div></th>
-                    <th className={TH}><div className="flex items-center gap-1">{t('candidates.col.openToWork')}</div></th>
-                    <th className={TH}><div className="flex items-center gap-1">{t('candidates.col.owner')}</div></th>
-                    <th className="px-6 py-4 w-16 border-b border-[#e6dddb] dark:border-[#2a2423] text-xs font-bold text-[#896a61] uppercase tracking-wider text-center">{t('candidates.col.actions')}</th>
+                    <th className={th}><div className="flex items-center gap-1">{t('candidates.col.seniority')}</div></th>
+                    <th className={th}><div className="flex items-center gap-1">{t('candidates.col.stack')}</div></th>
+                    <th className={th}><div className={`flex items-center gap-1 ${showNew ? 'max-w-[72px]' : ''}`}>{t('candidates.col.english')}</div></th>
+                    <th className={th}><div className="flex items-center gap-1">{t('candidates.col.openToWork')}</div></th>
+                    <th className={th}><div className="flex items-center gap-1">{t('candidates.col.owner')}</div></th>
+                    <th className={`${showNew ? 'px-3' : 'px-6'} py-4 w-16 border-b border-[#e6dddb] dark:border-[#2a2423] text-xs font-bold text-[#896a61] uppercase tracking-wider text-center ${showNew ? STICKY_HEAD : ''}`}>{t('candidates.col.actions')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#f4f1f0] dark:divide-[#2a2423]">
                   {rows.map((c) => {
-                    const { shown, hidden } = splitSkills(c.skills);
+                    const { shown, hidden } = splitSkills(c.skills, skillBudget);
                     return (
                       <tr key={c.id} onClick={() => go(c)} className="hover:bg-gray-50 dark:hover:bg-white/5 transition-colors group cursor-pointer">
-                        <td className="px-6 py-4 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                        <td className={`${showNew ? 'pl-6 pr-2' : 'px-6'} py-4 whitespace-nowrap`} onClick={(e) => e.stopPropagation()}>
                           <input className={CHECKBOX} type="checkbox" checked={selected.has(c.id)} onChange={() => toggle(c.id)} aria-label={`Select ${c.name}`} />
                         </td>
-                        <td className={TD}>
+                        <td className={td}>
                           <div className="flex items-center gap-3">
                             <Avatar name={c.name} tone={MOCKUP_AVATAR_TONES[c.id] ?? toneFor(c.name)} />
-                            <div>
-                              <div className="font-bold text-[#181211] dark:text-white">{c.name}</div>
-                              <div className="text-xs text-[#896a61]">{c.title}</div>
+                            <div className={showNew ? 'min-w-0 max-w-[140px]' : ''}>
+                              <div className={`ty-cell-main font-bold text-[#181211] dark:text-white ${showNew ? 'truncate' : ''}`} title={showNew ? c.name : undefined}>{c.name}</div>
+                              <div className={`text-xs text-[#896a61] ${showNew ? 'truncate' : ''}`} title={showNew ? c.title : undefined}>{c.title}</div>
                             </div>
                           </div>
                         </td>
-                        <td className={TD} onClick={(e) => e.stopPropagation()}>
+                        <td className={td} onClick={(e) => e.stopPropagation()}>
                           <div className="flex items-center gap-3">
                             <div className="flex flex-col gap-0.5 relative">
                               <span className="text-sm text-[#181211] dark:text-white ">{mask(c.email)}</span>
@@ -329,23 +357,23 @@ export function CandidatePoolPage() {
                             </button>
                           </div>
                         </td>
-                        <td className={TD}>
+                        <td className={td}>
                           <span className={`${BADGE} font-semibold ${BADGES[SENIORITY_BADGE[c.seniority.toLowerCase()] ?? 'gray']}`}>
                             <span className="size-1.5 rounded-full bg-current"></span>{c.seniority}
                           </span>
                         </td>
-                        <td className={TD}>
+                        <td className={td}>
                           <div className="flex flex-nowrap gap-1.5 max-w-[300px]">
                             {shown.map((s) => <span key={s} className={`${CHIP} whitespace-nowrap`}>{s}</span>)}
                             {hidden > 0 && <span className={`${CHIP} flex-shrink-0`}>+{hidden}</span>}
                           </div>
                         </td>
-                        <td className={TD}>
+                        <td className={td}>
                           <span className={`${BADGE} font-medium ${BADGES[ENGLISH_BADGE[c.english.toLowerCase()] ?? 'gray']}`}>
                             <span className="size-1.5 rounded-full bg-current"></span>{c.english}
                           </span>
                         </td>
-                        <td className={TD}>
+                        <td className={td}>
                           <div className="pointer-events-none opacity-60">
                             <div className="flex flex-col gap-2 ">
                               <div className="flex items-center gap-3 mt-1">
@@ -357,10 +385,10 @@ export function CandidatePoolPage() {
                             </div>
                           </div>
                         </td>
-                        <td className={TD}>
+                        <td className={td}>
                           <span data-testid={`candidate-cvowner-${c.id}`} className="text-sm text-[#181211] dark:text-[#e6dddb] whitespace-nowrap">{userName(users, c.cvOwner)}</span>
                         </td>
-                        <td className={`${TD}text-center`} onClick={(e) => e.stopPropagation()}>
+                        <td className={`${tdAction}text-center ${showNew ? STICKY_CELL : ''}`} onClick={(e) => e.stopPropagation()}>
                           <Popover
                             wrapperClass="relative inline-block text-left"
                             align="right"

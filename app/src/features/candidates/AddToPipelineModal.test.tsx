@@ -22,6 +22,13 @@ const pickJob = (id: string) => fireEvent.change(screen.getByLabelText('Job'), {
 const confirm = () => fireEvent.click(screen.getByRole('button', { name: 'Add to pipeline' }));
 
 describe('AddToPipelineModal', () => {
+  it('labels the people being added and explains the source field', () => {
+    render(<AddToPipelineModal open onClose={() => {}} candidateIds={ids} />);
+    const list = screen.getByRole('list', { name: 'Candidates' });
+    expect(within(list).getAllByRole('listitem')).toHaveLength(2);
+    expect(screen.getByText('Shown on the pipeline card as where this application came from.')).toBeInTheDocument();
+  });
+
   it('adds selected candidates with via talent_pool', () => {
     render(<AddToPipelineModal open onClose={() => {}} candidateIds={ids} />);
     expect(screen.getByLabelText('Source')).toHaveValue('Talent Pool');
@@ -45,7 +52,7 @@ describe('AddToPipelineModal', () => {
     expect(useStore.getState().applications).toHaveLength(2);
     const rows = screen.getAllByRole('listitem');
     expect(rows).toHaveLength(2);
-    expect(within(rows[0]).getByText("Already in this job's pipeline (stage Interview)")).toBeInTheDocument();
+    expect(within(rows[0]).getByText("Already in this job's pipeline (stage 1st Interview)")).toBeInTheDocument();
     expect(within(rows[1]).getByText('Added')).toBeInTheDocument();
   });
 
@@ -67,7 +74,7 @@ describe('AddToPipelineModal', () => {
     const { candidates } = useStore.getState();
     useStore.getState().addToPipeline(candidates[2].id, jobId, { via: 'manual', source: 'Manual', by: 'u-admin' });
     render(<AddToPipelineModal open onClose={() => {}} jobId={jobId} />);
-    expect(screen.getByRole('dialog', { name: 'Add from Talent Pool' })).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'Add from Candidate Pool' })).toBeInTheDocument();
     expect(screen.queryByLabelText('Job')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Add to pipeline' })).toBeDisabled();
 

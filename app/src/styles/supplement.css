@@ -8,9 +8,26 @@
 }
 .animate-slide-left { animation: slide-left 0.3s ease-out; }
 
+/* Centred dialog (Drawer variant="center"): fade + slight zoom. */
+@keyframes pop-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+.animate-pop-in { animation: pop-in 0.18s ease-out; }
+
+/* Dashboard funnel: tiers open out from the centre, top to bottom (delay set per tier inline). */
+@keyframes funnel-tier-in {
+  from { transform: scaleX(0.4); opacity: 0; }
+  to { transform: scaleX(1); opacity: 1; }
+}
+.funnel-tier { animation: funnel-tier-in 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+@media (prefers-reduced-motion: reduce) {
+  .funnel-tier { animation: none; }
+}
+
 /* JD Matching (mockup/jd-matching.html <style>) */
 .jm-grid { display: grid; grid-template-columns: 360px minmax(0, 1fr); gap: 24px; align-items: start; }
-.jm-score { width: 44px; height: 44px; border-radius: 9999px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 13px; }
+.jm-score { width: 44px; height: 44px; border-radius: 9999px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; }
 .jm-bar { height: 6px; border-radius: 9999px; background: #f1f5f9; overflow: hidden; }
 .jm-bar > div { height: 100%; border-radius: 9999px; }
 .jm-row:hover { background: #fafafa; }
