@@ -24,6 +24,7 @@ const applicant = { name: 'Le Thi Test', email: 'le.test@example.com', phone: '0
 describe('applyFromCareers', () => {
   it('apply creates application in new with Careers page source', () => {
     const { s, openJob } = setup();
+    s.setState({ jobs: s.getState().jobs.map((j) => (j.id === openJob.id ? { ...j, campaignId: undefined } : j)) });
     const before = s.getState().candidates.length;
     const r = s.getState().applyFromCareers(applicant, openJob.id);
     expect(r.ok).toBe(true);
@@ -33,23 +34,29 @@ describe('applyFromCareers', () => {
     expect(app.campaignId).toBeUndefined();
   });
 
-  it('apply with campaign src sets campaignId and channel source', () => {
+  it("apply to a job in a running campaign credits it, with the campaign name as source", () => {
     const { s, openJob, campaign } = setup();
-    const r = s.getState().applyFromCareers(applicant, openJob.id, `${campaign.id}-linkedin`);
-    expect(r.ok && r.application).toMatchObject({ via: 'campaign', source: 'LinkedIn', campaignId: campaign.id });
+    s.setState({ jobs: s.getState().jobs.map((j) => (j.id === openJob.id ? { ...j, campaignId: campaign.id } : j)) });
+    s.setState({ campaigns: s.getState().campaigns.map((c) => (c.id === campaign.id ? { ...c, status: 'active', start: '2026-01-01' } : c)) });
+    const r = s.getState().applyFromCareers(applicant, openJob.id);
+    expect(r.ok && r.application).toMatchObject({ via: 'campaign', source: campaign.name, campaignId: campaign.id });
   });
 
-  it('unknown src falls back to Careers page', () => {
+  it('only an active campaign (or a scheduled one past its start) credits applicants', () => {
+    for (const [status, credited] of [['active', true], ['scheduled', true], ['draft', false], ['paused', false], ['completed', false], ['cancelled', false]] as const) {
+      const { s, openJob, campaign } = setup();
+      s.setState({ jobs: s.getState().jobs.map((j) => (j.id === openJob.id ? { ...j, campaignId: campaign.id } : j)) });
+      s.setState({ campaigns: s.getState().campaigns.map((c) => (c.id === campaign.id ? { ...c, status, start: '2026-01-01' } : c)) });
+      const r = s.getState().applyFromCareers(applicant, openJob.id);
+      expect(r.ok && r.application.via).toBe(credited ? 'campaign' : 'careers');
+      expect(r.ok && r.application.campaignId).toBe(credited ? campaign.id : undefined);
+    }
+  });
+
+  it('a job with no campaign counts as the careers page', () => {
     const { s, openJob } = setup();
-    const r = s.getState().applyFromCareers(applicant, openJob.id, 'nope-facebook');
-    expect(r.ok && r.application).toMatchObject({ via: 'careers', source: 'Careers page' });
-    expect(r.ok && r.application.campaignId).toBeUndefined();
-  });
-
-  it('credits a campaign only for jobs it covers', () => {
-    const { s, campaign } = setup();
-    const other = s.getState().jobs.find((j) => j.status === 'open' && !campaign.jobIds.includes(j.id))!;
-    const r = s.getState().applyFromCareers(applicant, other.id, `${campaign.id}-linkedin`);
+    s.setState({ jobs: s.getState().jobs.map((j) => (j.id === openJob.id ? { ...j, campaignId: undefined } : j)) });
+    const r = s.getState().applyFromCareers(applicant, openJob.id);
     expect(r.ok && r.application).toMatchObject({ via: 'careers', source: 'Careers page' });
     expect(r.ok && r.application.campaignId).toBeUndefined();
   });

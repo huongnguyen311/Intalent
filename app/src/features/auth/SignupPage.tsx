@@ -163,7 +163,7 @@ export function SignupPage() {
     saveDraft(null);
     setActiveWorkspace(workspaceId);
     // PRD 4.1 step 6: the workspace is ready once the first job exists, so land on a new job form.
-    window.location.assign('/jobs?new=1');
+    window.location.assign('/jobs/new');
   };
 
   const progress = (

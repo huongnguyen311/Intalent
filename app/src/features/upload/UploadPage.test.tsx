@@ -122,16 +122,6 @@ describe('UploadPage', () => {
     expect(screen.getAllByText('Added to Talent Pool')).toHaveLength(11);
   });
 
-  it('can add uploaded CVs straight to a job', () => {
-    const { container } = renderPage(<UploadPage />);
-    fireEvent.change(screen.getByLabelText('Add to job (optional)'), { target: { value: 'job-1' } });
-    pick(container, [mk('Zzz_Qqq_Xx_CV.pdf')]);
-    advance(5_000);
-    const s = useStore.getState();
-    const created = s.candidates.find((c) => c.name === 'Zzz Qqq Xx')!;
-    expect(s.applications.some((a) => a.candidateId === created.id && a.jobId === 'job-1')).toBe(true);
-  });
-
   it('shows a summary of the batch', () => {
     const { container } = renderPage(<UploadPage />);
     pick(container, [mk('Zzz_Qqq_Xx_CV.pdf'), mk('bad.exe')]);

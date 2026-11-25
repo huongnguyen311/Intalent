@@ -35,9 +35,18 @@ describe('Drawer keyboard and close behaviour', () => {
     expect(screen.getByText('Discard unsaved changes?')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Keep editing' }));
     expect(screen.queryByText('Discard unsaved changes?')).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+    fireEvent.keyDown(document, { key: 'Escape' });
     fireEvent.click(screen.getByRole('button', { name: 'Discard' }));
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('the X button always closes, even with unsaved changes', () => {
+    const onClose = vi.fn();
+    render(<Drawer open title="Panel" onClose={onClose} guardUnsaved><input aria-label="Title" /></Drawer>);
+    fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'x' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText('Discard unsaved changes?')).toBeNull();
   });
 
   it('closes straight away when nothing changed', () => {
@@ -55,6 +64,32 @@ describe('Drawer keyboard and close behaviour', () => {
     expect(dialog.className).toContain('rounded-xl');
     fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'x' } });
     fireEvent.click(dialog.parentElement!);
+    expect(onClose).not.toHaveBeenCalled();
+    expect(screen.getByText('Discard unsaved changes?')).toBeInTheDocument();
+  });
+
+  it('renders subheader and footer outside the scrolling body', () => {
+    render(<Drawer open title="F" onClose={() => {}} subheader={<p>steps</p>} footer={<button>Next</button>}><p>body</p></Drawer>);
+    const body = screen.getByText('body').parentElement!;
+    expect(screen.getByText('steps')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Next' })).toBeInTheDocument();
+    expect(body.contains(screen.getByText('steps'))).toBe(false);
+    expect(body.contains(screen.getByRole('button', { name: 'Next' }))).toBe(false);
+  });
+
+  it('inputs in footer and body both mark dirty', () => {
+    const onClose = vi.fn();
+    render(<Drawer open title="F" onClose={onClose} guardUnsaved footer={<input aria-label="Footer note" />}><p>body</p></Drawer>);
+    fireEvent.change(screen.getByLabelText('Footer note'), { target: { value: 'x' } });
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(onClose).not.toHaveBeenCalled();
+    expect(screen.getByText('Discard unsaved changes?')).toBeInTheDocument();
+  });
+
+  it('an edit the parent reports (no change event) also asks before closing', () => {
+    const onClose = vi.fn();
+    render(<Drawer open title="F" onClose={onClose} guardUnsaved dirty><p>body</p></Drawer>);
+    fireEvent.keyDown(document, { key: 'Escape' });
     expect(onClose).not.toHaveBeenCalled();
     expect(screen.getByText('Discard unsaved changes?')).toBeInTheDocument();
   });

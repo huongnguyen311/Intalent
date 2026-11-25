@@ -7,9 +7,22 @@ export type Period = 'day' | 'week' | '3m' | '6m' | 'all';
 const PERIOD_DAYS: Record<Exclude<Period, 'all'>, number> = { day: 1, week: 7, '3m': 90, '6m': 180 };
 const DAY_MS = 86_400_000;
 
+export const PERIODS: Period[] = ['day', 'week', '3m', '6m', 'all'];
+
+export function isPeriod(v: string | null | undefined): v is Period {
+  return !!v && (PERIODS as string[]).includes(v);
+}
+
+/** Whether the candidate joined the pool within the period ending `now`. */
+export function inPeriod(c: Candidate, period: Period, now: Date): boolean {
+  return period === 'all' || Date.parse(c.createdAt) >= now.getTime() - PERIOD_DAYS[period] * DAY_MS;
+}
+
 export interface DashboardMetrics {
   total: number;
   active: number;
+  /** Candidates marked open to work. */
+  available: number;
   parsingSuccess: { ok: number; total: number };
   missingEmail: number;
   topStacks: { name: string; pct: number; color?: string }[];
@@ -235,6 +248,7 @@ function fromTotals(state: DemoState, cutoff: number, now: number): DashboardMet
   return {
     total: d.totalCandidates,
     active: d.activeCandidates,
+    available: d.activeCandidates,
     parsingSuccess: { ok: d.parsing.ok, total: d.parsing.of },
     missingEmail: d.missingEmail,
     topStacks: d.topStacks.map((s) => ({ name: s.label, pct: s.pct, color: s.color })),
@@ -252,10 +266,8 @@ export function dashboardMetrics(state: DemoState, period: Period, now: Date): D
   const overrides = fromTotals(state, cutoff, now.getTime());
   if (overrides) return overrides;
 
-  let candidates: Candidate[] = state.candidates;
-  if (period !== 'all') {
-    candidates = candidates.filter((c) => Date.parse(c.createdAt) >= cutoff);
-  }
+  const candidates: Candidate[] = state.candidates.filter((c) => inPeriod(c, period, now));
+  const open = candidates.filter((c) => c.openToWork);
   const total = candidates.length;
   const pct = (n: number, of: number) => (of ? (n / of) * 100 : 0);
 
@@ -266,6 +278,7 @@ export function dashboardMetrics(state: DemoState, period: Period, now: Date): D
   return {
     total,
     active: total,
+    available: open.length,
     parsingSuccess: { ok: candidates.filter((c) => c.skills.length > 0).length, total },
     missingEmail: candidates.filter((c) => !c.email.trim()).length,
     topStacks: topSkills.map(([name, n]) => ({ name, pct: Math.round(pct(n, topSkillsSum) * 100) / 100 })),
@@ -273,7 +286,9 @@ export function dashboardMetrics(state: DemoState, period: Period, now: Date): D
     topTa: ranked(tally(candidates.map((c) => userName(c.cvOwner)).filter(Boolean)))
       .slice(0, 3)
       .map(([name, files]) => ({ name, files })),
-    availableStacks: topSkills.slice(0, 2).map(([name, count]) => ({ name, count, pct: Math.round(pct(count, total) * 100) / 100 })),
+    availableStacks: ranked(tally(open.flatMap((c) => c.skills)))
+      .slice(0, 5)
+      .map(([name, count]) => ({ name, count, pct: Math.round(pct(count, open.length) * 100) / 100 })),
     english: toRecord(candidates.map((c) => c.english).filter(Boolean)),
     domains: ranked(tally(candidates.flatMap((c) => c.domains)))
       .slice(0, 5)

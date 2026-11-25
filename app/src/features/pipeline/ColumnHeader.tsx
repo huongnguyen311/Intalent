@@ -8,19 +8,20 @@ type Props = {
   count: number;
 };
 
-/** Column title (board style): stage name + filled count pill, with a thick stage-colour rule underneath. */
+/** Column title (board style): stage dot + name + soft count pill, with a thin muted stage-colour rule underneath. */
 export function ColumnHeader({ stage, count }: Props) {
   const label = useStageName();
   const color = STAGE_COLOR[stage];
   const name = label(stage);
   return (
-    <header data-testid="column-header" className="-mx-2 -mt-2 mb-2 px-3 py-3 border-b-[3px]" style={{ borderBottomColor: color, background: `${color}24` }}>
+    <header data-testid="column-header" className="-mx-2 -mt-2 mb-2 px-3 py-3 border-b-2" style={{ borderBottomColor: `${color}80`, background: `${color}0f` }}>
       <div className="flex items-center gap-2 min-w-0 h-7">
-        <span className="min-w-0 text-[15px] font-bold text-slate-800 dark:text-white leading-tight truncate" title={name}>{name}</span>
+        <span aria-hidden="true" className="shrink-0 size-2 rounded-full" style={{ background: color }} />
+        <span className="min-w-0 text-[15px] font-bold text-slate-700 dark:text-white leading-tight truncate" title={name}>{name}</span>
         <span
           data-testid="column-count"
-          className="shrink-0 min-w-[22px] h-[22px] px-1.5 rounded-full text-[12px] font-bold tabular-nums text-white flex items-center justify-center"
-          style={{ background: color }}
+          className="shrink-0 min-w-[22px] h-[22px] px-1.5 rounded-full text-[12px] font-bold tabular-nums text-slate-600 dark:text-slate-200 flex items-center justify-center"
+          style={{ background: `${color}1f` }}
         >
           {count}
         </span>

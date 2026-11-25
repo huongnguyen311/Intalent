@@ -136,11 +136,21 @@ export type Recommendation = 'strong_yes' | 'yes' | 'no' | 'strong_no';
 export const SCORE_CRITERIA = ['technical', 'communication', 'problem', 'culture'] as const;
 export type ScoreCriterion = (typeof SCORE_CRITERIA)[number];
 
+/** One line of a scorecard. Skills carry the JD's own wording; core competencies are named by `key` (i18n). */
+export interface ScoreCriterionDef {
+  key: string;
+  group: 'skill' | 'core';
+  label?: string;
+}
+
 /** One interviewer's evaluation of one interview round. */
 export interface Scorecard {
   by: string;
   at: string;
-  scores: Record<ScoreCriterion, number>;
+  /** 1–5 per criterion key; a skill the interviewer did not probe is left out. */
+  scores: Record<string, number>;
+  /** The criteria this card was scored on (built for the job and round); absent on older cards (SCORE_CRITERIA). */
+  criteria?: ScoreCriterionDef[];
   recommendation: Recommendation;
   note?: string;
 }
@@ -283,8 +293,18 @@ export interface JobQuestion {
   required: boolean;
 }
 
+/** How pressing a job's hiring is; `urgent` and `critical` count as urgent hiring. */
+export const HIRING_PRIORITIES = ['normal', 'high', 'urgent', 'critical'] as const;
+export type HiringPriority = (typeof HIRING_PRIORITIES)[number];
+
 export interface Job {
   id: string;
+  /** Undefined reads as `normal`. */
+  hiringPriority?: HiringPriority;
+  /** Date the job should be filled by (YYYY-MM-DD); past it with open seats, the job is overdue. */
+  targetHiringDate?: string;
+  urgencyReason?: string;
+  priorityNotes?: string;
   jdId: string;
   title: string;
   department: string;
@@ -295,6 +315,8 @@ export interface Job {
   workplace?: Workplace;
   /** PRD 3.2: how many people this job hires. */
   headcount?: number;
+  /** The campaign this job runs in; careers-page applicants are credited to it while it is active. */
+  campaignId?: string;
   /** PRD 3.2: On Hold pauses intake (off the careers page) while the pipeline keeps working.
    *  `pending_approval` waits for a Recruitment Lead / Super Admin before it goes public. */
   status: 'draft' | 'pending_approval' | 'open' | 'on_hold' | 'closed';
@@ -316,11 +338,20 @@ export interface Job {
   showSalary?: boolean;
   /** Staff who work on this job alongside the hiring manager. */
   collaborators?: string[];
+  /** Default interview panel for this job (besides the hiring manager). */
+  interviewers?: string[];
   questions?: JobQuestion[];
   /** Careers-page "Why you'll love working here"; starts from the company template. */
   whyLove?: string;
   /** Careers-page "Additional information" (location, hours, process...). */
   additionalInfo?: string;
+  /** Careers-page copy, filled from the JD when it is picked (see domain/jobPost); the JD stays the source for AI matching. */
+  summary?: string;
+  responsibilities?: string[];
+  aboutTeam?: string;
+  skills?: string[];
+  mustHave?: string[];
+  niceToHave?: string[];
   /** The job's middle columns in board order (see OPTIONAL_STAGES; may include 'withdrawn'); undefined = DEFAULT_PIPELINE. */
   pipeline?: Stage[];
   /** Column names this job uses instead of the standard labels (required for custom columns). */
@@ -355,38 +386,37 @@ export interface JobApproval {
   rejectedReason?: string;
 }
 
-/** Saved job setup to start new jobs from (Job Templates, PRD P1). */
-export interface JobTemplate {
-  id: string;
-  name: string;
-  fields: JobTemplateFields;
-  createdAt: string;
-  createdBy: string;
-}
-
-export type JobTemplateFields = Omit<Job, 'id' | 'openedAt' | 'status' | 'approval' | 'updatedAt' | 'title' | 'jdId'> & { title?: string; jdId?: string };
-
-export interface CampaignLink {
-  channel: string;
-  url: string;
-}
+export const CAMPAIGN_PRIORITIES = ['low', 'medium', 'high', 'urgent'] as const;
+export type CampaignPriority = (typeof CAMPAIGN_PRIORITIES)[number];
+export const CAMPAIGN_STATUSES = ['draft', 'scheduled', 'active', 'paused', 'completed', 'cancelled'] as const;
+export type CampaignStatus = (typeof CAMPAIGN_STATUSES)[number];
 
 export interface Campaign {
   id: string;
+  /** CMP-<year>-<NNN>, set on create and never edited. */
+  code: string;
   name: string;
-  jobIds: string[];
-  channels: string[];
-  goal: number;
+  description?: string;
+  /** User id of the HR person running the campaign. */
+  owner: string;
+  priority?: CampaignPriority;
   start: string;
   end: string;
+  applicationDeadline?: string;
+  /** Stored status; read it through effectiveStatus (a scheduled campaign turns active on its start date). */
   status: CampaignStatus;
-  links: CampaignLink[];
+  /** Jobs join a campaign from the job form (Job.campaignId); each job's openings are its hiring target. */
+  goals: {
+    targetApplicants?: number;
+    budget?: number;
+    currency?: Currency;
+  };
   /** `views` is 0 for campaigns without recorded traffic; campaignStats then simulates it. */
   stats: { views: number };
+  createdAt: string;
 }
 
-export type CampaignStatus = 'active' | 'paused' | 'ended';
-export type CampaignInput = Pick<Campaign, 'name' | 'jobIds' | 'channels' | 'goal' | 'start' | 'end'>;
+export type CampaignInput = Omit<Campaign, 'id' | 'code' | 'status' | 'stats' | 'createdAt'>;
 export type CampaignPatch = Partial<CampaignInput>;
 
 export interface Note {
@@ -473,6 +503,30 @@ export interface Jd {
   mustHave?: string[];
   /** Careers-page "Your skills and experience" section. */
   skillsExperience?: string;
+  /** Structured requirements from the full-page editor (prod "Refine Requirements"); absent on older JDs. */
+  niceToHave?: string[];
+  seniority?: string;
+  minYears?: number;
+  english?: string;
+  /** ISO date the hire should start. */
+  availableFrom?: string;
+  location?: string;
+  workingModel?: 'Onsite' | 'Hybrid' | 'Remote';
+  /** One item per line in the editor. */
+  responsibilities?: string[];
+  /** Short pitch of the role shown first to candidates. */
+  summary?: string;
+  aboutTeam?: string;
+  dailyTasks?: string[];
+  /** Lowest education accepted, same scale as Job.education. */
+  education?: Education;
+  major?: string;
+  /** Languages besides English, e.g. "Japanese - N2". */
+  languages?: string[];
+  certifications?: string[];
+  otherRequirements?: string;
+  /** Tech-stack skills HR marked critical; they weigh double in matching. */
+  criticalSkills?: string[];
   createdAt: string;
   updatedAt: string;
 }
@@ -597,8 +651,6 @@ export interface DemoState {
   prompts: Prompt[];
   chats: ChatMessage[];
   emails: SentEmail[];
-  /** Absent in older saves (filled from seed on merge). */
-  jobTemplates?: JobTemplate[];
   ui: UiState;
   /** Workspace profile; absent in older saves (see companyOf). */
   company?: import('./company').CompanySettings;
@@ -613,7 +665,7 @@ export type CandidateInput = Partial<Omit<Candidate, 'id' | 'createdAt' | 'inTal
   name: string;
 };
 
-export interface JdInput {
+export interface JdInput extends JdDetails {
   title: string;
   client?: string;
   domains: string[];
@@ -623,6 +675,9 @@ export interface JdInput {
   mustHave?: string[];
   skillsExperience?: string;
 }
+
+/** Optional structured fields shared by Jd and JdInput. */
+export type JdDetails = Pick<Jd, 'niceToHave' | 'seniority' | 'minYears' | 'english' | 'availableFrom' | 'location' | 'workingModel' | 'responsibilities' | 'summary' | 'aboutTeam' | 'dailyTasks' | 'education' | 'major' | 'languages' | 'certifications' | 'otherRequirements' | 'criticalSkills'>;
 
 export type JdPatch = Partial<Omit<JdInput, 'status'>>;
 

@@ -7,11 +7,11 @@ export interface Slice {
 }
 
 /** Top Tech Stacks: solid pie, counter-clockwise from 3 o'clock, white separators. */
-export function StackPie({ data }: { data: Slice[] }) {
+export function StackPie({ data, radius = 100 }: { data: Slice[]; radius?: number }) {
   return (
     <ResponsiveContainer width="100%" height="100%">
       <PieChart>
-        <Pie data={data} dataKey="value" nameKey="name" outerRadius={100} cx="50%" cy="50%" isAnimationActive={false}>
+        <Pie data={data} dataKey="value" nameKey="name" outerRadius={radius} cx="50%" cy="50%" isAnimationActive={false}>
           {data.map((d) => (
             <Cell key={d.name} fill={d.color} />
           ))}
@@ -22,7 +22,7 @@ export function StackPie({ data }: { data: Slice[] }) {
 }
 
 /** English Level: donut starting at 12 o'clock, clockwise. */
-export function EnglishDonut({ data }: { data: Slice[] }) {
+export function EnglishDonut({ data, inner = 65, outer = 85 }: { data: Slice[]; inner?: number; outer?: number }) {
   return (
     <ResponsiveContainer width="100%" height="100%">
       <PieChart>
@@ -30,8 +30,8 @@ export function EnglishDonut({ data }: { data: Slice[] }) {
           data={data}
           dataKey="value"
           nameKey="name"
-          innerRadius={65}
-          outerRadius={85}
+          innerRadius={inner}
+          outerRadius={outer}
           startAngle={90}
           endAngle={-270}
           stroke="none"

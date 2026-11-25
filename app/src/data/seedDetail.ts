@@ -153,7 +153,7 @@ function interviewRounds(a: Application, k: number, now: number): Interview[] {
         { ...base, id: id(1), round: 'HR screening call', at: localHour(mid), durationMin: 30, mode: 'phone', place: '', interviewers: [a.addedBy], status: 'done',
           scorecards: [scorecard(a.addedBy, Math.min(now, mid + HOUR), k, 'yes', 'Motivated, salary expectation in range. Move to technical round.')] },
         { ...base, id: id(2), round: 'Technical interview', at: localHour(now + DAY * (1 + (k % 3)) + 2 * HOUR), mode: 'online', place: meet,
-          interviewers: panel(lead, 'u-quang'), status: 'scheduled' },
+          interviewers: panel(lead, 'u-quang', 'u-admin'), status: 'scheduled' },
       ];
     case 1:
       return [
@@ -176,6 +176,47 @@ function interviewRounds(a: Application, k: number, now: number): Interview[] {
           interviewers: panel('u-quang', lead), status: 'scheduled' },
       ];
   }
+}
+
+/**
+ * 2nd-interview cards: the technical round is behind them (scored, or still waiting on the Interviewer) and the
+ * final round with the hiring manager is today, tomorrow or next week, so "My interviews" has both halves filled.
+ */
+function finalRounds(a: Application, k: number, now: number): Interview[] {
+  const base = { durationMin: 60, createdBy: a.addedBy, scorecards: [] as Scorecard[] };
+  const id = (n: number) => `int-${a.id}-${n}`;
+  const tech = Date.parse(localHour(now - DAY * (3 + k)));
+  const scored = k % 2 === 0;
+  const upcoming = [now + 2 * HOUR, now + DAY + HOUR, now + 6 * DAY, now + 2 * DAY + 5 * HOUR][k % 4];
+  return [
+    { ...base, id: id(1), round: 'Technical interview', at: localHour(tech), mode: k % 2 ? 'onsite' : 'online',
+      place: k % 2 ? 'Meeting room 2' : 'https://meet.example.com/intalent', interviewers: ['u-quang', 'u-huy', 'u-admin'], status: 'done',
+      scorecards: [
+        scorecard('u-huy', tech + 2 * HOUR, k, 'yes', 'Clear on fundamentals; asked good questions about the team.'),
+        // The Super Admin sat in too: scored half of them, so their own "My interviews" shows both states.
+        ...(k % 2 ? [scorecard('u-admin', tech + 4 * HOUR, k + 2, 'yes', 'Good culture fit; salary expectation within budget.')] : []),
+        ...(scored ? [scorecard('u-quang', tech + 3 * HOUR, k + 1, k % 4 === 0 ? 'strong_yes' : 'yes', 'Strong debugging; solid on testing and code review habits.')] : []),
+      ] },
+    { ...base, id: id(2), round: 'Final interview', at: localHour(upcoming), mode: k % 3 === 2 ? 'phone' : 'onsite',
+      place: k % 3 === 2 ? '' : 'Meeting room 1', interviewers: ['u-nam', 'u-quang', 'u-admin'], status: 'scheduled' },
+  ];
+}
+
+/** Candidates turned down after interviewing keep the round and the "no" scorecards that led to it. */
+function rejectedRounds(a: Application, k: number): Interview[] {
+  const at = Date.parse(localHour(Date.parse(a.stageEnteredAt) - 2 * DAY));
+  const strong = k % 2 === 1;
+  return [{
+    id: `int-${a.id}-1`, round: 'Technical interview', at: localHour(at), durationMin: 60, mode: 'online',
+    place: 'https://meet.example.com/intalent', interviewers: ['u-quang', 'u-nam', 'u-admin'], status: 'done', createdBy: a.addedBy,
+    scorecards: [
+      { ...scorecard('u-admin', at + HOUR, k, 'no', 'Agree with the panel: not ready for this level yet.'), scores: { technical: 2, communication: 3, problem: 2, culture: 3 } },
+      { ...scorecard('u-quang', at + 2 * HOUR, k, strong ? 'strong_no' : 'no', strong
+        ? 'Could not explain the projects on the CV; struggled with basic data structures.'
+        : 'Fine on syntax but weak on system design for this level.'), scores: { technical: 2, communication: 3, problem: 2, culture: 3 } },
+      ...(k % 3 === 0 ? [] : [{ ...scorecard('u-nam', at + 3 * HOUR, k, 'no', 'Not the seniority we need right now; keep in the pool.'), scores: { technical: 2, communication: 3, problem: 3, culture: 4 } }]),
+    ],
+  }];
 }
 
 function offerAmount(job: Job | undefined, k: number): Pick<Offer, 'salary' | 'currency'> {
@@ -223,6 +264,8 @@ export function withFlowDetail(s: DemoState, now: number): DemoState {
   // Pass 1: shape each application.
   const portal = new Set(s.users.flatMap((u) => (u.candidateId ? [u.candidateId] : [])));
   let ivK = 0;
+  let finalK = 0;
+  let rejK = 0;
   let offerK = 0;
   const applications = s.applications.map((a): Application => {
     const job = jobOf(a.jobId);
@@ -237,6 +280,8 @@ export function withFlowDetail(s: DemoState, now: number): DemoState {
       next = { ...next, history: next.history.map((h, n) => (n === next.history.length - 1 ? { ...h, note: a.rejectedReason } : h)) };
     }
     if (a.stage === 'interview') next = { ...next, interviews: interviewRounds(a, ivK++, now) };
+    if (a.stage === 'final_interview') next = { ...next, interviews: finalRounds(a, finalK++, now) };
+    if (a.stage === 'rejected' && !a.interviews?.length && rejK++ % 3 !== 2) next = { ...next, interviews: rejectedRounds(a, rejK) };
     // A candidate with a portal login always has a sent offer, so the demo can accept or decline it from /me.
     if (a.offer) next = { ...next, offer: offerFor(a, job, a.stage !== 'offer' ? offerK : portal.has(a.candidateId) ? 1 : offerK++, now) };
     return next;
@@ -337,7 +382,7 @@ export function withFlowDetail(s: DemoState, now: number): DemoState {
     ...s,
     applications,
     notes,
-    campaigns: s.campaigns.map((c) => (c.id === 'camp-2' ? { ...c, status: 'paused' } : c)),
+    // The base seed already covers every campaign status (camp-7 is paused).
     activities: [...s.activities, ...acts].sort((x, y) => x.at.localeCompare(y.at)),
     emails: emails.sort((x, y) => x.at.localeCompare(y.at)),
     chats: [...s.chats, ...chats],

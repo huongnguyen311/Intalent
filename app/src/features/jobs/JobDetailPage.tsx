@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { AppLayout } from '../../components/AppLayout';
+import { BackButton } from '../../components/BackButton';
 import { NotFoundState } from '../../components/NotFoundState';
 import { salaryRange } from '../../domain/hiring';
 import { userName } from '../../domain/users';
@@ -10,10 +11,9 @@ import { useMe } from '../../store/session';
 import { useStore } from '../../store/store';
 import { fullDate } from '../jds/format';
 import { JobStatusBadge } from './JobBits';
-import { JobDrawer } from './JobDrawer';
 import { PipelineWorkspace } from '../pipeline/PipelineWorkspace';
 import { CampaignsTab, CandidatesTab, CareersPreviewTab } from './JobTabs';
-import { ago } from './jobForm';
+import { ago, editorPath } from './jobForm';
 import { useJobActions } from './useJobActions';
 
 const SECONDARY =
@@ -36,8 +36,6 @@ export function JobDetailPage() {
   const jd = useStore((s) => s.jds.find((j) => j.id === job?.jdId));
   const users = useStore((s) => s.users);
   const [tab, setTab] = useState<(typeof TABS)[number][0]>('pipeline');
-  const [editing, setEditing] = useState(false);
-  const [duplicating, setDuplicating] = useState(false);
   const { actionsFor, dialog } = useJobActions();
 
   if (!job) {
@@ -65,9 +63,7 @@ export function JobDetailPage() {
         <div className="p-8 max-w-[1400px] mx-auto space-y-8">
           <div className="flex items-end justify-between">
             <div className="flex items-center gap-4">
-              <button aria-label={t('common.back')} onClick={() => navigate('/jobs')} className="size-10 rounded-full bg-white dark:bg-[#2a2423] border border-[#e6dddb] dark:border-[#3a3433] flex items-center justify-center text-[#896a61] hover:text-brand-vivid transition-colors shadow-sm">
-                <span className="material-symbols-outlined">arrow_back</span>
-              </button>
+              <BackButton label={t('jobs.detail.back')} onClick={() => navigate('/jobs')} />
               <div>
                 <h1 className="ty-title text-[22px] font-bold tracking-tight text-[#181211] dark:text-white mb-1">{job.title}</h1>
                 <p className="text-[#896a61] text-sm flex items-center gap-3 flex-wrap">
@@ -76,7 +72,7 @@ export function JobDetailPage() {
                   {jd && <span>• {t('jobs.detail.jd', { code: jd.code })}</span>}
                   <span>• {userName(users, job.hiringManager)}</span>
                   {!!job.collaborators?.length && (
-                    <span title={`${t('jobs.drawer.collaborators')}: ${job.collaborators.map((u) => userName(users, u)).join(', ')}`}>+{job.collaborators.length}</span>
+                    <span title={`${t('jobs.drawer.recruiters')}: ${job.collaborators.map((u) => userName(users, u)).join(', ')}`}>+{job.collaborators.length}</span>
                   )}
                   {job.workplace && <span>• {t(`workplace.${job.workplace}`)}</span>}
                   {job.headcount && <span>• {t('jobs.detail.headcount', { n: job.headcount })}</span>}
@@ -88,10 +84,10 @@ export function JobDetailPage() {
             {(canEdit || actions.length > 0) && <div className="flex items-center gap-3">
               {canEdit && (
                 <>
-                  <button onClick={() => setEditing(true)} className={SECONDARY}>
+                  <button onClick={() => navigate(editorPath('edit', job.id), { state: { from: `/jobs/${job.id}` } })} className={SECONDARY}>
                     <span className="material-symbols-outlined text-[20px]">edit</span>{t('jobs.menu.edit')}
                   </button>
-                  <button onClick={() => setDuplicating(true)} className={SECONDARY}>
+                  <button onClick={() => navigate(editorPath('duplicate', job.id), { state: { from: `/jobs/${job.id}` } })} className={SECONDARY}>
                     <span className="material-symbols-outlined text-[20px]">content_copy</span>{t('jobs.menu.duplicate')}
                   </button>
                 </>
@@ -138,8 +134,6 @@ export function JobDetailPage() {
           {tab === 'careers' && <CareersPreviewTab job={job} jd={jd} />}
         </div>
       </div>
-      <JobDrawer open={editing} job={job} onClose={() => setEditing(false)} />
-      <JobDrawer open={duplicating} copyFrom={job} onClose={() => setDuplicating(false)} onSaved={(created) => navigate(`/jobs/${created.id}`)} />
       {dialog}
     </AppLayout>
   );

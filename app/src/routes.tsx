@@ -10,9 +10,11 @@ import { MyInterviewsPage } from './features/interviews/MyInterviewsPage';
 import { AssistantPage } from './features/assistant/AssistantPage';
 import { LoginPage } from './features/auth/LoginPage';
 import { CampaignDetailPage } from './features/campaigns/CampaignDetailPage';
+import { CampaignEditorPage } from './features/campaigns/CampaignEditorPage';
 import { CampaignsPage } from './features/campaigns/CampaignsPage';
 import { CandidatePoolPage } from './features/candidates/CandidatePoolPage';
 import { CandidateProfilePage } from './features/candidates/CandidateProfilePage';
+import { PoolInsightsPage } from './features/candidates/PoolInsights';
 import { Applied } from './features/careers/Applied';
 import { ApplyForm } from './features/careers/ApplyForm';
 import { CareersHome } from './features/careers/CareersHome';
@@ -20,8 +22,10 @@ import { CareersJob } from './features/careers/CareersJob';
 import { CareersLayout } from './features/careers/CareersLayout';
 import { DashboardPage } from './features/dashboard/DashboardPage';
 import { JobDetailPage } from './features/jobs/JobDetailPage';
+import { JobEditorPage } from './features/jobs/JobEditorPage';
 import { JobsPage } from './features/jobs/JobsPage';
 import { JdDetailPage } from './features/jds/JdDetailPage';
+import { JdEditorPage } from './features/jds/JdEditorPage';
 import { JdListPage } from './features/jds/JdListPage';
 import { JdMatchingPage } from './features/matching/JdMatchingPage';
 import { NotesRoute } from './features/notes/NotesRoute';
@@ -45,12 +49,15 @@ export function AppRoutes() {
       <Route path="/invite" element={<AcceptInvitePage />} />
       <Route path="/inbox" element={<InboxPage />} />
       <Route path="/c/:slug" element={<CareersSlugRedirect />} />
+      <Route path="/pool-overview" element={<Guard perms={['pool']}><PoolInsightsPage /></Guard>} />
       <Route path="/candidates" element={<Guard perms={['pool']}><CandidatePoolPage /></Guard>} />
       <Route path="/candidates/:id" element={<Guard perms={['pool', 'pipeline', 'scorecard']}><CandidateProfilePage /></Guard>} />
       <Route path="/notes" element={<Guard perms={['pool']}><NotesRoute /></Guard>} />
       <Route path="/assistant" element={<Guard perms={['pool']}><AssistantPage /></Guard>} />
       <Route path="/jds" element={<Guard perms={['jd.edit']}><JdListPage /></Guard>} />
+      <Route path="/jds/new" element={<Guard perms={['jd.edit']}><JdEditorPage mode="create" /></Guard>} />
       <Route path="/jds/:id" element={<Guard perms={['jd.edit']}><JdDetailPage /></Guard>} />
+      <Route path="/jds/:id/edit" element={<Guard perms={['jd.edit']}><JdEditorPage mode="edit" /></Guard>} />
       <Route path="/jd-matching" element={<Guard perms={['pool']}><JdMatchingPage /></Guard>} />
       <Route path="/upload" element={<Guard perms={['pool']}><UploadPage /></Guard>} />
       <Route path="/upload-ultra" element={<Guard perms={['pool']}><UltraUploadPage /></Guard>} />
@@ -61,10 +68,15 @@ export function AppRoutes() {
       <Route path="/settings" element={<Guard perms={['config']}><CompanySettingsPage /></Guard>} />
       <Route path="/ta-contribution" element={<Guard perms={['reports']}><TaContributionPage /></Guard>} />
       <Route path="/jobs" element={<Guard perms={['pipeline']}><JobsPage /></Guard>} />
+      <Route path="/jobs/new" element={<Guard perms={['job.edit']}><JobEditorPage mode="create" /></Guard>} />
       <Route path="/jobs/:id" element={<Guard perms={['pipeline']}><JobDetailPage /></Guard>} />
+      <Route path="/jobs/:id/edit" element={<Guard perms={['job.edit']}><JobEditorPage mode="edit" /></Guard>} />
+      <Route path="/jobs/:id/duplicate" element={<Guard perms={['job.edit']}><JobEditorPage mode="duplicate" /></Guard>} />
       <Route path="/published" element={<Navigate to="/jobs" replace />} />
       <Route path="/campaigns" element={<Guard perms={['campaign']}><CampaignsPage /></Guard>} />
+      <Route path="/campaigns/new" element={<Guard perms={['campaign']}><CampaignEditorPage mode="create" /></Guard>} />
       <Route path="/campaigns/:id" element={<Guard perms={['campaign']}><CampaignDetailPage /></Guard>} />
+      <Route path="/campaigns/:id/edit" element={<Guard perms={['campaign']}><CampaignEditorPage mode="edit" /></Guard>} />
       <Route path="/pipeline" element={<Guard perms={['pipeline']}><PipelinePage /></Guard>} />
       <Route path="/pipeline/:jobId" element={<Guard perms={['pipeline']}><PipelinePage /></Guard>} />
       <Route path="/my-interviews" element={<Guard perms={['scorecard']}><MyInterviewsPage /></Guard>} />

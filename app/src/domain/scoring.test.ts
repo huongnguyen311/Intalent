@@ -18,6 +18,14 @@ describe('scoreCandidate', () => {
     expect(partial.score).toBeLessThan(full.score);
   });
 
+  it('critical skills count double in the stack score', () => {
+    const onlyReact = { ...base, skills: ['React'] };
+    // React is 1 of 3 skills (13 / 40), or 2 of 4 weight points when critical (20 / 40).
+    expect(scoreCandidate(onlyReact, req).breakdown.stack).toBe(13);
+    expect(scoreCandidate(onlyReact, { ...req, critical: ['react'] }).breakdown.stack).toBe(20);
+    expect(scoreCandidate({ ...base, skills: ['TypeScript', 'Vue'] }, { ...req, critical: ['React'] }).breakdown.stack).toBe(20);
+  });
+
   it('breakdown sums to score', () => {
     const r = scoreCandidate({ ...base, skills: ['React'], english: 'Basic' }, req);
     const { stack, experience, domain, english } = r.breakdown;

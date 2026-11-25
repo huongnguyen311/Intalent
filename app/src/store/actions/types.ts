@@ -13,8 +13,6 @@ import type {
   JdInput,
   JdPatch,
   Job,
-  JobTemplate,
-  JobTemplateFields,
   JobInput,
   JobPatch,
   Note,
@@ -79,11 +77,10 @@ export interface DemoActions {
   addComment(appId: string, text: string, by: string): boolean;
   /** Integer 1-5; a reviewer rating again replaces their earlier score. */
   rateApplication(appId: string, by: string, stars: number): boolean;
-  /** Public apply: dedupes the candidate, then adds to the job's pipeline. `src` is a campaign tracking code (`<campaignId>-<channel>`); unknown codes count as the careers page. */
+  /** Public apply: dedupes the candidate, then adds to the job's pipeline, credited to the job's campaign while that campaign is active. */
   applyFromCareers(
     input: CandidateInput,
     jobId: string,
-    src?: string,
     answers?: ApplicationAnswer[],
   ): { ok: true; application: Application; created: boolean } | { ok: false; reason: 'unavailable' } | { ok: false; reason: 'duplicate'; stage: Stage };
   addNote(input: NoteInput, by: string): Note;
@@ -104,12 +101,13 @@ export interface DemoActions {
   approveJob(id: string): boolean;
   /** pending_approval -> draft with the reason kept on the job; a blank reason is refused. */
   rejectJob(id: string, reason: string): boolean;
-  saveJobTemplate(name: string, fields: JobTemplateFields): JobTemplate;
-  deleteJobTemplate(id: string): boolean;
-  /** New campaigns start active (`id` lets the wizard preview final links beforehand); tracking links are generated from the current origin. */
-  createCampaign(input: CampaignInput, id?: string): Campaign;
-  /** Regenerates the tracking links. */
+  /** Draft, or launched (scheduled before its start, else active); sets the code. `id` keeps the id the editor generated. */
+  createCampaign(input: CampaignInput, opts: { launch: boolean; id?: string }): Campaign;
+  /** Completed / cancelled campaigns are read-only (false). */
   updateCampaign(id: string, patch: CampaignPatch): boolean;
+  /** draft -> scheduled / active; refused once the end date has passed. */
+  launchCampaign(id: string): boolean;
+  /** Only the lifecycle moves: active <-> paused, active/paused -> completed, anything not finished -> cancelled. */
   setCampaignStatus(id: string, status: CampaignStatus): boolean;
   /** Answers `text` with a ranked candidate search; starts a new conversation when `sessionId` is null. Returns the session id. */
   sendChat(sessionId: string | null, text: string): string;
@@ -143,7 +141,7 @@ export interface DemoActions {
   scheduleInterview(appId: string, input: InterviewInput, by: string): Interview | null;
   cancelInterview(appId: string, interviewId: string, by: string): boolean;
   /** One scorecard per interviewer per round (a resubmit replaces it); marks the round done. */
-  submitScorecard(appId: string, interviewId: string, input: Pick<Scorecard, 'scores' | 'recommendation' | 'note'>, by: string): boolean;
+  submitScorecard(appId: string, interviewId: string, input: Pick<Scorecard, 'scores' | 'recommendation' | 'note' | 'criteria'>, by: string): boolean;
   /** Creates or edits the offer as a draft; moves earlier cards to Offer. Refused once accepted. */
   saveOffer(appId: string, input: OfferInput, by: string): boolean;
   markOfferSent(appId: string, by: string): boolean;

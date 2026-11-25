@@ -54,7 +54,8 @@ export function InterviewDialog({ open, app, candidateName, hasEmail, onClose }:
     setDuration(60);
     setMode('online');
     setPlace('');
-    setPanel(job ? [job.hiringManager] : [me()]);
+    // The job's default panel: hiring manager first, then its interviewers.
+    setPanel(job ? [...new Set([job.hiringManager, ...(job.interviewers ?? [])])] : [me()]);
     setNotify(hasEmail);
     setError('');
     setZone(companyZone ?? localTimeZone());

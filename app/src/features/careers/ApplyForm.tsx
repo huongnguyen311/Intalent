@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { mulberry32 } from '../../data/seed';
 import { cvPrefill, hashString, parseReport, UPLOAD_LIMITS, validateFiles } from '../../domain/parseCv';
 import { useT, type TKey } from '../../i18n/i18n';
@@ -42,7 +42,6 @@ export function ApplyForm() {
   const t = useT('careers');
   const navigate = useNavigate();
   const { jobId } = useParams();
-  const [params] = useSearchParams();
   const job = useStore((s) => s.jobs.find((j) => j.id === jobId));
   const apply = useStore((s) => s.applyFromCareers);
   // Leaving the form by accident (Back, a link) must not lose what was typed: the draft lives in this tab.
@@ -113,7 +112,7 @@ export function ApplyForm() {
     const given = questions
       .filter((q) => answers[q.id]?.trim())
       .map((q) => ({ questionId: q.id, label: q.label, answer: q.type === 'yesno' ? t(answers[q.id] === 'yes' ? 'careers.apply.yes' : 'careers.apply.no') : answers[q.id].trim() }));
-    const r = apply(input, job.id, params.get('src') ?? undefined, given);
+    const r = apply(input, job.id, given);
     try {
       sessionStorage.removeItem(draftKey(job.id));
     } catch {

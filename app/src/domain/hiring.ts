@@ -1,6 +1,6 @@
 import { normalizeRole } from './permissions';
 import type { Application, Currency, Interview, Job, Scorecard, Stage, User } from './types';
-import { SCORE_CRITERIA } from './types';
+import { averageOf } from './scorecard';
 
 /** Name of the internal onboarding tool hires are handed to (placeholder until it has a product name). */
 export const HANDOFF_TARGET = 'HR Onboarding (internal)';
@@ -69,8 +69,7 @@ export function nextInterview(app: Pick<Application, 'interviews'>, now: Date = 
 }
 
 export function scorecardAverage(sc: Pick<Scorecard, 'scores'>): number {
-  const total = SCORE_CRITERIA.reduce((n, c) => n + sc.scores[c], 0);
-  return Math.round((total / SCORE_CRITERIA.length) * 10) / 10;
+  return averageOf(sc.scores);
 }
 
 /** Handed-off applications are read-only: no moves, interviews or offer changes. */

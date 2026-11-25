@@ -24,20 +24,22 @@ export function jdActions(
   };
 
   return {
-    createJd(input) {
+    createJd({ title, client, domains, skills, body, status, mustHave, skillsExperience, ...details }) {
       const at = env.now();
       const code = nextCode(get().jds, at);
       const jd: Jd = {
         id: code.toLowerCase(),
         code,
-        title: input.title.trim(),
-        client: input.client?.trim() ?? '',
-        domains: input.domains,
-        skills: input.skills,
-        body: input.body,
-        status: input.status ?? 'Draft',
-        ...(input.mustHave ? { mustHave: input.mustHave } : {}),
-        ...(input.skillsExperience ? { skillsExperience: input.skillsExperience } : {}),
+        title: title.trim(),
+        client: client?.trim() ?? '',
+        domains,
+        skills,
+        body,
+        status: status ?? 'Draft',
+        ...(mustHave ? { mustHave } : {}),
+        ...(skillsExperience ? { skillsExperience } : {}),
+        // Structured fields from the full-page editor; undefined ones are dropped so old JDs keep their shape.
+        ...Object.fromEntries(Object.entries(details).filter(([, v]) => v !== undefined)),
         createdAt: at,
         updatedAt: at,
       };

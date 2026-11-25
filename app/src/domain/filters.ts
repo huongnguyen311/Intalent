@@ -1,3 +1,5 @@
+import { inPeriod, type Period } from './metrics';
+import { matchesGap, type Gap } from './poolQuality';
 import type { Candidate } from './types';
 
 export type CandidateSort = 'newest' | 'name' | 'seniority';
@@ -11,6 +13,10 @@ export interface CandidateQuery {
   owner?: string;
   /** Every listed tag must be present on the candidate. */
   tags?: string[];
+  /** A CV-quality gap (drill-down from the pool overview). */
+  gap?: Gap;
+  /** Only candidates created within this period (drill-down keeps the overview's period). */
+  since?: Exclude<Period, 'all'>;
 }
 
 export const PAGE_SIZE = 10;
@@ -25,7 +31,7 @@ export function seniorityRank(s: string): number {
 
 const has = (haystack: string, needle: string) => haystack.toLowerCase().includes(needle.toLowerCase());
 
-export function filterCandidates(cands: Candidate[], q: CandidateQuery, sort: CandidateSort): Candidate[] {
+export function filterCandidates(cands: Candidate[], q: CandidateQuery, sort: CandidateSort, now: Date = new Date()): Candidate[] {
   const text = q.text?.trim();
   const stack = q.stack?.trim();
   const out = cands.filter((c) => {
@@ -35,6 +41,8 @@ export function filterCandidates(cands: Candidate[], q: CandidateQuery, sort: Ca
     if (q.english && c.english !== q.english) return false;
     if (q.owner && c.cvOwner !== q.owner) return false;
     if (q.tags?.length && !q.tags.every((t) => c.tags.includes(t))) return false;
+    if (q.gap && !matchesGap(c, q.gap, now)) return false;
+    if (q.since && !inPeriod(c, q.since, now)) return false;
     return true;
   });
   // Array.prototype.sort is stable, so equal keys keep their store order.

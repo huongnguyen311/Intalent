@@ -78,11 +78,23 @@ describe('dashboardMetrics', () => {
     expect(m.recruitment.topSources.length).toBeGreaterThan(0);
   });
 
+  it('available counts only open-to-work candidates', () => {
+    const s = withCandidates([
+      { openToWork: true, skills: ['Rust', 'Go'], createdAt: daysAgo(1) },
+      { openToWork: false, skills: ['Java', 'Java2'], createdAt: daysAgo(1) },
+      { openToWork: undefined, skills: ['Java'], createdAt: daysAgo(1) },
+    ]);
+    const m = dashboardMetrics(s, 'all', NOW);
+    expect(m.available).toBe(1);
+    expect(m.availableStacks.map((x) => x.name)).toEqual(['Rust', 'Go']);
+  });
+
   it('returns the mockup totals in fixture mode', () => {
     const m = dashboardMetrics(buildMockupFixture(), 'all', NOW);
     expect(m.total).toBe(781);
     expect(m.parsingSuccess).toEqual({ ok: 891, total: 1000 });
     expect(m.missingEmail).toBe(95);
+    expect(m.available).toBe(781);
     expect(m.topStacks[0]).toMatchObject({ name: 'Docker', pct: 18.12 });
     expect(m.seniority.Senior).toBe(411);
     expect(m.topTa[0]).toMatchObject({ name: 'Lê Minh Châu', files: 170 });

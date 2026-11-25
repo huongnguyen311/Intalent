@@ -1,7 +1,7 @@
 import { PRIVACY_POLICY_VERSION } from '../../domain/privacy';
 import { findDuplicate } from '../../domain/dedupe';
 import { fillTemplate, TEMPLATE } from '../../domain/hiring';
-import { CHANNEL_SOURCE, parseSrc } from '../../domain/campaigns';
+import { creditedCampaign } from '../../domain/campaigns';
 import { CAREERS_ACTOR, SOURCE_CAREERS } from '../../domain/sources';
 import type { DemoActions, Env, Get, Set } from './types';
 
@@ -9,15 +9,14 @@ import type { DemoActions, Env, Get, Set } from './types';
 export { CAREERS_ACTOR };
 export const CAREERS_SOURCE = SOURCE_CAREERS;
 
-export function careersActions(set: Set, get: Get, _env: Env): Pick<DemoActions, 'applyFromCareers'> {
+export function careersActions(set: Set, get: Get, env: Env): Pick<DemoActions, 'applyFromCareers'> {
   return {
-    applyFromCareers(input, jobId, src, answers) {
+    applyFromCareers(input, jobId, answers) {
       const job = get().jobs.find((j) => j.id === jobId);
       if (!job || job.status !== 'open') return { ok: false, reason: 'unavailable' };
-      // Unknown or stale tracking codes, and campaigns that do not cover this job, count as plain careers-page traffic.
-      const parsed = src ? parseSrc(src, get().campaigns) : null;
-      const hit = parsed && get().campaigns.find((c) => c.id === parsed.campaignId)?.jobIds.includes(jobId) ? parsed : null;
-      const source = hit ? CHANNEL_SOURCE[hit.channel] : CAREERS_SOURCE;
+      // The job's campaign gets the applicant while it is running; its name is the source HR sees.
+      const hit = creditedCampaign(job, get().campaigns, env.now().slice(0, 10));
+      const source = hit ? hit.name : CAREERS_SOURCE;
       // Already applied: report it before touching the candidate or the activity log.
       const known = findDuplicate(get().candidates, input);
       const prior = known && get().applications.find((a) => a.candidateId === known.id && a.jobId === jobId);
@@ -34,7 +33,7 @@ export function careersActions(set: Set, get: Get, _env: Env): Pick<DemoActions,
       const r = get().addToPipeline(candidate.id, jobId, {
         via: hit ? 'campaign' : 'careers',
         source,
-        ...(hit ? { campaignId: hit.campaignId } : {}),
+        ...(hit ? { campaignId: hit.id } : {}),
         by: CAREERS_ACTOR,
       });
       if (!r.ok) return r.reason === 'duplicate' ? r : { ok: false, reason: 'unavailable' };

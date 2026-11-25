@@ -6,7 +6,6 @@ import { useShowNew } from '../../hooks';
 import { useT } from '../../i18n/i18n';
 import { UploadModeSwitch } from './UploadModeSwitch';
 import { QueueRows, QueueSummary } from './QueueRows';
-import { UploadJobPicker } from './UploadJobPicker';
 import { LucideIcon } from './ultraIcons';
 import { useUploadQueue } from './useUploadQueue';
 
@@ -28,14 +27,12 @@ export function UltraUploadPage() {
   const t = useT();
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
-  const [jobId, setJobId] = useState('');
   const showNew = useShowNew();
   const { rows, running, add, start, clear, resolve, retry } = useUploadQueue({
     limits: ULTRA_LIMITS,
     source: SOURCE_ULTRA_UPLOAD,
     concurrency: 20,
     autoStart: false,
-    jobId: jobId || undefined,
   });
   const hasQueued = rows.some((r) => r.status === 'queued');
 
@@ -68,7 +65,6 @@ export function UltraUploadPage() {
         <div className="relative z-10 container mx-auto px-6 py-12">
           <div className="text-center mb-16">
             <UploadModeSwitch mode="ultra" dark />
-            {showNew && <div className="flex justify-center mb-6"><UploadJobPicker value={jobId} onChange={setJobId} dark /></div>}
             <div className="inline-flex items-center gap-4 mb-6 bg-white/5 backdrop-blur-xl rounded-full px-8 py-3 border border-white/20">
               <LucideIcon name="cpu" className="w-6 h-6 text-gray-300" />
               <LucideIcon name="sparkles" className="w-6 h-6 text-orange-400" />

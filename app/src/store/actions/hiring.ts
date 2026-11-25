@@ -1,7 +1,7 @@
 import { FORWARD_STAGES, isClosedOut, isEnded } from '../../domain/stages';
 import { HANDOFF_TARGET, interviewTime, isLocked, offerFinal } from '../../domain/hiring';
 import type { Activity, Application, Interview, Offer, Scorecard, SentEmail } from '../../domain/types';
-import { SCORE_CRITERIA } from '../../domain/types';
+import { criteriaOf, validScores } from '../../domain/scorecard';
 import type { DemoActions, Env, Get, Set } from './types';
 
 type Keys =
@@ -90,8 +90,10 @@ export function hiringActions(set: Set, get: Get, env: Env): Pick<DemoActions, K
       const app = findApp(appId);
       const iv = app?.interviews?.find((i) => i.id === interviewId);
       if (!app || !iv || isLocked(app) || iv.status === 'cancelled') return false;
-      if (!SCORE_CRITERIA.every((c) => Number.isInteger(input.scores[c]) && input.scores[c] >= 1 && input.scores[c] <= 5)) return false;
-      const card: Scorecard = { ...input, note: input.note?.trim() || undefined, by, at: env.now() };
+      if (!validScores(input.scores, criteriaOf(input))) return false;
+      // Unscored skills are dropped so the average only counts what was assessed.
+      const scores = Object.fromEntries(Object.entries(input.scores).filter(([, n]) => n > 0));
+      const card: Scorecard = { ...input, scores, note: input.note?.trim() || undefined, by, at: env.now() };
       const cards = iv.scorecards.some((c) => c.by === by) ? iv.scorecards.map((c) => (c.by === by ? card : c)) : [...iv.scorecards, card];
       patchApp(
         appId,

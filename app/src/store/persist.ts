@@ -3,7 +3,7 @@ import { buildSeed } from '../data/seed';
 import type { DemoState } from '../domain/types';
 
 export const PERSIST_KEY = 'intalent-demo';
-export const PERSIST_VERSION = 7;
+export const PERSIST_VERSION = 17;
 
 /** Only data is persisted; actions are re-attached by the store. */
 export function pickData(s: DemoState): DemoState {
@@ -20,7 +20,6 @@ export function pickData(s: DemoState): DemoState {
     prompts: s.prompts,
     chats: s.chats,
     emails: s.emails,
-    ...(s.jobTemplates ? { jobTemplates: s.jobTemplates } : {}),
     ui: s.ui,
     ...(s.company ? { company: s.company } : {}),
   };
@@ -69,7 +68,6 @@ export function persistOptions<T extends DemoState>(
         ...current,
         ...persisted,
         emails: persisted.emails ?? [],
-        jobTemplates: persisted.jobTemplates ?? fallback().jobTemplates ?? [],
         prompts: [...persisted.prompts, ...missingTemplates],
         ui: { ...seed.ui, ...persisted.ui },
       };

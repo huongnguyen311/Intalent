@@ -37,4 +37,14 @@ describe('filterCandidates', () => {
     expect(ids(filterCandidates(ALL, {}, 'name'))).toEqual(['a', 'b', 'c']);
     expect(ids(filterCandidates(ALL, {}, 'seniority'))).toEqual(['a', 'c', 'b']);
   });
+
+  it('gap keeps only candidates with that CV-quality gap', () => {
+    const noEmail = make({ id: 'd', name: 'Dung', createdAt: '2026-11-20T00:00:00.000Z' });
+    expect(ids(filterCandidates([...ALL, noEmail], { gap: 'email' }, 'name', new Date('2026-11-25')))).toEqual(['d']);
+  });
+
+  it('since keeps candidates created within the period', () => {
+    const recent = make({ id: 'r', name: 'Rin', email: 'r@x', createdAt: '2026-11-20T00:00:00.000Z' });
+    expect(ids(filterCandidates([...ALL, recent], { since: '3m' }, 'name', new Date('2026-11-25')))).toEqual(['r']);
+  });
 });

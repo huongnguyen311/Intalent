@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { AppLayout } from '../../components/AppLayout';
 import { Avatar, toneFor } from '../../components/Avatar';
@@ -6,14 +6,14 @@ import { MenuItem, Popover } from '../../components/Popover';
 import { Pagination } from '../../components/Pagination';
 import { isFixtureMode, MOCKUP_AVATAR_TONES } from '../../data/fixtureMockup';
 import { filterCandidates, PAGE_SIZE, seniorityRank, type CandidateQuery, type CandidateSort } from '../../domain/filters';
+import { isPeriod } from '../../domain/metrics';
+import { isGap } from '../../domain/poolQuality';
 import type { Candidate } from '../../domain/types';
 import { userName } from '../../domain/users';
 import { useShowNew } from '../../hooks';
-import { PoolInsights } from './PoolInsights';
 import { useT, type TKey } from '../../i18n/i18n';
 import { useStore } from '../../store/store';
 import { NotesPanel } from '../notes/NotesPage';
-import { IntakeModal } from '../intake/IntakeModal';
 import { AddToPipelineModal } from './AddToPipelineModal';
 
 const FILTER_BTN =
@@ -134,11 +134,20 @@ export function CandidatePoolPage() {
   const piiUnlocked = useStore((s) => s.ui.piiUnlocked);
   const fixtureTotal = useStore((s) => s.meta?.totals?.dashboard.totalCandidates);
 
-  const [q, setQ] = useState<CandidateQuery>({});
+  const urlGap = params.get('gap');
+  const urlSince = params.get('since');
+  const fromUrl = (): Pick<CandidateQuery, 'gap' | 'since'> =>
+    isGap(urlGap) ? { gap: urlGap, since: isPeriod(urlSince) && urlSince !== 'all' ? urlSince : undefined } : { gap: undefined, since: undefined };
+  const [q, setQ] = useState<CandidateQuery>(fromUrl);
+  // The overview drill-down lives in the URL: follow it when it changes while mounted (sidebar link, back/forward).
+  useEffect(() => {
+    setQ((cur) => ({ ...cur, ...fromUrl() }));
+    setPage(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [urlGap, urlSince]);
   const [sort, setSort] = useState<CandidateSort>('newest');
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [intakeOpen, setIntakeOpen] = useState(false);
   /** Candidates queued for the Add to Pipeline modal; null while it is closed. */
   const [pipelineIds, setPipelineIds] = useState<string[] | null>(null);
   const onAddToPipeline = setPipelineIds;
@@ -147,19 +156,25 @@ export function CandidatePoolPage() {
     setQ((cur) => ({ ...cur, ...p }));
     setPage(1);
   };
+  /** Drop the overview drill-down (gap + period) from the state and the URL, keeping other params. */
+  const clearGap = () => {
+    setQ((cur) => ({ ...cur, gap: undefined, since: undefined }));
+    setPage(1);
+    if (params.has('gap') || params.has('since')) {
+      const next = new URLSearchParams(params);
+      next.delete('gap');
+      next.delete('since');
+      setParams(next, { replace: true });
+    }
+  };
   const clearFilters = () => {
+    clearGap();
     setQ({});
     setSort('newest');
     setPage(1);
   };
 
-  // ?pending=1: only profiles with candidate-proposed changes waiting for review.
-  const pendingOnly = showNew && params.get('pending') === '1';
-  const pendingCount = useMemo(() => candidates.filter((c) => c.suggestions?.length).length, [candidates]);
-  const filtered = useMemo(() => {
-    const base = filterCandidates(candidates, q, sort);
-    return pendingOnly ? base.filter((c) => c.suggestions?.length) : base;
-  }, [candidates, q, sort, pendingOnly]);
+  const filtered = useMemo(() => filterCandidates(candidates, q, sort), [candidates, q, sort]);
   const filtersActive = Object.values(q).some((v) => (Array.isArray(v) ? v.length : Boolean(v)));
   // The mockup fixture shows a 781-row pool while only holding the first 10 rows.
   const overrideTotal = fixtureTotal !== undefined && !filtersActive ? fixtureTotal : undefined;
@@ -217,19 +232,6 @@ export function CandidatePoolPage() {
     <AppLayout title={t('nav.candidatePool')}>
       <div className="flex flex-col h-full bg-background-light dark:bg-background-dark overflow-hidden">
         {showNew && <PoolTabs notes={false} onChange={(v: boolean) => setParams(v ? { tab: 'notes' } : {}, { replace: true })} />}
-        {showNew && <PoolInsights />}
-        {showNew && (pendingCount > 0 || pendingOnly) && (
-          <div className="px-4 py-2 bg-amber-50 dark:bg-amber-900/10 border-b border-amber-100 dark:border-amber-900/30 flex items-center gap-3 text-sm text-amber-800 dark:text-amber-300">
-            <span className="material-symbols-outlined text-[18px]">rule</span>
-            <span className="flex-1">{t('suggest.poolBanner', { n: pendingCount })}</span>
-            <button
-              onClick={() => { setParams(pendingOnly ? {} : { pending: '1' }, { replace: true }); setPage(1); }}
-              className="px-3 py-1 rounded-full text-xs font-bold bg-white dark:bg-[#1e1e1e] border border-amber-200 dark:border-amber-800 hover:border-amber-400"
-            >
-              {t(pendingOnly ? 'suggest.showAll' : 'suggest.showPending')}
-            </button>
-          </div>
-        )}
         <div className="bg-white dark:bg-[#1e1e1e] border-b border-[#e6dddb] dark:border-[#2a2423] p-4 flex flex-col gap-4 z-10 shadow-soft">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4 w-full">
             <div className="relative w-full md:w-64 group">
@@ -246,7 +248,7 @@ export function CandidatePoolPage() {
             </div>
             <div className="flex items-center gap-3">
               <button
-                onClick={() => setIntakeOpen(true)}
+                onClick={() => navigate({ pathname: '/upload', search })}
                 className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-primary hover:bg-primary-hover text-white rounded-lg shadow-sm transition-colors"
               >
                 <span className="material-symbols-outlined text-[20px]">add</span>
@@ -273,6 +275,15 @@ export function CandidatePoolPage() {
               <FilterMenu icon="person" label={t('candidates.filter.owner')} options={opt(owners, (v) => userName(users, v))} value={q.owner ?? ''} onChange={(v) => patch({ owner: v })} anyLabel={any} testId="candidates-cvowner-filter" />
               {showNew && (
                 <FilterMenu icon="sell" label={t('candidates.filter.tag')} options={opt(tags)} value={q.tags?.[0] ?? ''} onChange={(v) => patch({ tags: v ? [v] : [] })} anyLabel={any} />
+              )}
+              {q.gap && (
+                <span data-testid="pool-gap-chip" className="flex items-center gap-1 pl-3 pr-1 py-1.5 rounded-lg bg-primary/10 text-primary text-sm font-semibold whitespace-nowrap">
+                  {t(`candidates.gap.${q.gap}` as TKey)}
+                  {q.since && <span className="text-xs font-bold opacity-80">· {t(`dash.period.${q.since}` as TKey)}</span>}
+                  <button type="button" onClick={clearGap} aria-label={t('candidates.gap.remove')} className="flex items-center rounded p-0.5 hover:bg-primary/15">
+                    <span className="material-symbols-outlined text-[16px]">close</span>
+                  </button>
+                </span>
               )}
               <button onClick={clearFilters} className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-[#896a61] hover:text-primary transition-colors whitespace-nowrap">
                 <span className="material-symbols-outlined text-[18px]">filter_list_off</span>
@@ -420,7 +431,6 @@ export function CandidatePoolPage() {
           </div>
         </div>
       </div>
-      <IntakeModal open={intakeOpen} onClose={() => setIntakeOpen(false)} />
       {showNew && (
         <AddToPipelineModal open={pipelineIds !== null} onClose={() => setPipelineIds(null)} candidateIds={pipelineIds ?? []} />
       )}

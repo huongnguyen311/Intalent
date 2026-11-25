@@ -1,29 +1,27 @@
-import { Link, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { salaryRange } from '../../domain/hiring';
-import { jdMustHave } from '../../domain/jdExtract';
-import { PostSection } from './PostSection';
 import { useLang, useT, type TKey } from '../../i18n/i18n';
 import { useStore } from '../../store/store';
-import { JdBody } from './JdBody';
+import { JobPostBody } from './JobPostBody';
 import { JobUnavailable } from './JobBits';
 import { SharePanel, ShareButton } from './JobShare';
 
 // Section headings in sentence case: easier to scan than the old small uppercase labels.
-const H2 = 'text-xl font-bold text-[#181211] mt-10 mb-3 first:mt-0';
+// Each heading keeps its top gap; only the very first one on the card drops it (see BODY).
+const H2 = 'text-xl font-bold text-[#181211] mt-10 mb-3';
+const BODY = 'bg-white rounded-3xl border border-[#e6dddb] p-6 sm:p-10 text-[15px] leading-relaxed text-[#3d312e] [&>h2:first-child]:mt-0 [&>section:first-child>h2]:mt-0';
+
 const APPLY = 'inline-flex items-center justify-center gap-2 h-12 px-8 rounded-full bg-primary hover:bg-primary-hover text-white font-bold text-sm shadow-lg shadow-primary/20';
 
-/** Public job page; only open jobs are shown. The `?src` tracking code is carried over to the apply page. */
+/** Public job page; only open jobs are shown. */
 export function CareersJob() {
   const t = useT('careers');
   const [lang] = useLang('careers');
   const { jobId } = useParams();
-  const [params] = useSearchParams();
   const job = useStore((s) => s.jobs.find((j) => j.id === jobId));
   const jd = useStore((s) => s.jds.find((j) => j.id === job?.jdId));
   if (!job || job.status !== 'open') return <JobUnavailable />;
-  const src = params.get('src');
-  const apply = `/careers/${job.id}/apply${src ? `?src=${encodeURIComponent(src)}` : ''}`;
-  const reqs = jd ? jdMustHave(jd) : [];
+  const apply = `/careers/${job.id}/apply`;
   const salary = job.showSalary ? salaryRange(job) : '';
   const facts: [string, TKey, string][] = [
     ['apartment', 'careers.filter.department', job.department],
@@ -60,46 +58,8 @@ export function CareersJob() {
       </header>
 
       <div className="mt-8 grid lg:grid-cols-[1fr_20rem] gap-8 items-start">
-        <div className="bg-white rounded-3xl border border-[#e6dddb] p-6 sm:p-10 text-[15px] leading-relaxed text-[#3d312e]">
-          {jd?.body ? (
-            <JdBody
-              body={jd.body}
-              title={job.title}
-              headingClass={H2}
-              // Requirements and skills have their own blocks below, so their copies in the body are not repeated.
-              skip={[...(reqs.length || jd.skillsExperience ? [/MUST|REQUIRE/] : []), ...(jd.skills.length ? [/TECH STACK|SKILLS/] : [])]}
-            />
-          ) : (
-            <>
-              <h2 className={H2}>{t('careers.job.about')}</h2>
-              <p>{t('careers.job.noDescription')}</p>
-            </>
-          )}
-          {jd?.skillsExperience ? (
-            <PostSection heading={t('careers.job.skillsExperience')} text={jd.skillsExperience} headingClass={H2} />
-          ) : reqs.length > 0 && (
-            <>
-              <h2 className={H2}>{t('careers.job.requirements')}</h2>
-              <ul className="space-y-2">
-                {reqs.map((r) => (
-                  <li key={r} className="flex gap-2.5">
-                    <span className="material-symbols-outlined icon-filled text-primary text-[20px] mt-0.5">check_circle</span>
-                    <span>{r}</span>
-                  </li>
-                ))}
-              </ul>
-            </>
-          )}
-          {jd && jd.skills.length > 0 && (
-            <>
-              <h2 className={H2}>{t('careers.job.skills')}</h2>
-              <div className="flex gap-2 flex-wrap">
-                {jd.skills.map((s) => <span key={s} className="px-3 py-1 rounded-full bg-primary/10 text-primary-ink text-xs font-semibold">{s}</span>)}
-              </div>
-            </>
-          )}
-          {job.whyLove && <PostSection heading={t('careers.job.whyLove')} text={job.whyLove} headingClass={H2} />}
-          {job.additionalInfo && <PostSection heading={t('careers.job.additionalInfo')} text={job.additionalInfo} headingClass={H2} />}
+        <div className={BODY}>
+          <JobPostBody job={job} jd={jd} headingClass={H2} />
         </div>
 
         <aside className="lg:sticky lg:top-24 bg-white rounded-3xl border border-[#e6dddb] p-6">

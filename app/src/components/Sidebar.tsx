@@ -67,6 +67,7 @@ const GROUPS: Group[] = [
   {
     title: 'nav.group.talentPool',
     items: [
+      { to: '/pool-overview', icon: 'insights', label: 'nav.poolOverview', perm: 'pool' },
       { ...POOL, also: ['/notes'], perm: 'pool' },
       { ...UPLOAD, label: 'nav.uploadCv', also: ['/upload-ultra'], perm: 'pool' },
       { ...SEARCH, perm: 'pool' },

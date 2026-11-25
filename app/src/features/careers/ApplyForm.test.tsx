@@ -35,6 +35,14 @@ const fill = (name: string, email: string) => {
 const consent = () => fireEvent.click(screen.getByRole('checkbox'));
 const submit = () => fireEvent.click(screen.getByRole('button', { name: 'Submit application' }));
 
+/** A job saved before jobs had their own post copy: the careers page falls back to its JD. */
+const clearJobCopy = (id: string) =>
+  useStore.setState((st) => ({
+    jobs: st.jobs.map((j) => (j.id === id
+      ? { ...j, summary: undefined, responsibilities: undefined, skills: undefined, mustHave: undefined, niceToHave: undefined, aboutTeam: undefined }
+      : j)),
+  }));
+
 describe('Careers site', () => {
   it('lists only open jobs and shows the job description with an apply link keeping ?src', () => {
     renderAt('/careers');
@@ -43,9 +51,9 @@ describe('Careers site', () => {
     expect(screen.queryByText(useStore.getState().jobs.find((j) => j.id === closedId)!.title)).toBeNull();
   });
 
-  it('job page keeps ?src on the apply link', () => {
+  it('the apply link carries no tracking code (old ?src links still open the job)', () => {
     renderAt(`/careers/${jobId}?src=${campaignId}-linkedin`);
-    expect(screen.getByRole('link', { name: 'Apply now' })).toHaveAttribute('href', `/careers/${jobId}/apply?src=${campaignId}-linkedin`);
+    expect(screen.getByRole('link', { name: 'Apply now' })).toHaveAttribute('href', `/careers/${jobId}/apply`);
   });
 
   it('closed job shows the unavailable page on job and apply routes', () => {
@@ -83,19 +91,64 @@ describe('Careers site', () => {
   });
 
   it('shows the job post sections from the JD and the job', () => {
+    clearJobCopy('job-1');
     const { jobs, jds } = useStore.getState();
     const job = jobs.find((j) => j.id === 'job-1')!;
     useStore.setState({
       jobs: jobs.map((j) => (j.id === 'job-1' ? { ...j, whyLove: '- Hybrid work', additionalInfo: 'Office in District 1' } : j)),
-      jds: jds.map((d) => (d.id === job.jdId ? { ...d, skillsExperience: '- 5+ years of React' } : d)),
+      jds: jds.map((d) => (d.id === job.jdId ? { ...d, mustHave: ['5+ years of React'], niceToHave: ['Fintech experience'] } : d)),
     });
     renderAt('/careers/job-1');
-    for (const h of ['Your skills and experience', "Why you'll love working here", 'Additional information']) {
+    for (const h of ['Requirements', 'Nice to have', "Why you'll love working here", 'Additional information']) {
       expect(screen.getByRole('heading', { name: h })).toBeInTheDocument();
     }
     expect(screen.getByText('5+ years of React')).toBeInTheDocument();
+    expect(screen.getByText('Fintech experience')).toBeInTheDocument();
     expect(screen.getByText('Hybrid work')).toBeInTheDocument();
     expect(screen.getByText('Office in District 1')).toBeInTheDocument();
+  });
+
+  it("shows the job's own post content over the JD", () => {
+    const { jobs, jds } = useStore.getState();
+    const jdSummary = jds.find((d) => d.id === jobs.find((j) => j.id === 'job-1')!.jdId)!.summary!;
+    useStore.setState({
+      jobs: jobs.map((j) => (j.id === 'job-1' ? { ...j, summary: 'Job-only summary', skills: ['OnlyOnJob'], niceToHave: ['Job nice'] } : j)),
+    });
+    renderAt('/careers/job-1');
+    expect(screen.getByText('Job-only summary')).toBeInTheDocument();
+    expect(screen.getByText('OnlyOnJob')).toBeInTheDocument();
+    expect(screen.getByText('Job nice')).toBeInTheDocument();
+    expect(screen.queryByText(jdSummary)).toBeNull();
+  });
+
+  it('orders the post: the role, its work, skills and requirements, then the team and the offer', () => {
+    renderAt('/careers/job-7');
+    const card = screen.getByRole('heading', { name: 'About the role' }).closest('section')!.parentElement!;
+    expect(within(card).getAllByRole('heading', { level: 2 }).map((h) => h.textContent)).toEqual([
+      'About the role', "What you'll do", 'Skills', 'Requirements', 'Nice to have', 'About the team',
+      "Why you'll love working here", 'Additional information',
+    ]);
+  });
+
+  it('builds the post from the JD overview, ahead of the original text, with daily tasks among the duties', () => {
+    clearJobCopy('job-1');
+    const { jobs, jds } = useStore.getState();
+    const job = jobs.find((j) => j.id === 'job-1')!;
+    useStore.setState({
+      jds: jds.map((d) => (d.id === job.jdId
+        ? { ...d, body: 'ORIGINAL PASTED TEXT', summary: 'Own our payments UI.', responsibilities: ['Ship features'], dailyTasks: ['Code review'], aboutTeam: 'Six engineers' }
+        : d)),
+    });
+    renderAt('/careers/job-1');
+    for (const h of ['About the role', "What you'll do", 'About the team']) {
+      expect(screen.getByRole('heading', { name: h })).toBeInTheDocument();
+    }
+    expect(screen.queryByRole('heading', { name: 'A typical day' })).toBeNull();
+    expect(screen.queryByText('ORIGINAL PASTED TEXT')).toBeNull();
+    for (const text of ['Own our payments UI.', 'Ship features', 'Code review', 'Six engineers']) {
+      expect(screen.getByText(text)).toBeInTheDocument();
+    }
+    expect(screen.queryByText('Details for this role are coming soon.')).toBeNull();
   });
 
   it('shows the salary range only when the job allows it', () => {
@@ -129,13 +182,15 @@ describe('Careers site', () => {
     expect(screen.getByText('Only PDF or DOCX files are accepted')).toBeInTheDocument();
   });
 
-  it('submits an application with the campaign channel and shows the confirmation', () => {
-    renderAt(`/careers/${jobId}/apply?src=${campaignId}-topcv`);
+  it("an application to a job in a running campaign is credited to it, with the campaign name as source", () => {
+    const campaign = useStore.getState().campaigns.find((c) => c.id === campaignId)!;
+    expect(useStore.getState().jobs.find((j) => j.id === jobId)!.campaignId).toBe(campaignId);
+    renderAt(`/careers/${jobId}/apply`);
     fill('Pham Thi Test', 'pham.test@example.com');
     consent();
     submit();
     expect(screen.getByTestId('careers-applied')).toBeInTheDocument();
-    expect(useStore.getState().applications[0]).toMatchObject({ stage: 'new', source: 'TopCV', via: 'campaign', campaignId });
+    expect(useStore.getState().applications[0]).toMatchObject({ stage: 'new', source: campaign.name, via: 'campaign', campaignId });
   });
 
   it('applying again shows the already applied page and adds nothing', () => {

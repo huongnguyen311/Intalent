@@ -17,6 +17,9 @@ const ENTRIES: string[][] = [
   ['GA4'], ['Google Ads'], ['Meta Ads'], ['SEO'],
 ];
 
+/** Canonical skill names, for pickers. */
+export const VOCAB: string[] = ENTRIES.map(([canon]) => canon);
+
 /** Role words that stand for a bundle of skills ("frontend developer" -> React, Vue, ...). */
 export const ROLE_STACKS: Array<[words: string[], stack: string[]]> = [
   [['frontend', 'front-end', 'front end'], ['React', 'Vue', 'TypeScript', 'JavaScript']],

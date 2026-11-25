@@ -1,4 +1,5 @@
 import { jobStages } from '../domain/pipelineConfig';
+import { jobPostFromJd } from '../domain/jobPost';
 import { buildSeed, mulberry32, SEED_BASE_TIME } from './seed';
 import { isOverSla } from '../domain/pipeline';
 import { buildMockupFixture, isFixtureMode } from './fixtureMockup';
@@ -22,6 +23,16 @@ describe('seed', () => {
     expect(s.applications.some((a) => a.source === 'Careers site')).toBe(false);
   });
 
+  it('every seeded job carries its post content from its JD', () => {
+    const s = buildSeed();
+    for (const job of s.jobs) {
+      const jd = s.jds.find((d) => d.id === job.jdId)!;
+      expect(job.summary, job.id).toBeTruthy();
+      expect(job.mustHave, job.id).toEqual(jobPostFromJd(jd).mustHave);
+      expect(job.skills, job.id).toEqual(jd.skills);
+    }
+  });
+
   it('seed volumes match spec', () => {
     const s = buildSeed();
     expect(s.candidates).toHaveLength(150);
@@ -29,8 +40,8 @@ describe('seed', () => {
     expect(s.users.filter((u) => u.role !== 'Candidate')).toHaveLength(8);
     expect(s.users.filter((u) => u.role === 'Candidate' && u.candidateId)).toHaveLength(2);
     expect(s.users.some((u) => u.email === 'admin@company.demo' && u.role === 'Super Admin')).toBe(true);
-    expect(s.jobs).toHaveLength(6);
-    expect(s.jobs.filter((j) => j.status === 'open')).toHaveLength(4);
+    expect(s.jobs).toHaveLength(7);
+    expect(s.jobs.filter((j) => j.status === 'open')).toHaveLength(5);
     // The one unpublished job waits for approval, so the approval flow can be demoed straight away.
     expect(s.jobs.filter((j) => j.status === 'pending_approval')).toHaveLength(1);
     expect(s.jobs.filter((j) => j.status === 'closed')).toHaveLength(1);
@@ -39,13 +50,14 @@ describe('seed', () => {
     for (const stage of jobStages({})) {
       expect(s.applications.some((a) => a.stage === stage)).toBe(true);
     }
-    expect(s.campaigns).toHaveLength(3);
+    expect(new Set(s.campaigns.map((c) => c.status))).toEqual(new Set(['draft', 'scheduled', 'active', 'paused', 'completed', 'cancelled']));
     expect(s.notes).toHaveLength(10);
     expect(s.jds.map((j) => j.title)).toEqual([
       'Senior Growth Marketing Lead',
       'Tech Lead / Senior Engineer',
       'Senior Frontend Developer',
       'Senior Flutter & Java Engineer',
+      'Senior Backend Engineer (Node.js)',
     ]);
     expect(s.taxonomy.filter((t) => t.kind === 'english').map((t) => t.label)).toEqual([
       'Advanced', 'Intermediate', 'Basic', 'Fluent',
@@ -74,7 +86,7 @@ describe('seed', () => {
       expect(cands.has(a.candidateId)).toBe(true);
       expect(jobs.has(a.jobId)).toBe(true);
       expect(a.source).toBeTruthy();
-      if (a.via === 'campaign') expect(camps.get(a.campaignId!)?.jobIds).toContain(a.jobId);
+      if (a.via === 'campaign') expect(a.source).toBe(camps.get(a.campaignId!)?.name);
       if (a.stage === 'rejected') expect(a.rejectedReason).toBeTruthy();
       expect(a.history[a.history.length - 1].stage).toBe(a.stage);
       pairs.add(`${a.candidateId}|${a.jobId}`);
@@ -193,5 +205,12 @@ describe('mockup fixture', () => {
     store.getState().resetDemo();
     expect(store.getState().candidates).toHaveLength(10);
     expect(store.getState().notes).toHaveLength(0);
+  });
+
+  it('seeds urgent jobs and an overdue one', async () => {
+    const { isOverdue, isUrgent, todayIso } = await import('../domain/jobUrgency');
+    const s = buildSeed();
+    expect(s.jobs.filter(isUrgent).length).toBeGreaterThanOrEqual(2);
+    expect(s.jobs.filter((j) => isOverdue(j, s.applications, todayIso())).length).toBeGreaterThanOrEqual(1);
   });
 });

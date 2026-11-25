@@ -1,14 +1,22 @@
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { AppLayout } from '../../components/AppLayout';
+import { BackButton } from '../../components/BackButton';
 import { Chip } from '../../components/Chip';
-import { campaignLinks, campaignStats, CHANNELS, channelFromSource } from '../../domain/campaigns';
+import { Modal } from '../../components/Modal';
+import { PriorityBadge } from '../../components/PriorityBadge';
+import { toast } from '../../components/Toast';
+import { campaignJobRows, campaignPerformance, campaignStats, effectiveStatus, pastEnd } from '../../domain/campaigns';
+import { isOverdue, todayIso } from '../../domain/jobUrgency';
 import { stageLabel } from '../../domain/stages';
+import type { CampaignStatus } from '../../domain/types';
+import { userName } from '../../domain/users';
 import { useLang, useT } from '../../i18n/i18n';
 import { useStore } from '../../store/store';
 import { fullDate } from '../jds/format';
-import { CampaignStatusBadge, LinkRow, PRIMARY_BTN, SECONDARY_BTN, useChannelLabel } from './CampaignBits';
-import { CampaignWizard } from './CampaignWizard';
+import { JobStatusBadge } from '../jobs/JobBits';
+import { CampaignStatusBadge, PRIMARY_BTN, SECONDARY_BTN } from './CampaignBits';
+import { CampaignFunnel } from './CampaignFunnel';
 
 const CARD = 'bg-white dark:bg-surface-dark p-8 rounded-[2rem] border border-gray-100 dark:border-white/10 shadow-sm';
 const LABEL = 'text-2xs font-bold text-muted uppercase tracking-widest';
@@ -25,16 +33,28 @@ function Kpi({ id, label, value, hint }: { id: string; label: string; value: str
   );
 }
 
+const money = (n: number, currency = 'VND') =>
+  new Intl.NumberFormat('en-US', { style: 'currency', currency, maximumFractionDigits: 0 }).format(n);
+
+/** What the header offers in each (effective) status; finished campaigns offer nothing. */
+const ACTIONS: Record<CampaignStatus, Array<'edit' | 'launch' | 'pause' | 'resume' | 'complete' | 'cancel'>> = {
+  draft: ['edit', 'launch', 'cancel'],
+  scheduled: ['edit', 'cancel'],
+  active: ['edit', 'pause', 'complete', 'cancel'],
+  paused: ['edit', 'resume', 'complete', 'cancel'],
+  completed: [],
+  cancelled: [],
+};
+
 export function CampaignDetailPage() {
   const t = useT();
   const [lang] = useLang();
-  const channelLabel = useChannelLabel();
   const navigate = useNavigate();
   const { id } = useParams();
   const state = useStore();
-  const { applications, candidates, jobs } = state;
+  const { applications, candidates, jobs, users } = state;
   const campaign = state.campaigns.find((c) => c.id === id);
-  const [editing, setEditing] = useState(false);
+  const [confirmCancel, setConfirmCancel] = useState(false);
 
   if (!campaign) {
     return (
@@ -47,70 +67,71 @@ export function CampaignDetailPage() {
     );
   }
 
+  const today = todayIso();
+  const status = effectiveStatus(campaign, today);
   const stats = campaignStats(state, campaign.id);
+  const perf = campaignPerformance(state, campaign.id, new Date());
+  const { rows: jobRows, totals } = campaignJobRows(state, campaign);
   const jobTitle = (jobId: string) => jobs.find((j) => j.id === jobId)?.title ?? jobId;
   const rows = applications
     .filter((a) => a.campaignId === campaign.id)
     .sort((a, b) => b.addedAt.localeCompare(a.addedAt));
-  const maxBar = Math.max(1, ...Object.values(stats.byChannel));
-  const barChannels = CHANNELS.filter((c) => campaign.channels.includes(c) || stats.byChannel[c] > 0);
-  const links = campaignLinks(campaign, location.origin);
-  const setStatus = (next: 'active' | 'paused' | 'ended') => useStore.getState().setCampaignStatus(campaign.id, next);
+  const { setCampaignStatus, launchCampaign } = useStore.getState();
+  const move = (next: CampaignStatus) => setCampaignStatus(campaign.id, next);
+  const goals = campaign.goals;
 
-  const actions = (
-    <div className="flex items-center gap-3">
-      <button onClick={() => setEditing(true)} className={SECONDARY_BTN}>
+  const buttons = {
+    edit: (
+      <button key="edit" onClick={() => navigate(`/campaigns/${campaign.id}/edit`)} className={SECONDARY_BTN}>
         <span className="material-symbols-outlined text-[20px]">edit</span>{t('campaigns.detail.edit')}
       </button>
-      {campaign.status === 'active' && (
-        <button onClick={() => setStatus('paused')} className={SECONDARY_BTN}>{t('campaigns.detail.pause')}</button>
-      )}
-      {campaign.status !== 'ended' && (
-        <button onClick={() => setStatus('ended')} className={SECONDARY_BTN}>{t('campaigns.detail.end')}</button>
-      )}
-      {campaign.status !== 'active' && (
-        <button onClick={() => setStatus('active')} className={PRIMARY_BTN}>{t('campaigns.detail.resume')}</button>
-      )}
-    </div>
-  );
+    ),
+    launch: <button key="launch" onClick={() => launchCampaign(campaign.id) || toast(t('campaigns.err.launchEnded'), 'error')} className={PRIMARY_BTN}>{t('campaigns.editor.launch')}</button>,
+    pause: <button key="pause" onClick={() => move('paused')} className={SECONDARY_BTN}>{t('campaigns.detail.pause')}</button>,
+    resume: <button key="resume" onClick={() => move('active')} className={PRIMARY_BTN}>{t('campaigns.detail.resume')}</button>,
+    complete: <button key="complete" onClick={() => move('completed')} className={SECONDARY_BTN}>{t('campaigns.detail.complete')}</button>,
+    cancel: <button key="cancel" onClick={() => setConfirmCancel(true)} className={`${SECONDARY_BTN} !text-red-600 whitespace-nowrap`}>{t('campaigns.detail.cancel')}</button>,
+  };
+  const offered = ACTIONS[status];
+  const actions = <div className="flex items-center gap-3">{offered.map((a) => buttons[a])}</div>;
 
   return (
     <AppLayout title={campaign.name} subtitle={`${fullDate(campaign.start)} – ${fullDate(campaign.end)}`} actions={actions}>
       <div className="p-8 max-w-[1400px] mx-auto space-y-8">
-        <div className="flex items-center gap-4 flex-wrap">
-          <button aria-label={t('common.back')} onClick={() => navigate('/campaigns')} className="size-10 rounded-full bg-white dark:bg-[#2a2423] border border-[#e6dddb] dark:border-[#3a3433] flex items-center justify-center text-[#896a61] hover:text-brand-vivid transition-colors shadow-sm">
-            <span className="material-symbols-outlined">arrow_back</span>
-          </button>
-          <CampaignStatusBadge status={campaign.status} />
-          {campaign.jobIds.map((jobId) => (
-            <Link key={jobId} to={`/pipeline/${jobId}`} className="text-sm font-bold text-slate-700 dark:text-gray-200 hover:text-primary flex items-center gap-1.5 transition-colors">
-              <span className="material-symbols-outlined text-[18px]">view_kanban</span>
-              {t('campaigns.detail.pipeline', { title: jobTitle(jobId) })}
-            </Link>
-          ))}
+        <div data-testid="campaign-header" className="flex items-center gap-4 flex-wrap">
+          <BackButton label={t('campaigns.detail.back')} onClick={() => navigate('/campaigns')} />
+          <span className="text-sm font-bold text-[#896a61]">{campaign.code}</span>
+          <CampaignStatusBadge status={status} />
+          {campaign.priority && <PriorityBadge priority={campaign.priority} />}
+          <span className="text-sm text-slate-600 dark:text-gray-300">{t('campaigns.detail.owner', { name: campaign.owner ? userName(users, campaign.owner) : '—' })}</span>
+          {campaign.applicationDeadline && (
+            <span className="text-sm text-slate-600 dark:text-gray-300">{t('campaigns.detail.deadline', { date: fullDate(campaign.applicationDeadline) })}</span>
+          )}
         </div>
+        {campaign.description && <p className="text-sm text-slate-600 dark:text-gray-300 -mt-4">{campaign.description}</p>}
 
-        <div className="grid grid-cols-4 gap-6">
+        {pastEnd(campaign, today) && (
+          <div data-testid="past-end" role="status" className="flex items-center gap-3 px-5 py-3 rounded-xl bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 text-sm">
+            <span aria-hidden="true" className="material-symbols-outlined text-amber-600">event_busy</span>
+            <span className="flex-1 font-semibold text-amber-900 dark:text-amber-100">{t('campaigns.detail.pastEnd', { date: fullDate(campaign.end) })}</span>
+            <button onClick={() => move('completed')} className={SECONDARY_BTN}>{t('campaigns.detail.complete')}</button>
+          </div>
+        )}
+
+        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-6">
           <Kpi id="views" label={t('campaigns.kpi.views')} value={stats.views.toLocaleString('en-US')} />
-          <Kpi id="applicants" label={t('campaigns.kpi.applicants')} value={String(stats.applicants)} hint={t('campaigns.kpi.goal', { goal: campaign.goal })} />
+          <Kpi id="applicants" label={t('campaigns.kpi.applicants')} value={String(stats.applicants)} hint={goals.targetApplicants ? t('campaigns.kpi.target', { n: goals.targetApplicants }) : undefined} />
           <Kpi id="conversion" label={t('campaigns.kpi.conversion')} value={`${(stats.conversion * 100).toFixed(1)}%`} />
-          <Kpi id="hires" label={t('campaigns.kpi.hires')} value={String(stats.hires)} />
+          <Kpi id="hires" label={t('campaigns.kpi.hires')} value={String(stats.hires)} hint={t('campaigns.kpi.of', { n: totals.target })} />
+          <Kpi id="cph" label={t('campaigns.kpi.cph')} value={perf.costPerHire === undefined ? '—' : money(perf.costPerHire, goals.currency)} />
         </div>
 
         <div className={CARD}>
-          <div className={`${LABEL} mb-6`}>{t('campaigns.byChannel')}</div>
-          <div className="space-y-4">
-            {barChannels.map((c) => (
-              <div key={c} data-testid={`bar-${c}`} className="flex items-center gap-4">
-                <div className="w-36 text-sm font-semibold text-slate-600 dark:text-gray-300">{channelLabel(c)}</div>
-                <div className="flex-1 h-3 rounded-full bg-gray-100 overflow-hidden">
-                  <div className="h-full rounded-full bg-primary" style={{ width: `${(stats.byChannel[c] / maxBar) * 100}%` }} />
-                </div>
-                <div className="w-8 text-right text-sm font-bold text-slate-700 dark:text-white">{stats.byChannel[c]}</div>
-              </div>
-            ))}
-          </div>
+          <div className={`${LABEL} mb-6`}>{t('campaigns.funnel')}</div>
+          <CampaignFunnel perf={perf} />
         </div>
+
+        <JobsTable rows={jobRows} totals={totals} today={today} />
 
         <div className="bg-white dark:bg-surface-dark rounded-[1.5rem] shadow-sm border border-gray-100 dark:border-white/10 overflow-hidden">
           <div className={`${LABEL} px-6 pt-6 pb-4`}>{t('campaigns.applicants')}</div>
@@ -125,7 +146,7 @@ export function CampaignDetailPage() {
               <table className="w-full text-left border-collapse">
                 <thead className="bg-[#f8f6f6] dark:bg-[#251f1e]">
                   <tr>
-                    {(['campaigns.applicants.col.name', 'campaigns.applicants.col.job', 'campaigns.applicants.col.source', 'campaigns.applicants.col.stage', 'campaigns.applicants.col.applied'] as const).map((k) => (
+                    {(['campaigns.applicants.col.name', 'campaigns.applicants.col.job', 'campaigns.applicants.col.stage', 'campaigns.applicants.col.applied'] as const).map((k) => (
                       <th key={k} className={TH}>{t(k)}</th>
                     ))}
                   </tr>
@@ -139,7 +160,6 @@ export function CampaignDetailPage() {
                         </Link>
                       </td>
                       <td className={TD}>{jobTitle(a.jobId)}</td>
-                      <td className={TD}>{channelLabel(channelFromSource(a.source))}</td>
                       <td className={TD}><Chip>{stageLabel(a.stage, lang)}</Chip></td>
                       <td className={TD}>{fullDate(a.addedAt)}</td>
                     </tr>
@@ -149,15 +169,75 @@ export function CampaignDetailPage() {
             </div>
           )}
         </div>
-
-        <div className={CARD}>
-          <div className={`${LABEL} mb-2`}>{t('campaigns.links')}</div>
-          <div className="divide-y divide-[#f4f1f0] dark:divide-[#2a2423]">
-            {links.map((l) => <LinkRow key={`${l.jobId}-${l.channel}`} channel={l.channel} jobTitle={jobTitle(l.jobId)} url={l.url} />)}
-          </div>
-        </div>
       </div>
-      <CampaignWizard open={editing} campaign={campaign} onClose={() => setEditing(false)} />
+      <Modal
+        open={confirmCancel} title={t('campaigns.detail.cancelTitle')} onClose={() => setConfirmCancel(false)}
+        footer={
+          <div className="flex justify-end gap-2">
+            <button onClick={() => setConfirmCancel(false)} className={SECONDARY_BTN}>{t('campaigns.detail.keep')}</button>
+            <button onClick={() => { move('cancelled'); setConfirmCancel(false); }} className={`${PRIMARY_BTN} !bg-red-600`}>{t('campaigns.detail.cancel')}</button>
+          </div>
+        }
+      >
+        <p className="text-sm text-slate-600 dark:text-gray-300">{t('campaigns.detail.cancelBody')}</p>
+      </Modal>
     </AppLayout>
+  );
+}
+
+function JobsTable({ rows, totals, today }: {
+  rows: ReturnType<typeof campaignJobRows>['rows'];
+  totals: ReturnType<typeof campaignJobRows>['totals'];
+  today: string;
+}) {
+  const t = useT();
+  const jobs = useStore((s) => s.jobs);
+  const applications = useStore((s) => s.applications);
+  const cols = ['job', 'priority', 'date', 'status', 'target', 'hired', 'remaining'] as const;
+  return (
+    <div className="bg-white dark:bg-surface-dark rounded-[1.5rem] shadow-sm border border-gray-100 dark:border-white/10 overflow-hidden">
+      <div className={`${LABEL} px-6 pt-6 pb-4`}>{t('campaigns.jobs.title')}</div>
+      {rows.length === 0 ? (
+        <p className="px-6 pb-8 text-sm text-[#896a61]">{t('campaigns.jobs.empty')}</p>
+      ) : (
+      <div className="overflow-x-auto custom-scrollbar">
+        <table data-testid="campaign-jobs" className="w-full text-left border-collapse">
+          <thead className="bg-[#f8f6f6] dark:bg-[#251f1e]">
+            <tr>{cols.map((k) => <th key={k} className={TH}>{t(`campaigns.jobs.col.${k}`)}</th>)}</tr>
+          </thead>
+          <tbody className="divide-y divide-[#f4f1f0] dark:divide-[#2a2423]">
+            {rows.map((r) => {
+              const job = jobs.find((j) => j.id === r.jobId);
+              const overdue = !!job && isOverdue(job, applications, today);
+              return (
+                <tr key={r.jobId}>
+                  <td className={TD}>
+                    {job ? (
+                      <Link to={`/pipeline/${r.jobId}`} className="font-bold text-slate-800 dark:text-gray-200 hover:text-primary transition-colors">{r.title}</Link>
+                    ) : (
+                      <span className="font-bold text-slate-500">{r.title}</span>
+                    )}
+                    {job && !r.attached && <div className="text-xs text-[#896a61] mt-0.5">{t('campaigns.jobs.moved')}</div>}
+                  </td>
+                  <td className={TD}><PriorityBadge priority={r.priority} />{r.priority === 'normal' && <span className="text-gray-300">—</span>}</td>
+                  <td className={`${TD} ${overdue ? 'text-red-600 font-semibold' : ''}`}>{r.targetHiringDate ? fullDate(r.targetHiringDate) : '—'}</td>
+                  <td className={TD} data-testid="cell-status">{r.jobStatus ? <JobStatusBadge status={r.jobStatus} /> : '—'}</td>
+                  <td className={TD} data-testid="cell-target">{r.target}</td>
+                  <td className={`${TD} font-bold`} data-testid="cell-hired">{r.hired}</td>
+                  <td className={TD} data-testid="cell-remaining">{r.remaining}</td>
+                </tr>
+              );
+            })}
+            <tr data-testid="jobs-total" className="bg-[#fbf9f8] dark:bg-white/5 font-bold">
+              <td className={`${TD} font-bold text-slate-800 dark:text-white`} colSpan={4}>{t('campaigns.jobs.total')}</td>
+              <td className={`${TD} font-bold`} data-testid="cell-target">{totals.target}</td>
+              <td className={`${TD} font-bold`} data-testid="cell-hired">{totals.hired}</td>
+              <td className={`${TD} font-bold`} data-testid="cell-remaining">{totals.remaining}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      )}
+    </div>
   );
 }

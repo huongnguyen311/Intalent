@@ -30,14 +30,14 @@ export function Column({ stage, apps, candidates, jobOf, showJob, onOpen, onMove
   const label = useStageName();
   const { setNodeRef, isOver } = useDroppable({ id: stage });
   const over = isOver ? 'border-primary/50 bg-orange-50/60 dark:bg-white/5' : 'bg-white dark:bg-[#1a1a1a]';
-  // Each column wears its stage colour: a soft tinted wash, a matching border and a faint coloured drop shadow.
+  // Each column carries only a whisper of its stage colour (very light wash + border) so the board stays easy on the eyes.
   const color = STAGE_COLOR[stage];
   const tint = isOver
     ? undefined
     : {
-        backgroundImage: `linear-gradient(to bottom, ${color}1a, ${color}08 45%, transparent)`,
-        borderColor: `${color}40`,
-        boxShadow: `0 4px 10px -6px ${color}40, 0 1px 2px rgba(15,23,42,0.04)`,
+        backgroundImage: `linear-gradient(to bottom, ${color}0a, transparent 35%)`,
+        borderColor: `${color}26`,
+        boxShadow: '0 1px 2px rgba(15,23,42,0.04)',
       };
   if (collapsed) {
     return (
@@ -56,7 +56,7 @@ export function Column({ stage, apps, candidates, jobOf, showJob, onOpen, onMove
         >
           <span aria-hidden="true" className="material-symbols-outlined text-[18px]">chevron_left</span>
         </button>
-        <span data-testid="column-count" className="min-w-[22px] h-5 px-1.5 rounded-full text-[11px] font-bold flex items-center justify-center" style={{ background: STAGE_COLOR[stage], color: '#fff' }}>
+        <span data-testid="column-count" className="min-w-[22px] h-5 px-1.5 rounded-full text-[11px] font-bold flex items-center justify-center" style={{ background: `${color}1f`, color: '#334155' }}>
           {apps.length}
         </span>
         <span style={{ writingMode: 'vertical-rl' }} className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">

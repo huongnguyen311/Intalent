@@ -6,7 +6,6 @@ import { useShowNew } from '../../hooks';
 import { useT } from '../../i18n/i18n';
 import { UploadModeSwitch } from './UploadModeSwitch';
 import { QueueRows, QueueSummary } from './QueueRows';
-import { UploadJobPicker } from './UploadJobPicker';
 import { useUploadQueue } from './useUploadQueue';
 
 // The app uses the brand primary for the main action; the mockup's button is near-black.
@@ -18,13 +17,11 @@ export function UploadPage() {
   const showNew = useShowNew();
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
-  const [jobId, setJobId] = useState('');
   const { rows, running, add, clear, resolve, retry } = useUploadQueue({
     limits: UPLOAD_LIMITS,
     source: SOURCE_CV_UPLOAD,
     concurrency: 2,
     autoStart: true,
-    jobId: jobId || undefined,
   });
 
   const onDrop = (e: DragEvent) => {
@@ -43,7 +40,6 @@ export function UploadPage() {
               <h1 className="text-3xl font-bold tracking-tight text-[#181211] dark:text-white mb-2">{t('upload.title')}</h1>
               <p className="text-[#896a61] text-sm">{t('upload.subtitle')}</p>
             </div>}
-            {showNew && <UploadJobPicker value={jobId} onChange={setJobId} />}
             <UploadModeSwitch mode="normal" />
           </div>
           <div className="w-full">

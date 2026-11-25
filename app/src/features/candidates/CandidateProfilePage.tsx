@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { AppLayout } from '../../components/AppLayout';
+import { BackButton } from '../../components/BackButton';
 import { normalizePhone } from '../../domain/normalize';
 import { toast } from '../../components/Toast';
 import { isFixtureMode } from '../../data/fixtureMockup';
@@ -235,11 +236,15 @@ export function CandidateProfilePage() {
           <div className="h-16 px-6 flex items-center justify-between">
             <div className="flex items-center gap-4">
               <nav className="flex items-center text-sm font-medium text-[#896a61]">
-                <button className="hover:text-primary transition-colors" onClick={() => (full ? navigate({ pathname: '/candidates', search }) : (window.history.state?.idx ?? 0) > 0 ? navigate(-1) : navigate(homeFor(user)))}>
-                  {/* Without Talent Pool access this goes back where the user came from, so say so. */}
-                  {full ? t('nav.candidatePool') : <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[16px]">arrow_back</span>{t('common.back')}</span>}
-                </button>
-                <span className="material-symbols-outlined text-[16px] mx-2">chevron_right</span>
+                {full ? (
+                  <>
+                    <button className="hover:text-primary transition-colors" onClick={() => navigate({ pathname: '/candidates', search })}>{t('nav.candidatePool')}</button>
+                    <span className="material-symbols-outlined text-[16px] mx-2">chevron_right</span>
+                  </>
+                ) : (
+                  // Without Talent Pool access this goes back where the user came from.
+                  <span className="mr-3"><BackButton size="sm" label={t('common.back')} onClick={() => ((window.history.state?.idx ?? 0) > 0 ? navigate(-1) : navigate(homeFor(user)))} /></span>
+                )}
                 <span className="text-[#181211] dark:text-white">{c.name}</span>
               </nav>
               <div className="h-6 w-px bg-gray-100 dark:bg-gray-700 mx-1"></div>

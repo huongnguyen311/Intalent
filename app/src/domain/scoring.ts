@@ -8,6 +8,8 @@ export interface Requirements {
   years?: number;
   domains?: string[];
   english?: string;
+  /** Stack skills that count double (HR-marked "critical"). */
+  critical?: string[];
 }
 
 export interface ScoreResult {
@@ -66,7 +68,11 @@ export function scoreCandidate(c: Candidate, req: Requirements): ScoreResult {
   const owned = candidateSkillKeys(c);
   const have = req.stack.filter((s) => owned.has(skillKey(s)));
   const miss = req.stack.filter((s) => !owned.has(skillKey(s)));
-  const stack = req.stack.length ? have.length / req.stack.length : 1;
+  // Critical skills weigh 2, the rest 1.
+  const crit = new Set((req.critical ?? []).map(skillKey));
+  const weight = (s: string) => (crit.has(skillKey(s)) ? 2 : 1);
+  const total = req.stack.reduce((n, s) => n + weight(s), 0);
+  const stack = total ? have.reduce((n, s) => n + weight(s), 0) / total : 1;
 
   const need = req.seniority ? seniorityRank(req.seniority) : -1;
   const gap = need < 0 ? 0 : Math.max(0, need - seniorityRank(c.seniority));

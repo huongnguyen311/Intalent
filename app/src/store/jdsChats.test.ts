@@ -21,7 +21,7 @@ describe('JD actions', () => {
   it('createJd numbers the next code of the year and starts as Draft', () => {
     const s = setup();
     const jd = s.getState().createJd({ title: ' Data Engineer ', domains: ['SaaS'], skills: ['Python'], body: 'x' });
-    expect(jd).toMatchObject({ code: 'JD-2026-005', title: 'Data Engineer', status: 'Draft', createdAt: NOW });
+    expect(jd).toMatchObject({ code: 'JD-2026-006', title: 'Data Engineer', status: 'Draft', createdAt: NOW });
     expect(s.getState().jds[0].id).toBe(jd.id);
   });
 

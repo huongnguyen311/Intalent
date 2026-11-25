@@ -1,5 +1,7 @@
 import { isClosedOut, isEnded } from '../../domain/stages';
 import { useState, type ReactNode } from 'react';
+import { Avatar, toneFor } from '../../components/Avatar';
+import { DrawerSection } from '../../components/DrawerSection';
 import { toast } from '../../components/Toast';
 import { formatMoney, HANDOFF_TARGET, interviewTime, isLocked, offerFinal, scorecardAverage, scorecardsHiddenFrom, shortDate, TEMPLATE, zoneLabel } from '../../domain/hiring';
 import type { Application, Candidate, Interview, Job, OfferStatus, Recommendation } from '../../domain/types';
@@ -22,18 +24,6 @@ const MODE_ICON = { online: 'videocam', onsite: 'apartment', phone: 'call' } as 
 const REC_TONE: Record<Recommendation, 'green' | 'blue' | 'amber' | 'red'> = { strong_yes: 'green', yes: 'blue', no: 'amber', strong_no: 'red' };
 const OFFER_TONE: Record<OfferStatus, 'gray' | 'blue' | 'green' | 'red'> = { draft: 'gray', sent: 'blue', accepted: 'green', declined: 'red' };
 
-function Heading({ title, action }: { title: string; action?: ReactNode }) {
-  return (
-    <div className="flex items-center justify-between mb-3">
-      <h4 className="text-xs font-bold text-[#896a61] uppercase tracking-wider">{title}</h4>
-      {action}
-    </div>
-  );
-}
-
-function Block({ children }: { children: ReactNode }) {
-  return <section className="py-5 border-t border-[#f4f1f0] dark:border-[#2a2423]">{children}</section>;
-}
 
 /** Green banner shown at the top of a handed-off application. */
 export function HandoffBanner({ app }: { app: Application }) {
@@ -52,8 +42,7 @@ export function AnswersSection({ app }: { app: Application }) {
   const t = useT();
   if (!app.answers?.length) return null;
   return (
-    <Block>
-      <Heading title={t('answers.title')} />
+    <DrawerSection icon="quiz" title={t('answers.title')} count={app.answers.length}>
       <dl className="space-y-3">
         {app.answers.map((a) => (
           <div key={a.questionId}>
@@ -62,11 +51,40 @@ export function AnswersSection({ app }: { app: Application }) {
           </div>
         ))}
       </dl>
-    </Block>
+    </DrawerSection>
   );
 }
 
-function InterviewItem({ app, iv, locked, onScore, onEmail }: { app: Application; iv: Interview; locked: boolean; onScore: () => void; onEmail: () => void }) {
+/** "13:00 – 14:00" from a local stamp and a length in minutes. */
+function timeRange(at: string, minutes: number): string {
+  const [h, m] = at.slice(11, 16).split(':').map(Number);
+  const hhmm = (x: number) => `${String(Math.floor(x / 60) % 24).padStart(2, '0')}:${String(x % 60).padStart(2, '0')}`;
+  return `${hhmm(h * 60 + m)} – ${hhmm(h * 60 + m + minutes)}`;
+}
+
+const STATUS_DOT = { scheduled: 'bg-violet-500', done: 'bg-emerald-500', cancelled: 'bg-gray-300' } as const;
+const STAR_FILL = { fontVariationSettings: "'FILL' 1" };
+
+/** One labelled fact of the focused round: icon tile, small label, value. */
+function Fact({ icon, label, children }: { icon: string; label: string; children: ReactNode }) {
+  return (
+    <div className="flex items-start gap-3">
+      <span aria-hidden="true" className="size-8 shrink-0 rounded-lg grid place-items-center bg-[#f4f1f0] dark:bg-white/10 text-[#896a61] dark:text-gray-300">
+        <span className="material-symbols-outlined text-[18px]">{icon}</span>
+      </span>
+      <div className="min-w-0 flex-1">
+        <dt className="text-xs text-[#896a61]">{label}</dt>
+        <dd className="font-semibold text-slate-800 dark:text-white">{children}</dd>
+      </div>
+    </div>
+  );
+}
+
+function InterviewItem({ app, iv, locked, onScore, onEmail, focus = false, quiet = false }: {
+  app: Application; iv: Interview; locked: boolean; onScore: () => void; onEmail: () => void;
+  /** The round the drawer was opened for: a full card with labelled facts and the scorecard call to action. */ focus?: boolean;
+  /** Context only (the other rounds next to a focused one): no action buttons. */ quiet?: boolean;
+}) {
   const t = useT();
   const perm = useCan();
   const user = useMe();
@@ -80,55 +98,126 @@ function InterviewItem({ app, iv, locked, onScore, onEmail }: { app: Application
   const cancel = () => {
     if (useStore.getState().cancelInterview(app.id, iv.id, me())) toast(t('interview.toast.cancelled'));
   };
-  return (
-    <li className={`rounded-xl border border-[#f0ebea] dark:border-[#2a2423] px-3 py-3 ${iv.status === 'cancelled' ? 'opacity-60' : ''}`}>
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <div className="font-bold flex items-center gap-2 flex-wrap">{iv.round}<Pill tone={tone}>{t(`interview.status.${iv.status}`)}</Pill></div>
-          <div className="text-xs text-[#896a61] mt-1 flex items-center gap-1">
-            <span className="material-symbols-outlined text-[14px]">schedule</span>
-            {interviewTime(iv.at)}{iv.timeZone ? ` (${zoneLabel(iv.timeZone, iv.at)})` : ''} · {t('interview.minutes', { n: iv.durationMin })}
-          </div>
-          <div className="text-xs text-[#896a61] mt-0.5 flex items-center gap-1 min-w-0">
-            <span className="material-symbols-outlined text-[14px]">{MODE_ICON[iv.mode]}</span>
-            <span className="truncate">{t(`interview.mode.${iv.mode}`)}{iv.place ? ` · ${iv.place}` : ''}</span>
-          </div>
-          <div className="text-xs text-[#896a61] mt-0.5 flex items-center gap-1">
-            <span className="material-symbols-outlined text-[14px]">group</span>
-            {iv.interviewers.map((u) => userName(users, u)).join(', ')}
-          </div>
-        </div>
-      </div>
+  const link = iv.mode === 'online' && /^https?:\/\//.test(iv.place) ? iv.place : '';
+  const scoredByMe = iv.scorecards.some((c) => c.by === me());
+  const zone = iv.timeZone ? ` (${zoneLabel(iv.timeZone, iv.at)})` : '';
+  const actions = !quiet && !locked && iv.status !== 'cancelled';
+  const nameOf = (id: string) => userName(users, id);
+
+  // Each reviewer's verdict with their note right under it, so a quote is never read apart from its author.
+  const scores = (hidden > 0 || shown.length > 0) && (
+    <div className="space-y-2">
       {hidden > 0 && (
-        <p className="mt-3 text-xs text-[#896a61] flex items-center gap-1">
-          <span className="material-symbols-outlined text-[14px]">visibility_off</span>{t('scorecard.hiddenUntilYours', { n: hidden })}
+        <p className="text-xs text-[#896a61] flex items-center gap-1">
+          <span aria-hidden="true" className="material-symbols-outlined text-[14px]">visibility_off</span>{t('scorecard.hiddenUntilYours', { n: hidden })}
         </p>
       )}
       {shown.length > 0 && (
-        <ul className="mt-3 space-y-1.5">
+        <ul className="space-y-2">
           {shown.map((c) => (
-            <li key={c.by} className="flex items-center justify-between gap-2 text-xs">
-              <span className="font-semibold">{userName(users, c.by)}</span>
-              <span className="flex items-center gap-2">
-                <span className="flex items-center gap-0.5 font-bold">
-                  <span className="material-symbols-outlined text-[12px] text-amber-400" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
+            <li key={c.by} className="rounded-lg bg-[#f8f6f6] dark:bg-white/5 px-3 py-2">
+              <div className="flex items-center gap-2 text-xs">
+                <Avatar name={nameOf(c.by)} tone={toneFor(nameOf(c.by))} small />
+                <span className="font-semibold flex-1 min-w-0 truncate">{nameOf(c.by)}</span>
+                <span className="flex items-center gap-0.5 font-bold tabular-nums">
+                  <span aria-hidden="true" className="material-symbols-outlined text-[13px] text-amber-400" style={STAR_FILL}>star</span>
                   {scorecardAverage(c)}
                 </span>
                 <Pill tone={REC_TONE[c.recommendation]}>{t(`scorecard.rec.${c.recommendation}`)}</Pill>
-              </span>
+              </div>
+              {c.note && <p className="mt-1.5 pl-9 text-xs text-slate-600 dark:text-gray-300 italic">“{c.note}”</p>}
             </li>
-          ))}
-          {shown.filter((c) => c.note).map((c) => (
-            <li key={`${c.by}-note`} className="text-xs text-[#896a61] italic">“{c.note}” — {userName(users, c.by)}</li>
           ))}
         </ul>
       )}
-      {!locked && iv.status !== 'cancelled' && (
+    </div>
+  );
+
+  const scoreButton = canScore && (
+    <button
+      onClick={onScore}
+      // The focused round's own scorecard is the one thing to do here: a full-width filled button until it is sent.
+      className={focus && !scoredByMe
+        ? 'w-full justify-center px-4 py-2.5 text-sm font-bold bg-primary hover:bg-primary-hover text-white rounded-xl flex items-center gap-1.5 transition-colors'
+        : BTN_SMALL}
+    >
+      <span aria-hidden="true" className="material-symbols-outlined text-[16px]">rate_review</span>
+      {t(scoredByMe ? 'scorecard.edit' : 'scorecard.add')}
+    </button>
+  );
+
+  if (focus) {
+    return (
+      <li className={`rounded-2xl border border-[#e6dddb] dark:border-[#3a3433] overflow-hidden ${iv.status === 'cancelled' ? 'opacity-60' : ''}`}>
+        <div className="px-4 py-3 bg-primary/[0.05] border-b border-[#f0ebea] dark:border-[#2a2423] flex items-center justify-between gap-2">
+          <span className="text-base font-bold text-slate-800 dark:text-white">{iv.round}</span>
+          <Pill tone={tone}>{t(`interview.status.${iv.status}`)}</Pill>
+        </div>
+        <dl className="px-4 py-4 space-y-3.5">
+          <Fact icon="calendar_today" label={t('interview.when')}>
+            {interviewTime(iv.at).split(' · ')[0]}
+            <span className="block text-sm font-normal text-[#896a61]">{timeRange(iv.at, iv.durationMin)}{zone} · {t('interview.minutes', { n: iv.durationMin })}</span>
+          </Fact>
+          <Fact icon={MODE_ICON[iv.mode]} label={t('interview.where')}>
+            {t(`interview.mode.${iv.mode}`)}
+            {link ? (
+              <a href={link} target="_blank" rel="noreferrer" title={link} className="ml-2 inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-bold hover:bg-primary/15">
+                <span aria-hidden="true" className="material-symbols-outlined text-[14px]">open_in_new</span>{t('interview.join')}
+              </a>
+            ) : iv.place ? (
+              <span className="block text-sm font-normal text-[#896a61]">{iv.place}</span>
+            ) : null}
+          </Fact>
+          <Fact icon="group" label={t('interview.panel')}>
+            <span className="flex flex-wrap gap-1.5 mt-1 font-normal">
+              {iv.interviewers.map((u) => (
+                <span key={u} className="inline-flex items-center gap-1.5 pl-0.5 pr-2.5 py-0.5 rounded-full border border-[#f0ebea] dark:border-[#3a3433] text-xs">
+                  <Avatar name={nameOf(u)} tone={toneFor(nameOf(u))} small />
+                  {nameOf(u)}{u === user.id && <span className="text-[#896a61]">({t('interview.you')})</span>}
+                </span>
+              ))}
+            </span>
+          </Fact>
+        </dl>
+        {scores && <div className="px-4 pb-4">{scores}</div>}
+        {actions && scoreButton && <div className="px-4 py-3 border-t border-[#f0ebea] dark:border-[#2a2423] bg-[#fcfbfb] dark:bg-white/[0.02]">{scoreButton}</div>}
+      </li>
+    );
+  }
+
+  // Timeline entry: a dot on the rail, the round and its date, then the panel's verdicts.
+  return (
+    <li className={`relative pl-6 ${iv.status === 'cancelled' ? 'opacity-60' : ''}`}>
+      <span aria-hidden="true" className={`absolute left-0 top-1.5 size-3 rounded-full ring-4 ring-white dark:ring-[#1e1e1e] ${STATUS_DOT[iv.status]}`} />
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className="font-bold text-slate-800 dark:text-white">{iv.round}</span>
+        <Pill tone={tone}>{t(`interview.status.${iv.status}`)}</Pill>
+      </div>
+      <div className="text-xs text-[#896a61] mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5">
+        <span className="inline-flex items-center gap-1">
+          <span aria-hidden="true" className="material-symbols-outlined text-[14px]">schedule</span>
+          {interviewTime(iv.at)}{zone} · {t('interview.minutes', { n: iv.durationMin })}
+        </span>
+        <span className="inline-flex items-center gap-1 min-w-0">
+          <span aria-hidden="true" className="material-symbols-outlined text-[14px]">{MODE_ICON[iv.mode]}</span>
+          {link ? (
+            <span>
+              {t('interview.mode.online')} ·{' '}
+              <a href={link} target="_blank" rel="noreferrer" title={link} className="font-bold text-primary hover:underline">{t('interview.join')}</a>
+            </span>
+          ) : (
+            <span className="truncate">{t(`interview.mode.${iv.mode}`)}{iv.place ? ` · ${iv.place}` : ''}</span>
+          )}
+        </span>
+      </div>
+      <div className="text-xs text-[#896a61] mt-0.5 flex items-center gap-1">
+        <span aria-hidden="true" className="material-symbols-outlined text-[14px]">group</span>
+        {iv.interviewers.map(nameOf).join(', ')}
+      </div>
+      {scores && <div className="mt-2.5">{scores}</div>}
+      {actions && (
         <div className="flex gap-2 mt-3 flex-wrap">
-          {canScore && <button onClick={onScore} className={BTN_SMALL}>
-            <span className="material-symbols-outlined text-[14px]">rate_review</span>
-            {t(iv.scorecards.some((c) => c.by === me()) ? 'scorecard.edit' : 'scorecard.add')}
-          </button>}
+          {scoreButton}
           {iv.status === 'scheduled' && perm('interview.schedule') && (
             <>
               <button onClick={onEmail} className={BTN_SMALL}>
@@ -145,39 +234,65 @@ function InterviewItem({ app, iv, locked, onScore, onEmail }: { app: Application
   );
 }
 
-export function InterviewsSection({ app, candidate }: Ctx) {
+/** `focusId` (opened from "My interviews"): that round leads under "This interview", the rest follow below. */
+export function InterviewsSection({ app, candidate, focusId }: Ctx & { focusId?: string }) {
   const t = useT();
   const [scheduling, setScheduling] = useState(false);
   const [scoring, setScoring] = useState<Interview | null>(null);
   const [mailing, setMailing] = useState<Interview | null>(null);
   const locked = isLocked(app);
-  const canSchedule = can(currentUser(), 'interview.schedule') && !locked && !isEnded(app.stage);
-  const list = [...(app.interviews ?? [])].sort((a, b) => a.at.localeCompare(b.at));
+  const all = [...(app.interviews ?? [])].sort((a, b) => a.at.localeCompare(b.at));
+  const focused = focusId ? all.find((iv) => iv.id === focusId) : undefined;
+  const canSchedule = !focused && can(currentUser(), 'interview.schedule') && !locked && !isEnded(app.stage);
+  const list = focused ? all.filter((iv) => iv !== focused && iv.status !== 'cancelled') : all;
+  const dialogs = (<>
+    <InterviewDialog open={scheduling} app={app} candidateName={candidate?.name ?? ''} hasEmail={!!candidate?.email?.trim()} onClose={() => setScheduling(false)} />
+    {scoring && <ScorecardDialog open appId={app.id} interview={scoring} onClose={() => setScoring(null)} />}
+    {mailing && candidate && (
+      <EmailComposer open candidateId={candidate.id} applicationId={app.id} templateId={TEMPLATE.interview} interview={mailing} onClose={() => setMailing(null)} />
+    )}
+  </>);
+  if (focused) {
+    return (
+      <>
+        <DrawerSection icon="event" title={t('interview.thisOne')}>
+          <ul><InterviewItem focus app={app} iv={focused} locked={locked} onScore={() => setScoring(focused)} onEmail={() => setMailing(focused)} /></ul>
+          {dialogs}
+        </DrawerSection>
+        {list.length > 0 && (
+          <DrawerSection icon="history" title={t('interview.otherRounds')} count={list.length}>
+            <ul className="relative space-y-5 before:absolute before:left-[5px] before:top-2 before:bottom-2 before:w-0.5 before:bg-[#f0ebea] dark:before:bg-[#2a2423]">
+              {list.map((iv) => (
+                <InterviewItem key={iv.id} quiet app={app} iv={iv} locked={locked} onScore={() => setScoring(iv)} onEmail={() => setMailing(iv)} />
+              ))}
+            </ul>
+          </DrawerSection>
+        )}
+      </>
+    );
+  }
   return (
-    <Block>
-      <Heading
+    <DrawerSection
+        icon="event"
         title={t('interview.title')}
+        count={list.length || undefined}
         action={canSchedule && (
           <button onClick={() => setScheduling(true)} className={BTN_SMALL}>
             <span className="material-symbols-outlined text-[14px]">event</span>{t('interview.schedule')}
           </button>
         )}
-      />
+    >
       {list.length === 0 ? (
         <p className="text-[#896a61]">{t('interview.none')}</p>
       ) : (
-        <ul className="space-y-3">
+        <ul className="relative space-y-5 before:absolute before:left-[5px] before:top-2 before:bottom-2 before:w-0.5 before:bg-[#f0ebea] dark:before:bg-[#2a2423]">
           {list.map((iv) => (
             <InterviewItem key={iv.id} app={app} iv={iv} locked={locked} onScore={() => setScoring(iv)} onEmail={() => setMailing(iv)} />
           ))}
         </ul>
       )}
-      <InterviewDialog open={scheduling} app={app} candidateName={candidate?.name ?? ''} hasEmail={!!candidate?.email?.trim()} onClose={() => setScheduling(false)} />
-      {scoring && <ScorecardDialog open appId={app.id} interview={scoring} onClose={() => setScoring(null)} />}
-      {mailing && candidate && (
-        <EmailComposer open candidateId={candidate.id} applicationId={app.id} templateId={TEMPLATE.interview} interview={mailing} onClose={() => setMailing(null)} />
-      )}
-    </Block>
+      {dialogs}
+    </DrawerSection>
   );
 }
 
@@ -214,15 +329,15 @@ export function OfferSection({ app, candidate }: Ctx) {
   };
 
   return (
-    <Block>
-      <Heading
+    <DrawerSection
+        icon="request_quote"
         title={t('offer.title')}
         action={!offer && !locked && !isClosedOut(app.stage) && (
           <button onClick={() => setEditing(true)} className={BTN_SMALL}>
             <span className="material-symbols-outlined text-[14px]">request_quote</span>{t('offer.create')}
           </button>
         )}
-      />
+    >
       {!offer ? (
         <p className="text-[#896a61]">{t('offer.none')}</p>
       ) : (
@@ -296,7 +411,7 @@ export function OfferSection({ app, candidate }: Ctx) {
           onSent={() => useStore.getState().markOfferSent(app.id, me())}
         />
       )}
-    </Block>
+    </DrawerSection>
   );
 }
 
@@ -306,8 +421,7 @@ export function HandoffSection({ app, candidate, job }: Ctx) {
   const allowed = useCan()('handoff');
   if (app.stage !== 'hired' || app.handoff || !allowed) return null;
   return (
-    <Block>
-      <Heading title={t('handoff.section')} />
+    <DrawerSection icon="outbox" title={t('handoff.section')}>
       <div className="rounded-xl bg-orange-50 dark:bg-orange-900/10 border border-orange-100 dark:border-orange-900/30 px-4 py-3 flex items-center justify-between gap-3">
         <p className="text-sm">{t('handoff.prompt', { target: HANDOFF_TARGET })}</p>
         <button onClick={() => setOpen(true)} className="shrink-0 px-4 py-2 text-sm font-bold bg-primary hover:bg-primary-hover text-white rounded-lg shadow-sm flex items-center gap-1">
@@ -315,7 +429,7 @@ export function HandoffSection({ app, candidate, job }: Ctx) {
         </button>
       </div>
       <HandoffDialog open={open} app={app} candidate={candidate} job={job} onClose={() => setOpen(false)} />
-    </Block>
+    </DrawerSection>
   );
 }
 
@@ -326,8 +440,7 @@ export function EmailsSection({ app }: { app: Application }) {
   const [openId, setOpenId] = useState<string | null>(null);
   const emails = all.filter((e) => e.applicationId === app.id).sort((a, b) => b.at.localeCompare(a.at));
   return (
-    <Block>
-      <Heading title={t('email.history')} />
+    <DrawerSection icon="mail" title={t('email.history')} count={emails.length || undefined}>
       {emails.length === 0 ? (
         <p className="text-[#896a61]">{t('email.none')}</p>
       ) : (
@@ -346,6 +459,6 @@ export function EmailsSection({ app }: { app: Application }) {
           ))}
         </ul>
       )}
-    </Block>
+    </DrawerSection>
   );
 }

@@ -5,9 +5,11 @@ import { useMemo, useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { AppLayout } from '../../components/AppLayout';
 import { RecruitmentRow } from './RecruitmentRow';
+import { PeriodControl, UrgencyTiles } from './DashboardWidgets';
+import { isOverdue, isUrgent, todayIso } from '../../domain/jobUrgency';
 import { dashboardMetrics, type Period } from '../../domain/metrics';
 import { useShowNew } from '../../hooks';
-import { useT, type TKey } from '../../i18n/i18n';
+import { useT } from '../../i18n/i18n';
 import { useStore } from '../../store/store';
 import { EnglishDonut, SeniorityBars, StackPie } from './charts';
 
@@ -83,6 +85,11 @@ export function DashboardPage() {
     return (
       <AppLayout title="Dashboard">
         <div className="p-4 sm:p-8 max-w-[1600px] mx-auto bg-canvas min-h-full">
+          {(() => {
+            const open = jobsInScope(user, data.jobs).filter((j) => j.status === 'open');
+            const today = todayIso();
+            return <UrgencyTiles urgent={open.filter(isUrgent).length} overdue={open.filter((j) => isOverdue(j, data.applications, today)).length} />;
+          })()}
           <RecruitmentRow
             metrics={m.recruitment}
             jobs={jobsInScope(user, data.jobs)}
@@ -93,31 +100,12 @@ export function DashboardPage() {
             onJob={setJobFilter}
             onRecruiter={setRecruiterFilter}
             cta={can(user, 'job.edit') ? (
-              <Link to="/jobs?new=1" className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-primary px-3.5 text-xs font-bold text-white hover:bg-primary-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
+              <Link to="/jobs/new" className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-primary px-3.5 text-xs font-bold text-white hover:bg-primary-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
                 <span aria-hidden="true" className="material-symbols-outlined text-[18px]">add</span>
                 {tr('jobs.create')}
               </Link>
             ) : undefined}
-            period={
-              // Segmented control: the chosen range sits raised on a quiet track, same height as the selects beside it.
-              <div className="flex h-9 items-center gap-0.5 rounded-lg bg-slate-100 dark:bg-white/10 p-0.5">
-                {PERIODS.map((p) => (
-                  <button
-                    key={p.id}
-                    type="button"
-                    onClick={() => setPeriod(p.id)}
-                    aria-pressed={period === p.id}
-                    className={`h-8 px-3 rounded-md text-xs font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary ${
-                      period === p.id
-                        ? 'bg-white dark:bg-[#2a2a2a] text-slate-900 dark:text-white shadow-[0_1px_2px_rgb(0_0_0/0.08)]'
-                        : 'text-slate-500 hover:text-slate-900 dark:text-gray-400 dark:hover:text-white'
-                    }`}
-                  >
-                    {tr(`dash.period.${p.id}` as TKey)}
-                  </button>
-                ))}
-              </div>
-            }
+            period={<PeriodControl value={period} onChange={setPeriod} />}
           />
         </div>
       </AppLayout>

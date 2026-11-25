@@ -52,3 +52,32 @@ describe('Login and Dashboard screens', () => {
   });
 });
 
+describe('Dashboard hiring urgency tiles', () => {
+  it('counts open urgent and overdue jobs in scope and links to the filtered Jobs list', async () => {
+    const { isOverdue, isUrgent, todayIso } = await import('../../domain/jobUrgency');
+    const { buildSeed } = await import('../../data/seed');
+    useStore.setState({ ...buildSeed() });
+    const st = useStore.getState();
+    const open = st.jobs.filter((j) => j.status === 'open');
+    at('/dashboard');
+    const urgent = screen.getByTestId('tile-urgent-jobs');
+    const overdue = screen.getByTestId('tile-overdue-jobs');
+    expect(urgent).toHaveTextContent(String(open.filter(isUrgent).length));
+    expect(overdue).toHaveTextContent(String(open.filter((j) => isOverdue(j, st.applications, todayIso())).length));
+    expect(urgent.closest('a') ?? urgent.querySelector('a')).toHaveAttribute('href', '/jobs?priority=urgent,critical&status=open');
+    expect(overdue.closest('a') ?? overdue.querySelector('a')).toHaveAttribute('href', '/jobs?overdue=1');
+  });
+
+  it('a recruiter only counts jobs in their scope', async () => {
+    const { isUrgent } = await import('../../domain/jobUrgency');
+    const { buildSeed } = await import('../../data/seed');
+    useStore.setState({ ...buildSeed() });
+    signInAs('u-chau');
+    const st = useStore.getState();
+    const mine = jobsInScope(st.users.find((u) => u.id === 'u-chau'), st.jobs).filter((j) => j.status === 'open');
+    at('/dashboard');
+    expect(screen.getByTestId('tile-urgent-jobs')).toHaveTextContent(String(mine.filter(isUrgent).length));
+    signInAs(undefined);
+  });
+});
+

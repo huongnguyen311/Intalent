@@ -1,14 +1,16 @@
 import { evaluateApplication, requirementsForJob } from '../domain/aiEvaluation';
 import type {
-  Activity, Application, ApplicationComment, ApplicationRating, Campaign, Candidate, DemoState, Interview, Job, JobTemplate, Jd, Note,
+  Activity, Application, ApplicationComment, ApplicationRating, Campaign, Candidate, DemoState, Interview, Job, Jd, Note,
   Offer, Prompt, Stage, StageHistoryEntry, TaxonomyItem, User, Via,
 } from '../domain/types';
-import { campaignLinks, CHANNEL_SOURCE, DEMO_ORIGIN, type Channel } from '../domain/campaigns';
+import { nextCampaignCode } from '../domain/campaigns';
 import { SOURCE_CAREERS, SOURCE_CV_UPLOAD, SOURCE_MANUAL, SOURCE_REFERRAL, SOURCE_TALENT_POOL } from '../domain/sources';
 import { HANDOFF_TARGET } from '../domain/hiring';
 import { STAGES } from '../domain/stages';
 import { normalizeEmail } from '../domain/normalize';
 import { withFlowDetail, withProfiles } from './seedDetail';
+import { buildShowcaseJd, buildShowcaseJob } from './showcaseJob';
+import { withJdDetails, withJobPosts } from './jobPosts';
 import {
   COMMENTS, DOMAINS, ENGLISH, FIRST_NAMES, GROUPS, LAST_NAMES, MIDDLE_NAMES, NOTE_TEXTS,
   REJECT_REASONS, SENIORITY, SKILLS, TAGS, TITLES,
@@ -80,6 +82,10 @@ const JD_ROWS: Array<Pick<Jd, 'id' | 'code' | 'title' | 'domains' | 'skills' | '
     createdAt: '2026-04-10', updatedAt: '2026-04-10',
   },
 ];
+
+/** Demo clients for the regular seed; the mockup fixture keeps prod's empty client column. JD-2026-001 stays internal. */
+const JD_CLIENTS: Record<string, string> = { 'jd-2026-004': 'Northwind Retail', 'jd-2026-003': 'Acme SaaS', 'jd-2026-002': 'MediCore Health' };
+const withClients = (jds: Jd[]): Jd[] => jds.map((j) => ({ ...j, client: JD_CLIENTS[j.id] ?? '' }));
 
 export function buildJds(): Jd[] {
   return JD_ROWS.map((r) => ({
@@ -200,8 +206,26 @@ function buildJobs(clock: Clock): Job[] {
     openedAt: clock.daysAgo(90 - i * 10),
     hiringManager: i % 2 ? 'u-nam' : 'u-thu',
     ...JOB_EXTRAS[i],
+    ...urgency(i, clock),
+    ...(JOB_CAMPAIGN[id] ? { campaignId: JOB_CAMPAIGN[id] } : {}),
     ...(JOB_EXTRAS[i].approval ? { approval: { ...JOB_EXTRAS[i].approval!, requestedAt: clock.daysAgo(1) } } : {}),
   }));
+}
+
+/** The campaign each job currently runs in (picked on the job form). camp-3 has finished, so its jobs moved on. */
+const JOB_CAMPAIGN: Record<string, string> = { 'job-1': 'camp-1', 'job-2': 'camp-1', 'job-3': 'camp-2', 'job-4': 'camp-7', 'job-5': 'camp-4' };
+
+/** Hiring urgency per JOB_ROWS index: two urgent jobs, one of them already overdue (no rng draws). */
+function urgency(i: number, clock: Clock): Partial<Job> {
+  const due = (days: number) => clock.daysAgo(-days).slice(0, 10);
+  return [
+    { hiringPriority: 'critical', targetHiringDate: due(25), urgencyReason: 'Client project starts next month and needs two more frontend devs.' },
+    { hiringPriority: 'high', targetHiringDate: due(45) },
+    { hiringPriority: 'urgent', targetHiringDate: due(-5), urgencyReason: 'Mobile team is short after two resignations.', priorityNotes: 'Approved by CTO.' },
+    { hiringPriority: 'normal', targetHiringDate: due(60) },
+    { hiringPriority: 'normal', targetHiringDate: due(90) },
+    { hiringPriority: 'normal', targetHiringDate: due(-20) },
+  ][i] as Partial<Job>;
 }
 
 const MIL = 1_000_000;
@@ -222,29 +246,6 @@ const JOB_EXTRAS: Array<Partial<Job>> = [
   { workplace: 'onsite', headcount: 2, collaborators: ['u-huy'], education: 'college', approval: { requestedBy: 'u-huy', requestedAt: '' } },
   { workplace: 'onsite', headcount: 1, collaborators: ['u-chau'] },
 ];
-
-/** Starting points for new jobs (Job Templates). */
-function buildJobTemplates(clock: Clock): JobTemplate[] {
-  const sla = { new: 2, ai_screening: 1, screening: 5, interview: 7, assessment: 5, final_interview: 5, offer: 3 };
-  return [
-    {
-      id: 'jtpl-eng-senior', name: 'Engineering · Senior · Hybrid', createdAt: clock.daysAgo(60), createdBy: 'u-thu',
-      fields: {
-        department: 'Engineering', location: 'Hanoi', level: 'Senior', employment: 'Full-time', workplace: 'hybrid', headcount: 1,
-        hiringManager: 'u-thu', stageSla: sla, salaryMin: 40 * MIL, salaryMax: 60 * MIL, currency: 'VND', showSalary: true,
-        minYears: 5, education: 'bachelor',
-        questions: [{ id: 'q-notice', label: 'What is your notice period?', type: 'text', required: false }],
-      },
-    },
-    {
-      id: 'jtpl-mkt-middle', name: 'Marketing · Middle · Onsite', createdAt: clock.daysAgo(40), createdBy: 'u-nam',
-      fields: {
-        department: 'Marketing', location: 'Ho Chi Minh City', level: 'Middle', employment: 'Full-time', workplace: 'onsite', headcount: 1,
-        hiringManager: 'u-nam', stageSla: sla, currency: 'VND', minYears: 3, education: 'bachelor', questions: [],
-      },
-    },
-  ];
-}
 
 /**
  * Two candidates with a login (one in Interview, one at Offer), each with CV versions; the first also has
@@ -335,25 +336,58 @@ function withHiringRecords(apps: Application[], clock: Clock): Application[] {
   });
 }
 
+/**
+ * Jobs that brought applicants to each campaign with seeded traffic (active or completed; draft, scheduled,
+ * paused-from-the-start and cancelled ones had none). Fixed, so the seeded applications draw the same numbers.
+ */
+const SEEDED_TRAFFIC: Record<string, string[]> = { 'camp-1': ['job-1', 'job-2'], 'camp-2': ['job-3'], 'camp-3': ['job-4', 'job-6'] };
+
 function buildCampaigns(clock: Clock): Campaign[] {
-  const make = (c: Omit<Campaign, 'links'>): Campaign => ({
-    ...c,
-    links: campaignLinks(c, DEMO_ORIGIN).map(({ channel, url }) => ({ channel, url })),
-  });
-  return [
-    make({
-      id: 'camp-1', name: 'Frontend Summer Push', jobIds: ['job-1', 'job-2'], channels: ['linkedin', 'facebook'],
-      goal: 40, start: clock.daysAgo(40), end: clock.daysAgo(-20), status: 'active', stats: { views: 1240 },
-    }),
-    make({
-      id: 'camp-2', name: 'Mobile Talent Hunt', jobIds: ['job-3'], channels: ['linkedin', 'topcv'],
-      goal: 25, start: clock.daysAgo(25), end: clock.daysAgo(-35), status: 'active', stats: { views: 860 },
-    }),
-    make({
-      id: 'camp-3', name: 'Growth Marketing Referral', jobIds: ['job-4', 'job-6'], channels: ['referral'],
-      goal: 15, start: clock.daysAgo(70), end: clock.daysAgo(10), status: 'ended', stats: { views: 410 },
-    }),
-  ];
+  const day = (d: number) => clock.daysAgo(d).slice(0, 10);
+  const made: Campaign[] = [];
+  const make = (c: Omit<Campaign, 'code' | 'createdAt'>, createdDaysAgo: number) => {
+    const createdAt = clock.daysAgo(createdDaysAgo);
+    made.push({ ...c, code: nextCampaignCode(made, createdAt), createdAt });
+  };
+  make({
+    id: 'camp-1', name: 'Frontend Summer Push', owner: 'u-huy',
+    priority: 'high', description: 'Fill the frontend seats the client project needs before Q1.',
+    goals: { targetApplicants: 40, budget: 60_000_000, currency: 'VND' },
+    start: day(40), end: day(-20), applicationDeadline: day(-10), status: 'active', stats: { views: 1240 },
+  }, 42);
+  make({
+    id: 'camp-2', name: 'Mobile Talent Hunt', owner: 'u-linh', priority: 'urgent',
+    goals: { targetApplicants: 25 },
+    // Still active after its end date: the detail page offers to mark it completed.
+    start: day(25), end: day(3), status: 'active', stats: { views: 860 },
+  }, 27);
+  make({
+    id: 'camp-3', name: 'Growth Marketing Referral', owner: 'u-chau',
+    goals: { targetApplicants: 15, budget: 1500, currency: 'USD' },
+    start: day(70), end: day(10), status: 'completed', stats: { views: 410 },
+  }, 72);
+  make({
+    id: 'camp-4', name: 'Graduate Program 2027', owner: 'u-huy', priority: 'medium',
+    goals: { targetApplicants: 60 },
+    start: day(-15), end: day(-75), applicationDeadline: day(-60), status: 'scheduled', stats: { views: 0 },
+  }, 3);
+  make({
+    id: 'camp-5', name: 'Winter Internship', owner: 'u-linh',
+    goals: {},
+    start: day(-30), end: day(-90), status: 'draft', stats: { views: 0 },
+  }, 1);
+  make({
+    id: 'camp-6', name: 'Q4 Support Mass Hiring', owner: 'u-chau', priority: 'low',
+    description: 'Cancelled: the support team was outsourced.',
+    goals: { budget: 20_000_000, currency: 'VND' },
+    start: day(20), end: day(-40), status: 'cancelled', stats: { views: 120 },
+  }, 22);
+  make({
+    id: 'camp-7', name: 'Marketing Leads Q4', owner: 'u-huy',
+    goals: {},
+    start: day(14), end: day(-30), status: 'paused', stats: { views: 95 },
+  }, 15);
+  return made;
 }
 
 /** Unique-contact generator shared by candidates and notes. */
@@ -421,6 +455,25 @@ function buildCandidates(rng: Rng, count: number, contacts: Contacts, clock: Clo
   });
 }
 
+/**
+ * Give the pool overview's CV-quality block something to show, by index (no rng draws, so the rest of
+ * the demo stays the same): most candidates consented, a few lack a phone or English level, some CVs
+ * are over a year old, and some AI parses have low-confidence fields awaiting HR review.
+ */
+function withQualityVariety(candidates: Candidate[], clock: Clock): Candidate[] {
+  return candidates.map((c, i) => {
+    const createdAt = i % 20 === 9 ? clock.daysAgo(380 + i) : c.createdAt;
+    return {
+      ...c,
+      createdAt,
+      phone: i % 30 === 14 ? '' : c.phone,
+      english: i % 60 === 33 ? '' : c.english,
+      consents: c.consents ?? (i % 5 === 3 ? undefined : [{ purpose: 'recruitment' as const, policyVersion: '2026-01', at: createdAt }]),
+      parse: c.parse ?? (i % 15 === 7 ? { model: 'cv-extract', at: createdAt, confidence: { seniority: 0.45, english: 0.8, skills: 0.9 }, missing: [] } : undefined),
+    };
+  });
+}
+
 /** The original six-stage order; seed paths keep it so the rng draws (and so the demo data) stay the same. */
 const LEGACY_PATH: Stage[] = ['new', 'screening', 'interview', 'offer', 'hired', 'rejected'];
 
@@ -454,14 +507,15 @@ function buildApplications(rng: Rng, candidates: Candidate[], jobs: Job[], campa
     } while (pairs.has(`${cand.id}|${job.id}`));
     pairs.add(`${cand.id}|${job.id}`);
 
-    const camps = campaigns.filter((c) => c.jobIds.includes(job.id));
+    const camps = campaigns.filter((c) => SEEDED_TRAFFIC[c.id]?.includes(job.id));
     const r = rng();
     const via: Via = r < 0.3 ? 'careers' : r < 0.7 ? 'talent_pool' : r < 0.9 && camps.length ? 'campaign' : 'manual';
     const campaign = via === 'campaign' ? pick(rng, camps) : undefined;
     const source =
       via === 'careers' ? SOURCE_CAREERS
       : via === 'talent_pool' ? SOURCE_TALENT_POOL
-      : campaign ? CHANNEL_SOURCE[pick(rng, campaign.channels) as Channel]
+      // A campaign applicant's source is the campaign name. rng() stands in for the former channel pick so later seed draws stay the same.
+      : campaign && rng() >= 0 ? campaign.name
       : SOURCE_MANUAL;
     const addedBy = pick(rng, STAFF);
 
@@ -550,7 +604,7 @@ export function buildSeed(rng: Rng = mulberry32(20261116), base: number = SEED_B
   const clock = clockAt(base);
   const contacts = contactFactory(rng);
   // Full CV profiles go on before the AI evaluations run, so the stored scores match what the profile shows.
-  const candidates = withProfiles(buildCandidates(rng, 150, contacts, clock), base);
+  const candidates = withQualityVariety(withProfiles(buildCandidates(rng, 150, contacts, clock), base), clock);
   const jobs = buildJobs(clock);
   const campaigns = buildCampaigns(clock);
   const { apps, activities } = buildApplications(rng, candidates, jobs, campaigns, clock);
@@ -562,24 +616,27 @@ export function buildSeed(rng: Rng = mulberry32(20261116), base: number = SEED_B
   const noted: Activity[] = notes.map((n) => ({
     type: 'note_added', by: n.createdBy, at: n.createdAt, detail: `Note added for ${n.name}`,
   }));
-  const jds = buildJds();
+  const jds = withClients(buildJds());
+  // Full JD details go on after the AI evaluations below (which read `jds`), so seeded scores stay the same.
+  const detailedJds = withJdDetails(jds);
   const taxonomy = buildTaxonomy(candidates);
   const applications = withAiEvaluations(withHiringRecords(apps, clock), candidates, jobs, jds, taxonomy);
   const portal = withCandidateAccounts(candidates, applications, clock);
   return withFlowDetail({
     candidates: portal.candidates,
     applications,
-    jobs,
+    // Full job posts and JD details go on after the AI evaluations, so the seeded applicants and scores stay the same.
+    // The showcase job goes on last so it draws no rng and has no applicants.
+    jobs: [...withJobPosts(jobs, detailedJds), buildShowcaseJob(clock.daysAgo)],
     campaigns,
     notes,
     activities: [...created, ...activities, ...noted].sort((a, b) => a.at.localeCompare(b.at)),
     users: [...buildUsers(clock), ...portal.users],
-    jds,
+    jds: [...detailedJds, buildShowcaseJd()],
     taxonomy,
     prompts: [...buildPrompts(), ...buildEmailTemplates(), ...buildContentTemplates()],
     chats: [],
     emails: [],
-    jobTemplates: buildJobTemplates(clock),
     ui: { lang: 'en', careersLang: 'vi', piiUnlocked: false },
   }, base);
 }

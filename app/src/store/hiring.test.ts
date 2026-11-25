@@ -170,7 +170,7 @@ describe('careers application extras', () => {
     const store = createDemoStore(memoryStorage(), () => NOW);
     store.setState({ applications: [], activities: [], emails: [] });
     const answers = [{ questionId: 'q-lead', label: 'How many engineers have you led?', answer: '5' }];
-    const r = store.getState().applyFromCareers({ name: 'Le Van Test', email: 'le.test@example.com' }, 'job-2', undefined, answers);
+    const r = store.getState().applyFromCareers({ name: 'Le Van Test', email: 'le.test@example.com' }, 'job-2', answers);
     if (!r.ok) throw new Error('expected ok');
     expect(r.application.answers).toEqual(answers);
     const mail = store.getState().emails[0];

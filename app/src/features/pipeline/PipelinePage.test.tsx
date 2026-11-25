@@ -62,11 +62,15 @@ describe('PipelinePage', () => {
     expect(within(drawer).getByRole('link', { name: /View full profile/ })).toHaveAttribute('href', `/candidates/${app.candidateId}`);
     expect(within(drawer).getByText('Stage history')).toBeInTheDocument();
 
+    fireEvent.click(within(drawer).getByRole('button', { name: 'Rate 4 of 5' }));
+
+    // Comments live on their own tab, apart from the overview.
+    expect(within(drawer).queryByLabelText('Add a comment')).toBeNull();
+    fireEvent.click(within(drawer).getByRole('tab', { name: /Comments/ }));
+    expect(within(drawer).queryByText('Stage history')).toBeNull();
     fireEvent.change(within(drawer).getByLabelText('Add a comment'), { target: { value: 'Great culture fit' } });
     fireEvent.click(within(drawer).getByRole('button', { name: 'Post comment' }));
     expect(within(drawer).getByText('Great culture fit')).toBeInTheDocument();
-
-    fireEvent.click(within(drawer).getByRole('button', { name: 'Rate 4 of 5' }));
     const saved = useStore.getState().applications.find((a) => a.id === app.id)!;
     expect(saved.comments[saved.comments.length - 1]).toMatchObject({ by: 'u-admin', text: 'Great culture fit' });
     expect(saved.ratings?.find((r) => r.by === 'u-admin')?.stars).toBe(4);

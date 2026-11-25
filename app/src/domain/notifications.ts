@@ -16,7 +16,7 @@ export interface AppNotification {
 
 /**
  * PRD 3.8 in-app notifications for one user, newest first:
- * - a candidate applied (careers page or campaign link) to a job the user works on;
+ * - a candidate applied (careers page, credited to a campaign or not) to a job the user works on;
  * - someone else put the user on an interview panel;
  * - an interview the user sat on is waiting for their feedback.
  */

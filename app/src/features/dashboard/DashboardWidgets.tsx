@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Avatar, toneFor } from '../../components/Avatar';
-import type { DashboardMetrics, OpenJobRow, WeekInterview } from '../../domain/metrics';
+import { PERIODS, type DashboardMetrics, type OpenJobRow, type Period, type WeekInterview } from '../../domain/metrics';
 import { stageLabel } from '../../domain/stages';
 import type { Stage } from '../../domain/types';
 import { useLang, useT, type TKey } from '../../i18n/i18n';
@@ -36,6 +36,30 @@ export function Panel({ title, caption, action, testId, className = '', children
       </div>
       <div className="mt-5">{children}</div>
     </section>
+  );
+}
+
+/** Segmented Ngày/Tuần/3M/6M/All control: the chosen range sits raised on a quiet track. */
+export function PeriodControl({ value, onChange, testId }: { value: Period; onChange: (p: Period) => void; testId?: string }) {
+  const t = useT();
+  return (
+    <div data-testid={testId} className="flex h-9 items-center gap-0.5 rounded-lg bg-slate-100 dark:bg-white/10 p-0.5">
+      {PERIODS.map((p) => (
+        <button
+          key={p}
+          type="button"
+          onClick={() => onChange(p)}
+          aria-pressed={value === p}
+          className={`h-8 px-3 rounded-md text-xs font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary ${
+            value === p
+              ? 'bg-white dark:bg-[#2a2a2a] text-slate-900 dark:text-white shadow-[0_1px_2px_rgb(0_0_0/0.08)]'
+              : 'text-slate-500 hover:text-slate-900 dark:text-gray-400 dark:hover:text-white'
+          }`}
+        >
+          {t(`dash.period.${p}` as TKey)}
+        </button>
+      ))}
+    </div>
   );
 }
 
@@ -381,5 +405,27 @@ export function OpenJobs({ jobs, now }: { jobs: OpenJobRow[]; now: number }) {
         </div>
       )}
     </Panel>
+  );
+}
+
+/** Urgent and overdue open jobs (current state, so the period filter does not apply); each links to the filtered Jobs list. */
+export function UrgencyTiles({ urgent, overdue }: { urgent: number; overdue: number }) {
+  const t = useT();
+  const tile = (id: string, to: string, icon: string, label: string, n: number, alert: boolean) => (
+    <Link
+      data-testid={id}
+      to={to}
+      className={`${PANEL} flex items-center gap-3 px-4 py-3 hover:border-primary/50 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary`}
+    >
+      <span aria-hidden="true" className={`material-symbols-outlined text-[22px] ${alert && n > 0 ? 'text-red-600' : 'text-muted'}`}>{icon}</span>
+      <span className="text-sm font-semibold text-slate-700 dark:text-gray-200">{label}</span>
+      <span className={`ml-auto text-2xl font-bold ${alert && n > 0 ? 'text-red-600' : 'text-slate-900 dark:text-white'}`}>{n}</span>
+    </Link>
+  );
+  return (
+    <div className="grid gap-3 sm:grid-cols-2 mb-4">
+      {tile('tile-urgent-jobs', '/jobs?priority=urgent,critical&status=open', 'priority_high', t('dashboard.urgentJobs'), urgent, false)}
+      {tile('tile-overdue-jobs', '/jobs?overdue=1', 'event_busy', t('dashboard.overdueJobs'), overdue, true)}
+    </div>
   );
 }

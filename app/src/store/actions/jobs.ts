@@ -1,4 +1,4 @@
-import type { Job, JobTemplate } from '../../domain/types';
+import type { Job } from '../../domain/types';
 import { actorOf, logAudit } from './audit';
 import type { DemoActions, Env, Get, Set } from './types';
 
@@ -8,7 +8,7 @@ export function jobActions(
   env: Env,
 ): Pick<
   DemoActions,
-  'createJob' | 'updateJob' | 'setJobStatus' | 'requestJobApproval' | 'approveJob' | 'rejectJob' | 'saveJobTemplate' | 'deleteJobTemplate'
+  'createJob' | 'updateJob' | 'setJobStatus' | 'requestJobApproval' | 'approveJob' | 'rejectJob'
 > {
   const touch = (id: string, change: (j: Job) => Partial<Job>): boolean => {
     if (!get().jobs.some((j) => j.id === id)) return false;
@@ -71,18 +71,6 @@ export function jobActions(
         approval: { requestedBy: j.approval?.requestedBy ?? actorOf(get), requestedAt: j.approval?.requestedAt ?? at, decidedBy: actorOf(get), decidedAt: at, rejectedReason: why },
       }));
       logAudit(set, get, at, { type: 'job_rejected', jobId: id, detail: why });
-      return true;
-    },
-
-    saveJobTemplate(name, fields) {
-      const template: JobTemplate = { id: env.id('jtpl'), name: name.trim(), fields, createdAt: env.now(), createdBy: actorOf(get) };
-      set((s) => ({ jobTemplates: [template, ...(s.jobTemplates ?? [])] }));
-      return template;
-    },
-
-    deleteJobTemplate(id) {
-      if (!get().jobTemplates?.some((t) => t.id === id)) return false;
-      set((s) => ({ jobTemplates: (s.jobTemplates ?? []).filter((t) => t.id !== id) }));
       return true;
     },
   };

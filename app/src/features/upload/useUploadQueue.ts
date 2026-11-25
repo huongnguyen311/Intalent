@@ -38,18 +38,14 @@ interface Options {
   concurrency: number;
   /** Start parsing as soon as files are added; otherwise wait for `start()`. */
   autoStart: boolean;
-  /** Job whose pipeline each added profile joins; none = Talent Pool only. */
-  jobId?: string;
 }
 
 /** Simulated CV parsing queue: queued, parsing (timer-driven progress), done (created or merged) or failed. */
-export function useUploadQueue({ limits, source, concurrency, autoStart, jobId }: Options) {
+export function useUploadQueue({ limits, source, concurrency, autoStart }: Options) {
   const t = useT();
   const rowsRef = useRef<QueueRow[]>([]);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const runRef = useRef({ created: 0, merged: 0, review: 0 });
-  const jobRef = useRef(jobId);
-  jobRef.current = jobId;
   const nextId = useRef(1);
   const [rows, setRows] = useState<QueueRow[]>([]);
   const [running, setRunning] = useState(false);
@@ -66,7 +62,6 @@ export function useUploadQueue({ limits, source, concurrency, autoStart, jobId }
   const commit = (r: QueueRow, input: CandidateInput) => {
     const st = useStore.getState();
     const { candidate, created } = st.upsertCandidate(input, { source, by: me() });
-    if (jobRef.current) st.addToPipeline(candidate.id, jobRef.current, { via: 'manual', source, by: me() });
     r.status = 'done';
     r.outcome = created ? 'created' : 'merged';
     r.candidateId = candidate.id;

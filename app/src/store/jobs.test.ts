@@ -75,15 +75,3 @@ describe('job approval', () => {
     expect(job.approval).toMatchObject({ requestedBy: 'u-admin', requestedAt: clock });
   });
 });
-
-describe('job templates', () => {
-  it('saves and deletes templates', () => {
-    const s = setup();
-    const before = s.getState().jobTemplates!.length;
-    const tpl = s.getState().saveJobTemplate(' Data · Middle ', { department: 'Data', location: 'Hanoi', level: 'Middle', employment: 'Full-time', stageSla: {}, hiringManager: 'u-thu', minYears: 3 });
-    expect(tpl).toMatchObject({ name: 'Data · Middle', createdBy: 'u-admin' });
-    expect(s.getState().jobTemplates).toHaveLength(before + 1);
-    expect(s.getState().deleteJobTemplate(tpl.id)).toBe(true);
-    expect(s.getState().deleteJobTemplate(tpl.id)).toBe(false);
-  });
-});

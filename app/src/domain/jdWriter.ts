@@ -1,3 +1,5 @@
+import { extractSkills, ROLE_STACKS } from './techVocab';
+import type { JdInput } from './types';
 import type { Requirements } from './scoring';
 
 /**
@@ -79,4 +81,43 @@ export function textBlocks(text: string): Array<{ kind: 'p'; text: string } | { 
     } else out.push({ kind: 'p', text: line });
   }
   return out;
+}
+
+const ROLE_DUTIES: Array<[RegExp, string[]]> = [
+  [/front|ui|web/i, ['Build responsive, accessible user interfaces', 'Turn designs into reusable components', 'Keep page performance and quality high']],
+  [/back|api|server|data/i, ['Design and build reliable APIs and services', 'Model data and keep queries fast', 'Monitor, debug and improve production systems']],
+  [/mobile|ios|android|flutter/i, ['Build and ship mobile app features', 'Keep the app fast, stable and well tested', 'Work with designers on smooth mobile UX']],
+  [/qa|test/i, ['Plan and run manual and automated tests', 'Report and track defects clearly', 'Improve test coverage and release quality']],
+  [/market|growth|seo/i, ['Plan and run acquisition campaigns', 'Track funnel metrics and report results', 'Run experiments to improve conversion']],
+];
+const YEARS_FOR = { intern: 0, fresher: 0, junior: 1, middle: 3, mid: 3, senior: 5, lead: 7, manager: 7, director: 10 } as const;
+
+/** "Create with AI" from a job title alone: a first draft of the JD's structured fields for HR to review. */
+export function generateJdFromTitle(title: string, seniority?: string): JdInput {
+  const t = title.trim();
+  // A level named in the title wins over the form's current seniority.
+  const level = Object.keys(YEARS_FOR).find((k) => new RegExp(`\\b${k}\\b`, 'i').test(t)) ?? seniority;
+  const years = level ? YEARS_FOR[level.toLowerCase() as keyof typeof YEARS_FOR] as number | undefined : undefined;
+  const role = ROLE_STACKS.find(([words]) => words.some((w) => t.toLowerCase().includes(w)));
+  const skills = [...new Set([...extractSkills(t), ...(role?.[1] ?? [])])];
+  const duties = ROLE_DUTIES.find(([re]) => re.test(t))?.[1] ?? ['Deliver the core work of the role to a high standard', 'Work closely with the team and stakeholders', 'Share knowledge and improve how the team works'];
+  const lead = /lead|manager|head|director/i.test(`${t} ${level ?? ''}`);
+  return {
+    title: t,
+    domains: [],
+    skills,
+    body: '',
+    summary: `We are looking for a ${t} to join our team. You will ${duties[0].charAt(0).toLowerCase()}${duties[0].slice(1)} and help the product grow.`,
+    responsibilities: [...duties, ...(lead ? ['Lead, mentor and grow the team'] : [])],
+    dailyTasks: ['Join the daily stand-up and plan the day', 'Work on assigned tasks and review teammates\' work', 'Update progress in the team tracker'],
+    mustHave: [
+      ...(years ? [`${years}+ years of experience as a ${t.replace(/^(senior|junior|lead|middle|mid)\s+/i, '')}`] : []),
+      ...(skills.length ? [`Solid hands-on experience with ${list(skills.slice(0, 3))}`] : []),
+      'Clear written and spoken communication',
+    ],
+    niceToHave: skills.length > 3 ? [`Experience with ${list(skills.slice(3, 6))}`] : [],
+    ...(level ? { seniority: level.charAt(0).toUpperCase() + level.slice(1).toLowerCase() } : {}),
+    ...(years !== undefined ? { minYears: years } : {}),
+    education: 'bachelor',
+  };
 }

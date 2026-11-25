@@ -64,7 +64,7 @@ describe('sign up creates a separate, verified workspace (PRD 4.1, AC-01)', () =
     const ws = listWorkspaces().find((w) => w.slug === 'new-co')!;
     expect(ws.name).toBe('New Co');
     expect(activeWorkspaceId()).toBe(ws.id);
-    expect(assign).toHaveBeenCalledWith('/jobs?new=1');
+    expect(assign).toHaveBeenCalledWith('/jobs/new');
     const saved = JSON.parse(localStorage.getItem(workspaceKey(ws.id))!).state;
     // Nothing from the demo workspace is copied.
     expect(saved.candidates).toEqual([]);

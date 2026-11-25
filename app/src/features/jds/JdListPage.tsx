@@ -10,9 +10,10 @@ import { useT, type TKey } from '../../i18n/i18n';
 import { useStore } from '../../store/store';
 import { DeleteJdModal } from './DeleteJdModal';
 import { monthDay, year } from './format';
-import { JdEditor } from './JdEditor';
 
 const PAGE_SIZE = 10;
+/** Filter value for JDs without a client. */
+const INTERNAL = '__internal__';
 const FILTER_BTN =
   'flex items-center gap-2 px-3 py-2 bg-white dark:bg-[#251f1e] border border-[#e6dddb] dark:border-[#3a3433] rounded-lg text-sm font-medium text-[#181211] dark:text-white hover:border-primary/50 transition-colors whitespace-nowrap ';
 const INPUT =
@@ -57,7 +58,6 @@ export function JdListPage() {
   const [status, setStatus] = useState('');
   const [sort, setSort] = useState<Sort>('newest');
   const [page, setPage] = useState(1);
-  const [editor, setEditor] = useState<{ jd?: Jd } | null>(null);
   const [deleting, setDeleting] = useState<Jd | null>(null);
 
   const search = isFixtureMode() ? '?fixture=mockup' : '';
@@ -65,10 +65,11 @@ export function JdListPage() {
   const reset = <T,>(set: (v: T) => void) => (v: T) => { set(v); setPage(1); };
 
   const domains = useMemo(() => [...new Set(jds.flatMap((j) => j.domains))].sort(), [jds]);
+  const clients = useMemo(() => [...new Set(jds.map((j) => j.client).filter(Boolean))].sort(), [jds]);
   const filtered = useMemo(() => {
     const out = jds.filter(
       (j) =>
-        (!client.trim() || has(j.client, client)) &&
+        (!client || (client === INTERNAL ? !j.client : j.client === client)) &&
         (!q.trim() || has(j.title, q) || j.domains.some((d) => has(d, q)) || j.skills.some((s) => has(s, q))) &&
         (!stack.trim() || j.skills.some((s) => has(s, stack))) &&
         (!domain || j.domains.includes(domain)) &&
@@ -100,13 +101,11 @@ export function JdListPage() {
     <AppLayout title={t('nav.jdManagement')} subtitle={t('jds.subtitle')}>
       <div className="p-8 max-w-[1400px] mx-auto space-y-8 min-h-full">
         <div className="flex items-center justify-between gap-4">
-          <div className="relative group w-full max-w-sm">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#896a61] group-focus-within:text-primary transition-colors pointer-events-none flex items-center">
-              <span className="material-symbols-outlined text-[20px]">corporate_fare</span>
-            </span>
-            <input placeholder={t('jds.filter.client')} className={INPUT} type="text" value={client} onChange={(e) => reset(setClient)(e.target.value)} />
-          </div>
-          <button onClick={() => setEditor({})} className="px-6 py-2.5 bg-brand-accent hover:bg-brand-strong text-white rounded-full font-bold shadow-lg shadow-orange-500/20 flex items-center gap-2 transition-all transform active:scale-95 text-sm shrink-0">
+          {/* Client is a picked value, not free text: the list comes from the JDs, plus "Internal" for JDs with no client. */}
+          <Popover trigger={({ toggle }) => <FilterButton icon="corporate_fare" label={t('jds.filter.clientValue', { value: client === INTERNAL ? t('jds.client.internal') : client || t('jds.filter.allClients') })} onClick={toggle} />}>
+            {optionMenu(client, reset(setClient), [['', t('jds.filter.allClients')], ...clients.map((c): [string, string] => [c, c]), [INTERNAL, t('jds.client.internal')]])}
+          </Popover>
+          <button onClick={() => navigate({ pathname: '/jds/new', search })} className="px-6 py-2.5 bg-brand-accent hover:bg-brand-strong text-white rounded-full font-bold shadow-lg shadow-orange-500/20 flex items-center gap-2 transition-all transform active:scale-95 text-sm shrink-0">
             <span className="material-symbols-outlined text-[20px]">add</span> {t('jds.create')}
           </button>
         </div>
@@ -161,7 +160,7 @@ export function JdListPage() {
                     <tr key={jd.id} className="hover:bg-gray-50 dark:hover:bg-white/5 transition-colors group ">
                       <td className={TD}>
                         <div className="text-sm font-semibold text-slate-700 dark:text-gray-300">
-                          {jd.client || <span className="text-gray-300 dark:text-gray-600">—</span>}
+                          {jd.client || <span className="text-gray-400 dark:text-gray-500 font-medium">{t('jds.client.internal')}</span>}
                         </div>
                       </td>
                       <td className={TD}>
@@ -210,7 +209,7 @@ export function JdListPage() {
                           {(close) => (
                             <>
                               <MenuItem onClick={() => { close(); open(jd); }}>{t('jds.menu.view')}</MenuItem>
-                              <MenuItem onClick={() => { close(); setEditor({ jd }); }}>{t('jds.menu.edit')}</MenuItem>
+                              <MenuItem onClick={() => { close(); navigate({ pathname: `/jds/${jd.id}/edit`, search }); }}>{t('jds.menu.edit')}</MenuItem>
                               <MenuItem onClick={() => { close(); publish(jd); }}>{t(jd.status === 'Published' ? 'jds.menu.unpublish' : 'jds.menu.publish')}</MenuItem>
                               <MenuItem onClick={() => { close(); setDeleting(jd); }}>{t('jds.menu.delete')}</MenuItem>
                             </>
@@ -229,7 +228,6 @@ export function JdListPage() {
           </div>
         </div>
       </div>
-      <JdEditor open={editor !== null} jd={editor?.jd} onClose={() => setEditor(null)} />
       <DeleteJdModal jd={deleting} onClose={() => setDeleting(null)} />
     </AppLayout>
   );
