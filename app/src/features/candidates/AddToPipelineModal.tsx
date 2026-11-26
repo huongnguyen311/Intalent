@@ -20,7 +20,6 @@ type Props = {
 
 type Result = { ok: true } | { ok: false; stage: Stage } | { ok: false; closed: true };
 
-const DEFAULT_SOURCE = SOURCE_TALENT_POOL;
 const FIELD =
   'w-full px-3 py-2 bg-white dark:bg-[#251f1e] border border-[#e6dddb] dark:border-[#3a3433] rounded-lg text-sm text-[#181211] dark:text-white focus:ring-1 focus:ring-primary focus:border-primary focus:outline-none';
 const BTN_PRIMARY =
@@ -36,14 +35,12 @@ export function AddToPipelineModal({ open, onClose, candidateIds: fixedIds, jobI
   const candidates = useStore((s) => s.candidates);
   const [pickedJobId, setJobId] = useState('');
   const [picked, setPicked] = useState<string[]>([]);
-  const [source, setSource] = useState(DEFAULT_SOURCE);
   const [results, setResults] = useState<Record<string, Result> | null>(null);
 
   useEffect(() => {
     if (!open) return;
     setJobId('');
     setPicked([]);
-    setSource(DEFAULT_SOURCE);
     setResults(null);
   }, [open]);
 
@@ -61,7 +58,8 @@ export function AddToPipelineModal({ open, onClose, candidateIds: fixedIds, jobI
     for (const id of candidateIds) {
       const res = store.addToPipeline(id, jobId, {
         via: 'talent_pool',
-        source: source.trim() || DEFAULT_SOURCE,
+        // Always the Talent Pool: this modal only ever picks people from it.
+        source: SOURCE_TALENT_POOL,
         by: me(),
       });
       next[id] = res.ok ? { ok: true } : res.reason === 'duplicate' ? { ok: false, stage: res.stage } : { ok: false, closed: true };
@@ -99,11 +97,6 @@ export function AddToPipelineModal({ open, onClose, candidateIds: fixedIds, jobI
                 </select>
               </div>
             )}
-            <div className="flex flex-col gap-1">
-              <label htmlFor="atp-source" className="text-xs font-semibold text-[#896a61]">{t('atp.source')}</label>
-              <input id="atp-source" aria-describedby="atp-source-hint" className={FIELD} value={source} onChange={(e) => setSource(e.target.value)} />
-              <p id="atp-source-hint" className="text-xs text-[#896a61]">{t('atp.sourceHint')}</p>
-            </div>
             {searchMode && <PoolSearch jobId={jobId} selected={picked} onChange={setPicked} />}
           </>
         )}

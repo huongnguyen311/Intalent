@@ -29,6 +29,8 @@ export interface Candidate {
   /** CV tagline and city, used only to render the original-document pane. */
   headline?: string;
   location?: string;
+  /** Expected pay in USD per month; absent means "Contact for rate". Used by JD Matching's Max Rate filter. */
+  expectedRate?: number;
   /** Shown as "Primary Skills" on the profile; falls back to `skills`. */
   primarySkills?: string[];
   secondarySkills?: string[];
@@ -36,6 +38,13 @@ export interface Candidate {
   openToWork?: boolean;
   experience?: WorkExperience[];
   education?: EducationEntry[];
+  /** Original-document-only CV content (not structured profile fields). */
+  address?: string;
+  competencies?: CvCompetency[];
+  projects?: CvProject[];
+  certifications?: string[];
+  /** e.g. "English — IELTS 7.0". */
+  languages?: string[];
   /** Uploaded CV files, newest last (simulated: file name only). */
   cvVersions?: CvVersion[];
   /** Changes the candidate proposed to HR-standardised fields, waiting for review. */
@@ -46,6 +55,9 @@ export interface Candidate {
   anonymizedAt?: string;
   /** Latest AI CV parse (PRD 3.4 / AC-07): per-field confidence and fields the CV did not contain. */
   parse?: ParseResult;
+  /** Last staff or candidate edit of the profile (user id + ISO time). */
+  updatedBy?: string;
+  updatedAt?: string;
 }
 
 export interface Consent {
@@ -100,6 +112,28 @@ export interface WorkExperience {
   start: string;
   end: string;
   description: string;
+  /** CV bullet points for this job, as written in the original document; `sub` are nested bullets. */
+  highlights?: CvBullet[];
+}
+
+export interface CvBullet {
+  text: string;
+  sub?: string[];
+}
+
+/** "Label: text" line of the CV's Core Competencies block. */
+export interface CvCompetency {
+  label: string;
+  text: string;
+}
+
+export interface CvProject {
+  name: string;
+  role: string;
+  /** YYYY-MM – YYYY-MM or free text. */
+  period: string;
+  description: string;
+  tech: string[];
 }
 
 export interface EducationEntry {
@@ -303,8 +337,8 @@ export interface Job {
   hiringPriority?: HiringPriority;
   /** Date the job should be filled by (YYYY-MM-DD); past it with open seats, the job is overdue. */
   targetHiringDate?: string;
+  /** Why the job has this priority (who approved it, deadline driver, on-hold reason); shown on the priority badge. */
   urgencyReason?: string;
-  priorityNotes?: string;
   jdId: string;
   title: string;
   department: string;
@@ -631,6 +665,11 @@ export interface MatchRow {
   have: string[];
   miss: string[];
   reason: string;
+  location?: string;
+  /** USD per month (see Candidate.expectedRate). */
+  rate?: number;
+  /** Points per criterion; shown in the score's "why" popover. */
+  breakdown?: { stack: number; experience: number; domain: number; english: number };
 }
 
 export interface DemoMeta {

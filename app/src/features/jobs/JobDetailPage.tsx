@@ -3,27 +3,26 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { AppLayout } from '../../components/AppLayout';
 import { BackButton } from '../../components/BackButton';
 import { NotFoundState } from '../../components/NotFoundState';
-import { salaryRange } from '../../domain/hiring';
 import { userName } from '../../domain/users';
 import { useT, type TKey } from '../../i18n/i18n';
 import { can, jobsInScope } from '../../domain/permissions';
 import { useMe } from '../../store/session';
 import { useStore } from '../../store/store';
 import { fullDate } from '../jds/format';
-import { JobStatusBadge } from './JobBits';
 import { PipelineWorkspace } from '../pipeline/PipelineWorkspace';
-import { CampaignsTab, CandidatesTab, CareersPreviewTab } from './JobTabs';
+import { CampaignsTab, CandidatesTab } from './JobTabs';
 import { ago, editorPath } from './jobForm';
 import { useJobActions } from './useJobActions';
 
 const SECONDARY =
-  'px-5 py-2.5 bg-white dark:bg-[#2a2423] border border-[#e6dddb] dark:border-[#3a3433] text-slate-700 dark:text-white text-sm font-bold rounded-full shadow-sm hover:border-primary/50 transition-colors flex items-center gap-2 whitespace-nowrap';
+  'h-10 px-5 bg-white dark:bg-[#2a2423] border border-[#e6dddb] dark:border-[#3a3433] text-slate-700 dark:text-white text-sm font-bold rounded-full shadow-sm hover:border-primary/50 transition-colors flex items-center gap-2 whitespace-nowrap';
+const PRIMARY =
+  'h-10 px-5 bg-brand-accent hover:bg-brand-strong text-white text-sm font-bold rounded-full shadow-lg shadow-orange-500/20 transition-colors flex items-center gap-2 whitespace-nowrap';
 
-const TABS: Array<['pipeline' | 'candidates' | 'campaigns' | 'careers', TKey]> = [
+const TABS: Array<['pipeline' | 'candidates' | 'campaigns', TKey]> = [
   ['pipeline', 'jobs.tab.pipeline'],
   ['candidates', 'jobs.tab.candidates'],
   ['campaigns', 'jobs.tab.campaigns'],
-  ['careers', 'jobs.tab.careers'],
 ];
 
 export function JobDetailPage() {
@@ -33,7 +32,6 @@ export function JobDetailPage() {
   const user = useMe();
   const job = useStore((s) => jobsInScope(user, s.jobs).find((j) => j.id === id));
   const canEdit = can(user, 'job.edit');
-  const jd = useStore((s) => s.jds.find((j) => j.id === job?.jdId));
   const users = useStore((s) => s.users);
   const [tab, setTab] = useState<(typeof TABS)[number][0]>('pipeline');
   const { actionsFor, dialog } = useJobActions();
@@ -61,7 +59,7 @@ export function JobDetailPage() {
     <AppLayout title={t('nav.jobs')} subtitle={t('jobs.subtitle')}>
       <div className="min-h-full bg-[#fbf9f8] dark:bg-background-dark">
         <div className="p-8 max-w-[1400px] mx-auto space-y-8">
-          <div className="flex items-end justify-between">
+          <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-4">
               <BackButton label={t('jobs.detail.back')} onClick={() => navigate('/jobs')} />
               <div>
@@ -69,36 +67,18 @@ export function JobDetailPage() {
                 <p className="text-[#896a61] text-sm flex items-center gap-3 flex-wrap">
                   <span>{t('jobs.detail.meta', { department: job.department, location: job.location, level: job.level })}</span>
                   <span>• {t('jobs.detail.opened', { date: fullDate(job.openedAt) })}</span>
-                  {jd && <span>• {t('jobs.detail.jd', { code: jd.code })}</span>}
-                  <span>• {userName(users, job.hiringManager)}</span>
-                  {!!job.collaborators?.length && (
-                    <span title={`${t('jobs.drawer.recruiters')}: ${job.collaborators.map((u) => userName(users, u)).join(', ')}`}>+{job.collaborators.length}</span>
-                  )}
-                  {job.workplace && <span>• {t(`workplace.${job.workplace}`)}</span>}
-                  {job.headcount && <span>• {t('jobs.detail.headcount', { n: job.headcount })}</span>}
-                  {salaryRange(job) && <span>• {salaryRange(job)}</span>}
-                  <JobStatusBadge status={job.status} />
                 </p>
               </div>
             </div>
-            {(canEdit || actions.length > 0) && <div className="flex items-center gap-3">
+            {(canEdit || actions.length > 0) && <div className="flex items-center gap-2 shrink-0">
               {canEdit && (
-                <>
-                  <button onClick={() => navigate(editorPath('edit', job.id), { state: { from: `/jobs/${job.id}` } })} className={SECONDARY}>
-                    <span className="material-symbols-outlined text-[20px]">edit</span>{t('jobs.menu.edit')}
-                  </button>
-                  <button onClick={() => navigate(editorPath('duplicate', job.id), { state: { from: `/jobs/${job.id}` } })} className={SECONDARY}>
-                    <span className="material-symbols-outlined text-[20px]">content_copy</span>{t('jobs.menu.duplicate')}
-                  </button>
-                </>
+                <button onClick={() => navigate(editorPath('edit', job.id), { state: { from: `/jobs/${job.id}` } })} className={SECONDARY}>
+                  <span className="material-symbols-outlined text-[18px]">edit</span>{t('jobs.menu.edit')}
+                </button>
               )}
               {actions.map((a) => (
-                <button
-                  key={a.id}
-                  onClick={a.run}
-                  className={a.primary ? 'px-6 py-2.5 bg-brand-accent hover:bg-brand-strong text-white rounded-full font-bold shadow-lg shadow-orange-500/20 flex items-center gap-2 text-sm whitespace-nowrap' : SECONDARY}
-                >
-                  <span className="material-symbols-outlined text-[20px]">{a.icon}</span>{a.label}
+                <button key={a.id} onClick={a.run} className={a.primary ? PRIMARY : SECONDARY}>
+                  <span className="material-symbols-outlined text-[18px]">{a.icon}</span>{a.label}
                 </button>
               ))}
             </div>}
@@ -131,7 +111,6 @@ export function JobDetailPage() {
           {tab === 'pipeline' && <PipelineWorkspace job={job} />}
           {tab === 'candidates' && <CandidatesTab job={job} />}
           {tab === 'campaigns' && <CampaignsTab job={job} />}
-          {tab === 'careers' && <CareersPreviewTab job={job} jd={jd} />}
         </div>
       </div>
       {dialog}

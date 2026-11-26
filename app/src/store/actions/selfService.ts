@@ -39,7 +39,7 @@ export function selfServiceActions(set: Set, get: Get, env: Env): Pick<DemoActio
         Object.entries(patch).map(([k, v]) => [k, typeof v === 'string' ? v.trim() : v]),
       ) as typeof patch;
       if (clean.email !== undefined && !clean.email && !(clean.phone ?? before.phone)) return { ok: false, reason: 'no_contact' };
-      const r = get().updateCandidate(candidateId, clean);
+      const r = get().updateCandidate(candidateId, clean, by);
       if (!r.ok) return r;
       const changed = (Object.keys(clean) as Array<keyof typeof clean>).filter((k) => before[k] !== r.candidate[k]);
       if (changed.length === 0) return r;

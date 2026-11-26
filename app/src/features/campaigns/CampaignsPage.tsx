@@ -87,7 +87,7 @@ export function CampaignsPage() {
         </div>
 
         <div className="bg-white dark:bg-surface-dark rounded-[1.5rem] shadow-sm border border-gray-100 dark:border-white/10 overflow-hidden">
-          <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-320px)] custom-scrollbar">
+          <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-274px)] custom-scrollbar">
             <table className="w-full text-left border-collapse">
               <thead className="bg-[#f8f6f6] dark:bg-[#251f1e] sticky top-0 z-10">
                 <tr>

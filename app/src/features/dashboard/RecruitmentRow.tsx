@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { AI_MATCH_THRESHOLD, type DashboardMetrics } from '../../domain/metrics';
-import type { Job, User } from '../../domain/types';
+import type { User } from '../../domain/types';
 import { useLang, useT } from '../../i18n/i18n';
 import { useMe } from '../../store/session';
 import { useApprovals, useTodo } from '../todo/TodoList';
@@ -15,7 +15,7 @@ import { CAPTION, OpenJobs, PANEL, Panel, TodayPanel, ActivityPanel, TRACK } fro
  * - data colour is the brand primary only (each chart is a single series); red is kept for the funnel's weakest step;
  * - the KPIs read as one band split by hairlines rather than five separate cards.
  */
-const SELECT = 'h-9 rounded-lg border border-hairline bg-white dark:bg-[#1e1e1e] dark:border-white/10 px-3 text-xs font-semibold text-slate-700 dark:text-gray-200';
+const SELECT = 'h-9 rounded-lg border border-hairline bg-white dark:bg-[#1e1e1e] dark:border-white/10 pl-3 pr-9 text-xs font-semibold text-slate-700 dark:text-gray-200';
 
 const pct = (n: number, of: number) => (of ? Math.round((100 * n) / of) : undefined);
 
@@ -45,19 +45,14 @@ const VN_FAMILY = new Set(['nguyen', 'tran', 'le', 'pham', 'hoang', 'huynh', 'ph
  * Over-SLA cases are not a tile of their own: the to-do list already names each one.
  * Recruitment cost is left out on purpose: the app records no cost data yet.
  */
-export function RecruitmentRow({ metrics, jobs, recruiters, jobFilter, recruiterFilter, onJob, onRecruiter, period, cta, now = Date.now() }: {
+export function RecruitmentRow({ metrics, recruiters, recruiterFilter, onRecruiter, period, now = Date.now() }: {
   metrics: DashboardMetrics['recruitment'];
   /** The date-range buttons, shown with the job / recruiter filters. */
   period?: React.ReactNode;
-  /** The page's primary action (Create job), shown at the end of the header when the user may use it. */
-  cta?: React.ReactNode;
   now?: number;
-  jobs: Job[];
   /** Omitted when the viewer only sees their own jobs: the recruiter filter is then hidden. */
   recruiters?: User[];
-  jobFilter: string;
   recruiterFilter: string;
-  onJob: (id: string) => void;
   onRecruiter: (id: string) => void;
 }) {
   const t = useT();
@@ -111,17 +106,12 @@ export function RecruitmentRow({ metrics, jobs, recruiters, jobFilter, recruiter
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {period}
-          <select aria-label={t('dashboard.filter.job')} className={SELECT} value={jobFilter} onChange={(e) => onJob(e.target.value)}>
-            <option value="">{t('dashboard.filter.allJobs')}</option>
-            {jobs.map((j) => <option key={j.id} value={j.id}>{j.title}</option>)}
-          </select>
           {recruiters && (
             <select aria-label={t('dashboard.filter.recruiter')} className={SELECT} value={recruiterFilter} onChange={(e) => onRecruiter(e.target.value)}>
               <option value="">{t('dashboard.filter.allRecruiters')}</option>
               {recruiters.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
             </select>
           )}
-          {cta}
         </div>
       </div>
 

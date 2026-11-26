@@ -2,6 +2,7 @@ import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter, useLocation, useNavigate } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { buildSeed } from '../../data/seed';
+import { withoutDemoJobs } from '../../data/demoJobs';
 import { jobPostFromJd } from '../../domain/jobPost';
 import type { Job } from '../../domain/types';
 import { AppRoutes } from '../../routes';
@@ -28,7 +29,7 @@ const patchJob1 = (patch: Partial<Job>) =>
   useStore.setState({ jobs: useStore.getState().jobs.map((j) => (j.id === 'job-1' ? { ...j, ...patch } : j)) });
 
 beforeEach(() => {
-  useStore.setState({ ...buildSeed() });
+  useStore.setState({ ...withoutDemoJobs(buildSeed()) });
 });
 
 describe('JobEditorPage', () => {
@@ -123,14 +124,11 @@ describe('JobEditorPage', () => {
     expect(where()).toBe('/jobs/job-1/duplicate');
   });
 
-  it('job detail Edit and Duplicate open the editor page', () => {
-    const a = renderAt('/jobs/job-1');
+  it('job detail Edit opens the editor page; Duplicate lives on the job list only', () => {
+    renderAt('/jobs/job-1');
+    expect(screen.queryByRole('button', { name: /Duplicate/ })).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: /Edit/ }));
     expect(where()).toBe('/jobs/job-1/edit');
-    a.unmount();
-    renderAt('/jobs/job-1');
-    fireEvent.click(screen.getByRole('button', { name: /Duplicate/ }));
-    expect(where()).toBe('/jobs/job-1/duplicate');
   });
 });
 
@@ -249,6 +247,17 @@ describe('JobEditorPage small fixes', () => {
     expect(screen.getByLabelText('Title')).toHaveValue('Tech Lead / Senior Engineer');
   });
 
+  it('picking a JD sets the minimum years from it, even over a typed value', async () => {
+    const { jdRequirements } = await import('../../domain/jdExtract');
+    const years = (id: string) => jdRequirements(useStore.getState().jds.find((j) => j.id === id)!).years;
+    renderAt('/jobs/new');
+    fireEvent.change(screen.getByLabelText('Minimum years of experience'), { target: { value: '12' } });
+    fireEvent.change(screen.getByLabelText('Job description'), { target: { value: 'jd-2026-002' } });
+    expect(screen.getByLabelText('Minimum years of experience')).toHaveValue(years('jd-2026-002'));
+    fireEvent.change(screen.getByLabelText('Job description'), { target: { value: 'jd-2026-003' } });
+    expect(screen.getByLabelText('Minimum years of experience')).toHaveValue(years('jd-2026-003'));
+  });
+
 });
 
 describe('JobEditorPage + Create a new JD', () => {
@@ -303,7 +312,6 @@ describe('JobEditorPage + Create a new JD', () => {
 
     it('create starts at Normal with a target date 60 days out', () => {
       renderAt('/jobs/new');
-      expect(screen.getByRole('heading', { name: 'Hiring urgency' })).toBeInTheDocument();
       expect(screen.getByLabelText('Hiring priority')).toHaveValue('normal');
       expect(screen.getByLabelText('Target hiring date')).toHaveValue(plus60());
     });
@@ -317,16 +325,25 @@ describe('JobEditorPage + Create a new JD', () => {
       expect(useStore.getState().jobs).toHaveLength(before);
     });
 
-    it('saves priority, reason, notes and date', () => {
+    it('saves priority, reason and date', () => {
       renderAt('/jobs/new?fromJd=jd-2026-002');
       fireEvent.change(screen.getByLabelText('Hiring priority'), { target: { value: 'critical' } });
-      fireEvent.change(screen.getByLabelText('Urgency reason'), { target: { value: 'Project needs devs now' } });
-      fireEvent.change(screen.getByLabelText('Priority notes'), { target: { value: 'Ask CTO' } });
+      fireEvent.change(screen.getByLabelText('Priority reason'), { target: { value: 'Project needs devs now' } });
       fireEvent.change(screen.getByLabelText('Target hiring date'), { target: { value: '2027-01-15' } });
       fireEvent.click(screen.getByRole('button', { name: 'Save draft' }));
       expect(useStore.getState().jobs[0]).toMatchObject({
-        hiringPriority: 'critical', urgencyReason: 'Project needs devs now', priorityNotes: 'Ask CTO', targetHiringDate: '2027-01-15',
+        hiringPriority: 'critical', urgencyReason: 'Project needs devs now', targetHiringDate: '2027-01-15',
       });
+    });
+
+    it('hides the priority reason at Normal and drops a stale one on save', () => {
+      renderAt('/jobs/new?fromJd=jd-2026-002');
+      expect(screen.queryByLabelText('Priority reason')).toBeNull();
+      fireEvent.change(screen.getByLabelText('Hiring priority'), { target: { value: 'urgent' } });
+      fireEvent.change(screen.getByLabelText('Priority reason'), { target: { value: 'Old reason' } });
+      fireEvent.change(screen.getByLabelText('Hiring priority'), { target: { value: 'normal' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Save draft' }));
+      expect(useStore.getState().jobs[0].urgencyReason).toBeUndefined();
     });
 
     it('editing a job without a date prefills 60 days out and keeps its priority', () => {
@@ -405,7 +422,19 @@ describe('JobEditorPage post content', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Preview' }));
     const panel = screen.getByRole('dialog', { name: 'Preview' });
     expect(panel).toHaveTextContent('Preview summary');
-    expect(within(panel).getByRole('heading', { name: 'Nice to have' })).toBeInTheDocument();
+    // The preview is the real careers page, so it speaks the careers site's language (Vietnamese by default).
+    expect(within(panel).getByRole('heading', { name: /Nice to have|Điểm cộng/ })).toBeInTheDocument();
+  });
+
+  it('Preview pops up the careers job detail and its links cannot leave the editor', () => {
+    renderAt('/jobs/job-1/edit');
+    fireEvent.click(screen.getByRole('button', { name: 'Preview' }));
+    const panel = screen.getByRole('dialog', { name: 'Preview' });
+    const apply = within(panel).getAllByRole('link').find((a) => a.getAttribute('href')?.endsWith('/apply'))!;
+    expect(fireEvent.click(apply)).toBe(false);
+    expect(screen.getByTestId('job-editor')).toBeInTheDocument();
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(screen.queryByRole('dialog', { name: 'Preview' })).toBeNull();
   });
 
   it('saves the post content on the job', () => {

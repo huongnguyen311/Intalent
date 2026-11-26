@@ -17,19 +17,16 @@ type Props = {
   showJob?: boolean;
   onOpen: (appId: string) => void;
   onMove: (appId: string, to: Stage) => void;
-  /** Collapsed: a narrow strip that is still a drop target for its stage. */
-  collapsed?: boolean;
-  onToggleCollapse?: () => void;
   /** Bulk selection (ids across the whole board); omit to hide checkboxes. */
   selected?: Set<string>;
   onSelect?: (ids: string[], on: boolean) => void;
 };
 
-export function Column({ stage, apps, candidates, jobOf, showJob, onOpen, onMove, collapsed, onToggleCollapse, selected, onSelect }: Props) {
+export function Column({ stage, apps, candidates, jobOf, showJob, onOpen, onMove, selected, onSelect }: Props) {
   const t = useT();
   const label = useStageName();
   const { setNodeRef, isOver } = useDroppable({ id: stage });
-  const over = isOver ? 'border-primary/50 bg-orange-50/60 dark:bg-white/5' : 'bg-white dark:bg-[#1a1a1a]';
+  const over = isOver ? 'border-primary/50 bg-orange-50/60 dark:bg-white/5' : 'bg-slate-50 dark:bg-[#1a1a1a]';
   // Each column carries only a whisper of its stage colour (very light wash + border) so the board stays easy on the eyes.
   const color = STAGE_COLOR[stage];
   const tint = isOver
@@ -39,32 +36,6 @@ export function Column({ stage, apps, candidates, jobOf, showJob, onOpen, onMove
         borderColor: `${color}26`,
         boxShadow: '0 1px 2px rgba(15,23,42,0.04)',
       };
-  if (collapsed) {
-    return (
-      <section
-        ref={setNodeRef}
-        data-testid={`column-${stage}`}
-        aria-label={label(stage)}
-        className={`w-12 shrink-0 flex flex-col items-center gap-2 rounded-xl border py-2 transition-colors ${over}`}
-        style={tint}
-      >
-        <button
-          aria-label={t('pipeline.expand', { stage: label(stage) })}
-          title={t('pipeline.expand', { stage: label(stage) })}
-          onClick={onToggleCollapse}
-          className="size-7 rounded-full flex items-center justify-center text-[#896a61] hover:text-primary hover:bg-white dark:hover:bg-white/5"
-        >
-          <span aria-hidden="true" className="material-symbols-outlined text-[18px]">chevron_left</span>
-        </button>
-        <span data-testid="column-count" className="min-w-[22px] h-5 px-1.5 rounded-full text-[11px] font-bold flex items-center justify-center" style={{ background: `${color}1f`, color: '#334155' }}>
-          {apps.length}
-        </span>
-        <span style={{ writingMode: 'vertical-rl' }} className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">
-          {label(stage)}
-        </span>
-      </section>
-    );
-  }
   return (
     <section
       ref={setNodeRef}

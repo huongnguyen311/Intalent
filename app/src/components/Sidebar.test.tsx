@@ -58,13 +58,16 @@ describe('Sidebar', () => {
     expect(screen.getByText('Talent Pool')).toBeInTheDocument();
   });
 
-  it('puts JD Management under Recruitment and JD Matching under Talent Pool', () => {
+  it('puts JD Management under Recruitment and keeps JD Matching off the menu', () => {
     renderAt('/');
+    expect(screen.queryByRole('link', { name: /JD Matching/ })).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: /Recruitment/ }));
     expect(screen.queryByRole('link', { name: /JD Management/ })).toBeNull();
-    expect(screen.getByRole('link', { name: /JD Matching/ })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: /Talent Pool/ }));
-    expect(screen.queryByRole('link', { name: /JD Matching/ })).toBeNull();
+  });
+
+  it('highlights JD Management while on JD Matching', () => {
+    renderAt('/jd-matching?jd=x');
+    expect(screen.getByRole('link', { name: /JD Management/ })).toHaveClass('bg-primary');
   });
 
   it('user menu offers language toggle, reset and log out', () => {

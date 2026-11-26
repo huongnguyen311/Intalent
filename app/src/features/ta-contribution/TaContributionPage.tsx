@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { AppLayout } from '../../components/AppLayout';
+import { downloadCsv } from '../../components/download';
 import { toast } from '../../components/Toast';
 import { toCsv } from '../../domain/csv';
 import { taContribution, UNATTRIBUTED, type Period, type TaRow } from '../../domain/taContribution';
@@ -26,17 +27,6 @@ const plus = (n: number) => (n > 0 ? `+${n}` : '0');
 const minus = (n: number) => (n > 0 ? `−${n}` : '0');
 const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
-function download(csv: string) {
-  if (typeof URL.createObjectURL !== 'function') return;
-  const a = document.createElement('a');
-  // BOM so Excel reads the Vietnamese text as UTF-8.
-  a.href = URL.createObjectURL(new Blob(['﻿', csv], { type: 'text/csv;charset=utf-8' }));
-  a.download = 'cv-theo-ta.csv';
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(a.href);
-}
 
 export function TaContributionPage() {
   const t = useT();
@@ -69,7 +59,7 @@ export function TaContributionPage() {
       [t('ta.col.transferOut')]: r.transferOut,
       [t('ta.col.total')]: r.total,
     });
-    download(toCsv([...rows, totals].map(header)));
+    downloadCsv('cv-theo-ta.csv', toCsv([...rows, totals].map(header)));
     toast(t('ta.exported'));
   };
 

@@ -97,8 +97,7 @@ export function buildShowcaseJob(daysAgo: (d: number) => string): Job {
     status: 'open',
     hiringPriority: 'high',
     targetHiringDate: daysAgo(-40).slice(0, 10),
-    urgencyReason: 'Client is launching a new payments region in Q1 and needs two more backend engineers.',
-    priorityNotes: 'Budget approved by the Engineering Director.',
+    urgencyReason: 'Client is launching a new payments region in Q1 and needs two more backend engineers. Budget approved by the Engineering Director.',
     minYears: 4,
     education: 'bachelor',
     stageSla: { new: 2, ai_screening: 1, screening: 5, interview: 7, assessment: 5, final_interview: 5, offer: 3 },
@@ -109,7 +108,7 @@ export function buildShowcaseJob(daysAgo: (d: number) => string): Job {
     salaryMax: 70 * MIL,
     currency: 'VND',
     showSalary: true,
-    collaborators: ['u-huy', 'u-linh'],
+    collaborators: ['u-huy', 'u-linh', 'u-tien'],
     interviewers: ['u-thu', 'u-chau'],
     questions: [
       { id: 'q-notice', label: 'What is your notice period?', type: 'text', required: true },

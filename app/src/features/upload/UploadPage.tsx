@@ -4,9 +4,12 @@ import { UPLOAD_LIMITS } from '../../domain/parseCv';
 import { SOURCE_CV_UPLOAD } from '../../domain/sources';
 import { useShowNew } from '../../hooks';
 import { useT } from '../../i18n/i18n';
+import { useStore } from '../../store/store';
+import { showcaseRows } from './showcase';
 import { UploadModeSwitch } from './UploadModeSwitch';
 import { QueueRows, QueueSummary } from './QueueRows';
 import { useUploadQueue } from './useUploadQueue';
+import { UploadWorkspace } from './UploadWorkspace';
 
 // The app uses the brand primary for the main action; the mockup's button is near-black.
 const BTN_PRIMARY = 'bg-primary hover:bg-primary-hover text-white';
@@ -17,11 +20,13 @@ export function UploadPage() {
   const showNew = useShowNew();
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
-  const { rows, running, add, clear, resolve, retry } = useUploadQueue({
+  const { rows, running, lastRun, dismissResult, add, clear, resolve, retry } = useUploadQueue({
     limits: UPLOAD_LIMITS,
     source: SOURCE_CV_UPLOAD,
     concurrency: 2,
     autoStart: true,
+    // Sample rows show every queue state; the mockup (fixture mode) opens on an empty queue.
+    initialRows: () => (showNew ? showcaseRows(UPLOAD_LIMITS, useStore.getState().candidates) : []),
   });
 
   const onDrop = (e: DragEvent) => {
@@ -30,6 +35,15 @@ export function UploadPage() {
     add(Array.from(e.dataTransfer.files));
   };
 
+  if (showNew) {
+    return (
+      <AppLayout title={t('nav.uploadCvs')} subtitle={t('upload.subtitle')}>
+        <UploadWorkspace mode="normal" rows={rows} running={running} accept=".pdf,.docx,.txt" maxFiles={UPLOAD_LIMITS.maxFiles} lastRun={lastRun} dismissResult={dismissResult} add={add} clear={clear} resolve={resolve} retry={retry} />
+      </AppLayout>
+    );
+  }
+
+  // Fixture mode keeps the mockup markup below for pixel comparison.
   return (
     <AppLayout title={t('nav.uploadCvs')} subtitle={showNew ? t('upload.subtitle') : undefined}>
       <div className="px-8 pb-8 pt-4">

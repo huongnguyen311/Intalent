@@ -1,7 +1,6 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { AppLayout } from '../../components/AppLayout';
-import { Avatar, toneFor } from '../../components/Avatar';
 import { interviewTime, localStamp } from '../../domain/hiring';
 import type { Application, Interview, Job } from '../../domain/types';
 import { useT } from '../../i18n/i18n';
@@ -101,7 +100,6 @@ export function MyInterviewsPage() {
                   className="w-full text-left px-4 py-4 flex items-center gap-4 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
                 >
                   <div className="w-48 shrink-0 whitespace-nowrap text-sm font-semibold tabular-nums text-slate-800 dark:text-white">{interviewTime(iv.at)}</div>
-                  <Avatar name={name} tone={toneFor(name)} small />
                   <div className="flex-1 min-w-0">
                     <div className="font-bold text-sm text-slate-800 dark:text-white truncate">{name}</div>
                     <div className="text-xs text-[#896a61] truncate">{job?.title} · {iv.round}</div>

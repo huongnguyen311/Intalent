@@ -118,6 +118,60 @@ describe('CandidateProfilePage', () => {
     expect(within(dialog).getAllByRole('listitem')).toHaveLength(1);
   });
 
+  it('Save stamps Last updated by with the editor and date', () => {
+    renderAt(`/candidates/${id}`);
+    expect(screen.getByTestId('candidate-detail-lastupdatedby-input')).toHaveValue('—');
+    fireEvent.click(screen.getByRole('button', { name: /Edit/ }));
+    fireEvent.change(screen.getByLabelText('Current Role'), { target: { value: 'Staff Engineer' } });
+    fireEvent.click(screen.getByRole('button', { name: /Save/ }));
+    const c = useStore.getState().candidates[0];
+    expect(c.updatedBy).toBe('u-admin');
+    expect((screen.getByTestId('candidate-detail-lastupdatedby-input') as HTMLInputElement).value).toMatch(/^Super Admin · \d{2}\/\d{2}\/\d{4}$/);
+  });
+
+  it('shows location, source, added date and years of experience', () => {
+    const c = useStore.getState().candidates[0];
+    renderAt(`/candidates/${id}`);
+    expect(screen.getByLabelText('Location')).toHaveValue(c.location ?? '');
+    expect(screen.getByLabelText('Source')).toHaveValue(c.source);
+    expect(screen.getByLabelText('Added to pool')).toHaveValue(c.createdAt.slice(8, 10) + '/' + c.createdAt.slice(5, 7) + '/' + c.createdAt.slice(0, 4));
+    expect(screen.getByLabelText('Years of experience')).toBeInTheDocument();
+  });
+
+  it('edits tags, skills, open to work, experience and education', () => {
+    renderAt(`/candidates/${id}`);
+    fireEvent.click(screen.getByRole('button', { name: /Edit/ }));
+    const tagBox = within(screen.getByText('Tags').closest('section')!).getByRole('textbox');
+    fireEvent.change(tagBox, { target: { value: 'hot-lead' } });
+    fireEvent.keyDown(tagBox, { key: 'Enter' });
+    fireEvent.change(screen.getByLabelText('Primary Skills: Type and press Enter'), { target: { value: 'Rust' } });
+    fireEvent.keyDown(screen.getByLabelText('Primary Skills: Type and press Enter'), { key: 'Enter' });
+    const before = useStore.getState().candidates[0].openToWork;
+    fireEvent.click(screen.getByLabelText('Open to Work'));
+    fireEvent.click(screen.getByRole('button', { name: /Add experience/ }));
+    const titles = screen.getAllByLabelText('Job Title');
+    fireEvent.change(titles[titles.length - 1], { target: { value: 'CTO' } });
+    fireEvent.click(screen.getByRole('button', { name: /Add education/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Save/ }));
+    const c = useStore.getState().candidates[0];
+    expect(c.tags).toContain('hot-lead');
+    expect(c.primarySkills).toContain('Rust');
+    expect(c.skills).toContain('Rust');
+    expect(c.openToWork).toBe(!before);
+    expect(c.experience?.[c.experience.length - 1]?.title).toBe('CTO');
+    // An empty education row is dropped on save.
+    expect(c.education?.every((e) => e.degree || e.institution)).toBe(true);
+  });
+
+  it('Activity history lists what was logged about the candidate, newest first', () => {
+    const { users } = useStore.getState();
+    const other = users.find((u) => u.id !== 'u-admin' && u.role !== 'Candidate')!;
+    useStore.getState().transferOwner(id, other.id, 'u-admin');
+    renderAt(`/candidates/${id}`);
+    const history = screen.getByRole('region', { name: 'Activity history' });
+    expect(within(history).getByText(/CV owner changed/)).toBeInTheDocument();
+  });
+
   it('mockup fixture renders the first candidate fully and hides the new UI', () => {
     useStore.setState(buildMockupFixture());
     window.history.pushState({}, '', '/?fixture=mockup');

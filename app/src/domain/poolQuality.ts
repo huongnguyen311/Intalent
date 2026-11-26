@@ -27,6 +27,13 @@ function monthsBefore(now: Date, months: number): number {
   return d.getTime();
 }
 
+/** Freshness band of the last CV refresh (see AGING_MONTHS / STALE_MONTHS). */
+export function cvFreshness(c: Candidate, now: Date): 'fresh' | 'aging' | 'stale' {
+  const at = Date.parse(lastCvAt(c));
+  if (at < monthsBefore(now, STALE_MONTHS)) return 'stale';
+  return at < monthsBefore(now, AGING_MONTHS) ? 'aging' : 'fresh';
+}
+
 const blank = (s: string | undefined) => !s?.trim();
 
 export function matchesGap(c: Candidate, gap: Gap, now: Date): boolean {

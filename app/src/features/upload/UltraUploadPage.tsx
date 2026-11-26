@@ -4,10 +4,12 @@ import { ULTRA_LIMITS } from '../../domain/parseCv';
 import { SOURCE_ULTRA_UPLOAD } from '../../domain/sources';
 import { useShowNew } from '../../hooks';
 import { useT } from '../../i18n/i18n';
-import { UploadModeSwitch } from './UploadModeSwitch';
+import { useStore } from '../../store/store';
+import { showcaseRows } from './showcase';
 import { QueueRows, QueueSummary } from './QueueRows';
 import { LucideIcon } from './ultraIcons';
 import { useUploadQueue } from './useUploadQueue';
+import { UploadWorkspace } from './UploadWorkspace';
 
 // Particle positions are taken from the mockup snapshot; only their drift is animated (CSS, see ANIMATIONS).
 const PARTICLES: [left: number, top: number][] = [
@@ -28,11 +30,13 @@ export function UltraUploadPage() {
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
   const showNew = useShowNew();
-  const { rows, running, add, start, clear, resolve, retry } = useUploadQueue({
+  const { rows, running, lastRun, dismissResult, add, start, clear, resolve, retry } = useUploadQueue({
     limits: ULTRA_LIMITS,
     source: SOURCE_ULTRA_UPLOAD,
     concurrency: 20,
     autoStart: false,
+    // Sample rows show every queue state; the mockup (fixture mode) opens on an empty queue.
+    initialRows: () => (showNew ? showcaseRows(ULTRA_LIMITS, useStore.getState().candidates) : []),
   });
   const hasQueued = rows.some((r) => r.status === 'queued');
 
@@ -48,6 +52,15 @@ export function UltraUploadPage() {
     }
   };
 
+  if (showNew) {
+    return (
+      <AppLayout title={t('nav.ultraUpload')} subtitle={t('upload.subtitle')}>
+        <UploadWorkspace mode="ultra" rows={rows} running={running} accept=".pdf,.docx" maxFiles={ULTRA_LIMITS.maxFiles} lastRun={lastRun} dismissResult={dismissResult} add={add} clear={clear} start={start} resolve={resolve} retry={retry} />
+      </AppLayout>
+    );
+  }
+
+  // Fixture mode keeps the mockup markup below for pixel comparison.
   return (
     <AppLayout title={t('nav.ultraUpload')}>
       <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black relative overflow-hidden">
@@ -64,7 +77,6 @@ export function UltraUploadPage() {
         </div>
         <div className="relative z-10 container mx-auto px-6 py-12">
           <div className="text-center mb-16">
-            <UploadModeSwitch mode="ultra" dark />
             <div className="inline-flex items-center gap-4 mb-6 bg-white/5 backdrop-blur-xl rounded-full px-8 py-3 border border-white/20">
               <LucideIcon name="cpu" className="w-6 h-6 text-gray-300" />
               <LucideIcon name="sparkles" className="w-6 h-6 text-orange-400" />

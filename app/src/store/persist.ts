@@ -3,7 +3,7 @@ import { buildSeed } from '../data/seed';
 import type { DemoState } from '../domain/types';
 
 export const PERSIST_KEY = 'intalent-demo';
-export const PERSIST_VERSION = 17;
+export const PERSIST_VERSION = 24;
 
 /** Only data is persisted; actions are re-attached by the store. */
 export function pickData(s: DemoState): DemoState {

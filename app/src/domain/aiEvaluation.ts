@@ -7,11 +7,10 @@ export const AI_MODEL = 'intalent-match-v1' as const;
 
 const CRITERIA: AiCriterion[] = ['stack', 'experience', 'domain', 'english'];
 
-/** Requirements from the job's JD; a job whose JD is gone gets an empty stack (no criteria to miss). The job's own minimum years win over the JD's. */
+/** Requirements come from the job's JD alone; a job whose JD is gone gets an empty stack (no criteria to miss). */
 export function requirementsForJob(job: Job, jds: Jd[], taxonomy: TaxonomyItem[]): Requirements {
   const jd = jds.find((j) => j.id === job.jdId);
-  const req: Requirements = jd ? jdRequirements(jd, taxonomy) : { stack: [] };
-  return job.minYears ? { ...req, years: job.minYears } : req;
+  return jd ? jdRequirements(jd, taxonomy) : { stack: [] };
 }
 
 /** First sentence of the CV text or an experience description that mentions `term`; never paraphrased. */

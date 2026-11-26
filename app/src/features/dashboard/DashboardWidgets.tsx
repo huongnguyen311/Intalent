@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Avatar, toneFor } from '../../components/Avatar';
-import { PERIODS, type DashboardMetrics, type OpenJobRow, type Period, type WeekInterview } from '../../domain/metrics';
+import { PERIODS, type DashboardMetrics, type DateRange, type OpenJobRow, type Period, type WeekInterview } from '../../domain/metrics';
 import { stageLabel } from '../../domain/stages';
 import type { Stage } from '../../domain/types';
 import { useLang, useT, type TKey } from '../../i18n/i18n';
@@ -36,6 +36,39 @@ export function Panel({ title, caption, action, testId, className = '', children
       </div>
       <div className="mt-5">{children}</div>
     </section>
+  );
+}
+
+const RANGE_KINDS = ['all', 'today', 'week', 'month', 'custom'] as const;
+const RANGE_SELECT = 'h-9 rounded-lg border border-hairline bg-white dark:bg-[#1e1e1e] dark:border-white/10 pl-3 pr-9 text-xs font-semibold text-slate-700 dark:text-gray-200';
+
+/** Dashboard date range: a dropdown of presets; "Custom" reveals a from/to pair of date pickers. */
+export function DateRangeControl({ value, onChange, today }: { value: DateRange; onChange: (r: DateRange) => void; today: string }) {
+  const t = useT();
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <select
+        aria-label={t('dashboard.range.label')}
+        data-testid="dashboard-range"
+        className={RANGE_SELECT}
+        value={value.kind}
+        onChange={(e) => {
+          const kind = e.target.value as DateRange['kind'];
+          onChange(kind === 'custom' ? { kind, from: today, to: today } : { kind });
+        }}
+      >
+        {RANGE_KINDS.map((k) => <option key={k} value={k}>{t(`dashboard.range.${k}` as TKey)}</option>)}
+      </select>
+      {value.kind === 'custom' && (
+        <>
+          <input type="date" aria-label={t('dashboard.range.from')} className={RANGE_SELECT} value={value.from} max={value.to || undefined}
+            onChange={(e) => onChange({ ...value, from: e.target.value })} />
+          <span aria-hidden="true" className="text-xs text-muted">–</span>
+          <input type="date" aria-label={t('dashboard.range.to')} className={RANGE_SELECT} value={value.to} min={value.from || undefined}
+            onChange={(e) => onChange({ ...value, to: e.target.value })} />
+        </>
+      )}
+    </div>
   );
 }
 
@@ -405,27 +438,5 @@ export function OpenJobs({ jobs, now }: { jobs: OpenJobRow[]; now: number }) {
         </div>
       )}
     </Panel>
-  );
-}
-
-/** Urgent and overdue open jobs (current state, so the period filter does not apply); each links to the filtered Jobs list. */
-export function UrgencyTiles({ urgent, overdue }: { urgent: number; overdue: number }) {
-  const t = useT();
-  const tile = (id: string, to: string, icon: string, label: string, n: number, alert: boolean) => (
-    <Link
-      data-testid={id}
-      to={to}
-      className={`${PANEL} flex items-center gap-3 px-4 py-3 hover:border-primary/50 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary`}
-    >
-      <span aria-hidden="true" className={`material-symbols-outlined text-[22px] ${alert && n > 0 ? 'text-red-600' : 'text-muted'}`}>{icon}</span>
-      <span className="text-sm font-semibold text-slate-700 dark:text-gray-200">{label}</span>
-      <span className={`ml-auto text-2xl font-bold ${alert && n > 0 ? 'text-red-600' : 'text-slate-900 dark:text-white'}`}>{n}</span>
-    </Link>
-  );
-  return (
-    <div className="grid gap-3 sm:grid-cols-2 mb-4">
-      {tile('tile-urgent-jobs', '/jobs?priority=urgent,critical&status=open', 'priority_high', t('dashboard.urgentJobs'), urgent, false)}
-      {tile('tile-overdue-jobs', '/jobs?overdue=1', 'event_busy', t('dashboard.overdueJobs'), overdue, true)}
-    </div>
   );
 }

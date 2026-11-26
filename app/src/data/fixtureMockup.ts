@@ -56,20 +56,53 @@ const FIRST_CANDIDATE_PROFILE: Partial<Candidate> = {
     {
       title: 'Head of Sales', company: 'Nova Payments (demo)', start: '2024-01', end: '2026-06',
       description: 'Built and led a sales team of 10. Launched the go-to-market plan for a new POS product line and reached 90% of the yearly target in the first two quarters. Set up the weekly pipeline review and forecasting process.',
+      highlights: [
+        { text: 'Sales Team: built a sales team of 10 people; worked with HR to write job descriptions and hire the team in 3 weeks.' },
+        { text: 'GTM Strategy: designed and ran the go-to-market plan for the new EMV POS and merchant lending products.' },
+        { text: 'Achievements:', sub: [
+          'Reached 90% of the yearly POS sales target within the first 6 months.',
+          'Signed 500+ merchants for the lending service through bank and chain-store partners.',
+          'Set up weekly pipeline review and monthly forecasting used by the CEO.',
+        ] },
+      ],
     },
     {
       title: 'Key Account Manager', company: 'BlueRiver Systems (demo)', start: '2021-03', end: '2023-12',
       description: 'Managed 25 enterprise accounts in banking and retail. Grew account revenue 35% year over year through upsell of managed services and cloud solutions. Coordinated with solution architects on tenders.',
+      highlights: [
+        { text: 'Strategic Growth: built and ran growth plans for 25 key accounts in banking, securities and retail.' },
+        { text: 'Solution Sales: grew managed services and cloud revenue through partnerships with global vendors.' },
+        { text: 'Account Management: used a "Build, Hunt and Farm" approach to expand current accounts and win new ones.' },
+        { text: 'Key Clients: River Bank (demo), Lotus Securities (demo), Harbor Insurance (demo), Sunrise Retail (demo).' },
+      ],
     },
     {
       title: 'Sales Manager', company: 'Orion Tech JSC (demo)', start: '2017-06', end: '2021-02',
       description: 'Sold system integration and IT managed services to FMCG and healthcare clients. Opened new accounts through outbound prospecting, partner referrals and industry events.',
+      highlights: [
+        { text: 'Sold system integration, cybersecurity and IT managed services to FMCG, pharma chains and healthcare clients.' },
+        { text: 'Opened 30+ new accounts through outbound prospecting, partner referrals and industry events.' },
+        { text: 'Worked with presales on RFP answers, demos and proof-of-concept plans; win rate 38%.' },
+      ],
     },
     {
       title: 'Sales Specialist', company: 'Sunrise Telecom (demo)', start: '2011-01', end: '2017-05',
       description: 'Sold data center, network and leased-line services to domestic and international companies. Worked with technical teams to deliver projects on time and supported bid preparation.',
+      highlights: [
+        { text: 'Sold data center, network and leased-line services to domestic and international companies.' },
+        { text: 'Worked with technical teams to deliver projects on time; supported bid preparation and contract renewals.' },
+        { text: 'Top sales of the year 2014 and 2016.' },
+      ],
     },
   ],
+  address: '245 Vo Van Tan Street, Ward 5, District 3, Ho Chi Minh City',
+  competencies: [
+    { label: 'Strategic Leadership', text: 'Sales forecasting, P&L management, go-to-market (GTM) strategy, team leadership and mentoring.' },
+    { label: 'Business Development', text: 'Key account management (KAM), partnership and channel development, market penetration and expansion.' },
+    { label: 'Technical Solutions', text: 'IT managed services, system integration, fintech (online payment gateways, EMV-POS), cybersecurity, data center and cloud solutions.' },
+  ],
+  certifications: ['Certified Sales Leader – Sales Management Association (2022)', 'Strategic Account Management – SAMA (2019)'],
+  languages: ['Vietnamese — Native', 'English — Advanced (TOEIC 905)'],
   education: [
     { degree: 'MBA in Marketing', institution: 'Saigon Business School (demo)', year: '2015' },
     { degree: 'BA in Information Systems', institution: 'City University (demo)', year: '2010' },

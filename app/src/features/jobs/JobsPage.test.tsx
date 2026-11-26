@@ -2,6 +2,7 @@ import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { buildSeed } from '../../data/seed';
+import { withoutDemoJobs } from '../../data/demoJobs';
 import type { Job } from '../../domain/types';
 import { publicJobs } from '../../store/selectors';
 import { useStore } from '../../store/store';
@@ -26,7 +27,7 @@ const renderAt = (url: string) =>
   );
 
 beforeEach(() => {
-  useStore.setState({ ...buildSeed() });
+  useStore.setState({ ...withoutDemoJobs(buildSeed()) });
 });
 
 describe('Job editor validation', () => {
@@ -133,8 +134,8 @@ describe('Job editor', () => {
     renderAt('/jobs/new?fromJd=jd-2026-002');
     const drawer = document.body;
     expect(within(drawer).getByLabelText('Title')).toHaveValue(jd.title);
-    // Each skill shows on the JD summary and again in the job's own Skills field.
-    for (const skill of jd.skills.slice(0, 3)) expect(within(drawer).getAllByText(skill).length).toBeGreaterThanOrEqual(2);
+    // Skills come from the JD into the job's own Skills field (no separate read-only JD summary).
+    for (const skill of jd.skills.slice(0, 3)) expect(within(drawer).getAllByText(skill)).toHaveLength(1);
     expect(within(drawer).getByLabelText('Level')).toHaveValue('Senior');
   });
 
@@ -188,7 +189,7 @@ describe('JobsPage', () => {
 });
 
 describe('JobDetailPage', () => {
-  it('shows candidates and campaigns of the job and a careers preview', () => {
+  it('shows candidates and campaigns of the job', () => {
     const s = useStore.getState();
     const first = s.applications.find((a) => a.jobId === 'job-1')!;
     const name = s.candidates.find((c) => c.id === first.candidateId)!.name;
@@ -197,8 +198,13 @@ describe('JobDetailPage', () => {
     expect(screen.getByRole('link', { name })).toHaveAttribute('href', `/candidates/${first.candidateId}`);
     fireEvent.click(screen.getByRole('tab', { name: 'Campaigns' }));
     expect(screen.getByRole('link', { name: 'Frontend Summer Push' })).toHaveAttribute('href', '/campaigns/camp-1');
-    fireEvent.click(screen.getByRole('tab', { name: 'Careers page preview' }));
-    expect(screen.getByTestId('careers-preview')).toHaveTextContent('Senior Frontend Developer');
+  });
+
+  it('candidates tab links to JD Matching for the job JD', () => {
+    const job = useStore.getState().jobs.find((j) => j.id === 'job-1')!;
+    renderAt('/jobs/job-1');
+    fireEvent.click(screen.getByRole('tab', { name: 'Candidates' }));
+    expect(screen.getByRole('link', { name: /Find matches in pool/ })).toHaveAttribute('href', `/jd-matching?jd=${job.jdId}`);
   });
 
   it('pipeline tab embeds the Kanban board', () => {
@@ -230,12 +236,12 @@ describe('Jobs pagination language', () => {
 describe('Jobs list: PRD P1 additions', () => {
   const asUser = (id: string) => useStore.setState({ ui: { ...useStore.getState().ui, actingAs: id } });
 
-  it('shows the AI match average and a last-updated time per job', () => {
+  it('shows a last-updated time per job and no AI match average', () => {
     renderAt('/jobs');
-    expect(screen.getByRole('columnheader', { name: 'AI Match Avg' })).toBeInTheDocument();
+    expect(screen.queryByRole('columnheader', { name: 'AI Match Avg' })).toBeNull();
     expect(screen.getByRole('columnheader', { name: 'Last Updated' })).toBeInTheDocument();
     const row = screen.getByRole('link', { name: 'Senior Frontend Developer' }).closest('tr')!;
-    expect(within(row).getByText(/^\d+%$/)).toBeInTheDocument();
+    expect(within(row).queryByText(/^\d+%$/)).toBeNull();
     expect(within(row).getByText(/ago$|just now/)).toBeInTheDocument();
   });
 

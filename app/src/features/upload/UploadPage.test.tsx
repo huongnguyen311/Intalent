@@ -20,7 +20,13 @@ const mk = (name: string, size = 1000) => {
   return file;
 };
 
-const renderPage = (ui: JSX.Element) => render(<MemoryRouter>{ui}</MemoryRouter>);
+const renderShowcase = (ui: JSX.Element) => render(<MemoryRouter>{ui}</MemoryRouter>);
+/** Renders the page and clears the sample rows it opens with, so each test starts on an empty queue. */
+const renderPage = (ui: JSX.Element) => {
+  const r = renderShowcase(ui);
+  fireEvent.click(screen.getByRole('button', { name: /^(Clear finished|Clear)$/ }));
+  return r;
+};
 const pick = (container: HTMLElement, files: File[]) => {
   const input = container.querySelector('input[type="file"]') as HTMLInputElement;
   fireEvent.change(input, { target: { files } });
@@ -126,10 +132,22 @@ describe('UploadPage', () => {
     const { container } = renderPage(<UploadPage />);
     pick(container, [mk('Zzz_Qqq_Xx_CV.pdf'), mk('bad.exe')]);
     advance(5_000);
-    expect(screen.getByText('1 added · 0 to review · 1 failed')).toBeInTheDocument();
+    expect(screen.getByLabelText('1 added · 0 to review · 1 failed')).toBeInTheDocument();
   });
 
-  it('clears its timer on unmount', () => {
+  it('shows a completion banner with a link to the pool once the batch finishes', () => {
+    const { container } = renderPage(<UploadPage />);
+    pick(container, [mk('Zzz_Qqq_Xx_CV.pdf')]);
+    expect(screen.queryByText('Upload complete')).toBeNull();
+    advance(5_000);
+    expect(screen.getByText('Upload complete')).toBeInTheDocument();
+    expect(screen.getByText('1 new profile(s) · 0 merged · 0 to review · 0 failed')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Open Talent Pool/ })).toHaveAttribute('href', '/candidates');
+    fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }));
+    expect(screen.queryByText('Upload complete')).toBeNull();
+  });
+
+    it('clears its timer on unmount', () => {
     const { container, unmount } = renderPage(<UploadPage />);
     const baseline = vi.getTimerCount();
     pick(container, [mk('Le_Van_B_CV.pdf')]);
@@ -205,5 +223,48 @@ describe('Upload mode switch', () => {
     const { container } = renderAt('/upload-ultra');
     expect(screen.queryByRole('navigation', { name: 'Upload mode' })).toBeNull();
     expect(container.querySelector('.text-center.mb-16')?.firstElementChild?.className).not.toContain('justify-center');
+  });
+});
+
+describe('sample queue on open', () => {
+  it('shows every finished state and lets HR resolve the duplicate', () => {
+    const [dup, merged] = useStore.getState().candidates;
+    const before = useStore.getState().candidates.length;
+    renderShowcase(<UploadPage />);
+    expect(screen.getAllByText('Added to Talent Pool')).toHaveLength(3);
+    expect(screen.getByText('Merged into existing profile')).toBeInTheDocument();
+    expect(screen.getByText('Skipped')).toBeInTheDocument();
+    expect(screen.getByText('Unsupported file type')).toBeInTheDocument();
+    expect(screen.getByText('File exceeds 5 MB')).toBeInTheDocument();
+    expect(screen.getByText('Could not extract the CV')).toBeInTheDocument();
+    expect(screen.getByText('Batch limit exceeded (max 10 files)')).toBeInTheDocument();
+    expect(screen.getByText(`Possible duplicate of ${dup.name}`)).toBeInTheDocument();
+    expect(screen.getByLabelText('4 added · 1 to review · 4 failed')).toBeInTheDocument();
+    expect(screen.getAllByRole('link', { name: 'View profile' }).map((a) => a.getAttribute('href'))).toContain(`/candidates/${merged.id}`);
+    // Opening the page writes nothing; merging the duplicate updates the existing profile only.
+    expect(useStore.getState().candidates).toHaveLength(before);
+    fireEvent.click(screen.getByRole('button', { name: 'Merge' }));
+    expect(screen.getAllByText('Merged into existing profile')).toHaveLength(2);
+    expect(useStore.getState().candidates).toHaveLength(before);
+  });
+
+  it('retrying the over-limit file runs it through queued and parsing', () => {
+    renderShowcase(<UploadPage />);
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(screen.getByText(/Queued|Parsing/)).toBeInTheDocument();
+    advance(10_000);
+    expect(screen.getAllByText('Added to Talent Pool')).toHaveLength(4);
+  });
+
+  it('Ultra opens with samples but no batch-limit row', () => {
+    renderShowcase(<UltraUploadPage />);
+    expect(screen.getByText('Could not extract the CV')).toBeInTheDocument();
+    expect(screen.queryByText(/Batch limit exceeded/)).toBeNull();
+  });
+
+  it('an empty workspace opens on an empty queue', () => {
+    useStore.setState({ candidates: [] });
+    renderShowcase(<UploadPage />);
+    expect(screen.getByText('No files in queue')).toBeInTheDocument();
   });
 });

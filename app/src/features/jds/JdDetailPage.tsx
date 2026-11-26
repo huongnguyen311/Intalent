@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { AppLayout } from '../../components/AppLayout';
 import { BackButton } from '../../components/BackButton';
@@ -13,15 +12,18 @@ import { useShowNew } from '../../hooks';
 import { useT } from '../../i18n/i18n';
 import { useStore } from '../../store/store';
 import { JobStatusBadge } from '../jobs/JobBits';
-import { DeleteJdModal } from './DeleteJdModal';
 import { fullDate } from './format';
 
-const SECONDARY =
-  'px-5 py-2.5 bg-white dark:bg-[#2a2423] border border-[#e6dddb] dark:border-[#3a3433] hover:bg-gray-50 dark:hover:bg-[#332d2c] text-[#181211] dark:text-white text-sm font-bold rounded-full shadow-sm transition-colors flex items-center gap-2 whitespace-nowrap';
+// Compact buttons for the pinned action bar.
+const BTN = 'h-8 px-3.5 rounded-full text-[13px] font-semibold inline-flex items-center gap-1.5 whitespace-nowrap transition-colors';
+const BTN_GHOST = `${BTN} border border-[#e6dddb] dark:border-[#3a3433] text-[#181211] dark:text-white hover:bg-gray-50 dark:hover:bg-[#332d2c]`;
+const BTN_PRIMARY = `${BTN} font-bold text-white bg-brand-vivid hover:bg-[#e65e00] shadow-sm`;
+const ICON = 'material-symbols-outlined text-[16px]';
 const LABEL = 'text-2xs text-[#896a61] uppercase font-bold mb-0.5';
 const VALUE = 'text-sm font-semibold text-[#181211] dark:text-white';
 
-const SUB = 'text-xs font-medium text-[#896a61]';
+const CARD = 'bg-white dark:bg-[#1e1e1e] rounded-2xl shadow-card border border-hairline dark:border-[#2a2423]';
+const SUB ='text-xs font-medium text-[#896a61]';
 const CHIP = 'px-2.5 py-1 rounded bg-gray-100 dark:bg-white/10 text-[11px] font-bold text-slate-600 dark:text-gray-300';
 
 /** A titled block in the overview card: a paragraph or a bullet list. */
@@ -60,7 +62,6 @@ export function JdDetailPage() {
   const user = useMe();
   // Only the jobs this user may open are links; the rest are listed without one.
   const mine = new Set(jobsInScope(user, allJobs).map((j) => j.id));
-  const [deleting, setDeleting] = useState(false);
   const search = isFixtureMode() ? '?fixture=mockup' : '';
 
   if (!jd) {
@@ -82,13 +83,31 @@ export function JdDetailPage() {
     void navigator.clipboard?.writeText(jd.body);
     toast(t('jd.copied'));
   };
-  const toggleStatus = () => {
-    useStore.getState().setJdStatus(jd.id, published ? 'Draft' : 'Published');
-    toast(t(published ? 'jds.toast.unpublished' : 'jds.toast.published'));
-  };
+
+  // Actions sit in a bar pinned under the content, so they stay in reach while reading a long JD.
+  const footer = (
+    <div className="bg-white dark:bg-[#1e1e1e] border-t border-[#e6dddb] dark:border-[#2a2423] shadow-[0_-2px_8px_rgba(0,0,0,0.04)]">
+      {/* Right padding keeps the buttons clear of the floating AI button. */}
+      <div className="max-w-[1400px] mx-auto pl-8 pr-20 py-2 flex items-center gap-2 flex-wrap">
+        <div className="ml-auto flex items-center gap-2 flex-wrap">
+          <button onClick={() => navigate(`/jds/${jd.id}/edit`)} className={BTN_GHOST}>
+            <span aria-hidden="true" className={ICON}>edit</span>{t('jds.menu.edit')}
+          </button>
+          {showNew && (
+            <button onClick={() => navigate(`/jobs/new?fromJd=${jd.id}`, { state: { from: `/jds/${jd.id}` } })} className={BTN_GHOST}>
+              <span aria-hidden="true" className={ICON}>work</span>{t('jd.createJob')}
+            </button>
+          )}
+          <button onClick={() => navigate({ pathname: '/jd-matching', search: search ? `${search}&jd=${jd.id}` : `?jd=${jd.id}` })} className={BTN_PRIMARY}>
+            <span aria-hidden="true" className={ICON}>auto_awesome</span>{t('jd.runMatch')}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 
   return (
-    <AppLayout title="">
+    <AppLayout title="" footer={footer}>
       <div className="min-h-full bg-[#fbf9f8] dark:bg-background-dark">
         <div className="px-8 pb-8 pt-8">
           <div className="max-w-[1400px] mx-auto">
@@ -112,116 +131,42 @@ export function JdDetailPage() {
                   </p>
                 </div>
               </div>
-              <div className="flex flex-wrap items-center gap-3">
-                {showNew && (
-                  <>
-                    <button onClick={() => setDeleting(true)} className={`${SECONDARY} text-red-600`}>
-                      <span className="material-symbols-outlined text-[20px]">delete</span>{t('jds.menu.delete')}
-                    </button>
-                    <button onClick={toggleStatus} className={SECONDARY}>
-                      <span className="material-symbols-outlined text-[20px]">{published ? 'unpublished' : 'publish'}</span>
-                      {t(published ? 'jds.menu.unpublish' : 'jds.menu.publish')}
-                    </button>
-                    <button onClick={() => navigate(`/jobs/new?fromJd=${jd.id}`, { state: { from: `/jds/${jd.id}` } })} className={SECONDARY}>
-                      <span className="material-symbols-outlined text-[20px]">work</span>{t('jd.createJob')}
-                    </button>
-                  </>
-                )}
-                <button onClick={() => navigate(`/jds/${jd.id}/edit`)} className={SECONDARY}>
-                  <span className="material-symbols-outlined text-[20px]">edit</span>{t('jds.menu.edit')}
-                </button>
-                <button
-                  onClick={() => navigate({ pathname: '/jd-matching', search: search ? `${search}&jd=${jd.id}` : `?jd=${jd.id}` })}
-                  className="px-5 py-2.5 text-white text-sm font-bold rounded-full shadow-sm transition-colors flex items-center gap-2 whitespace-nowrap bg-brand-vivid hover:bg-[#e65e00]"
-                  title=""
-                >
-                  <span className="material-symbols-outlined text-[20px] ">auto_awesome</span>{t('jd.runMatch')}
-                </button>
-              </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              {/* Side column: the at-a-glance facts, then where the JD is used. */}
               <div className="lg:col-span-4 flex flex-col gap-6">
-                <div className="bg-white dark:bg-[#1e1e1e] rounded-2xl shadow-card border border-hairline dark:border-[#2a2423] p-6 h-fit">
+                <div className={`${CARD} p-6 h-fit`}>
                   <h2 className="ty-section text-lg font-bold text-[#181211] dark:text-white mb-6 flex items-center gap-2">
-                    <span className="material-symbols-outlined text-brand-vivid text-[22px]">psychology</span>{t('jd.requirements')}
+                    <span className="material-symbols-outlined text-brand-vivid text-[22px]">fact_check</span>{t('jd.breakdown')}
                   </h2>
                   <div className="space-y-6">
-                    <div>
-                      <h3 className="text-xs font-bold text-[#896a61] uppercase tracking-wider mb-3">{t('jd.core')}</h3>
-                      <div className="space-y-3">
-                        <div className="flex flex-col gap-1.5">
-                          <span className="text-xs font-medium text-[#896a61]">{t('jd.techStack')}</span>
-                          <div className="flex flex-wrap gap-2">
-                            {jd.skills.map((s) => (
-                              <span key={s} className={`px-2.5 py-1 rounded bg-orange-50 text-brand-vivid dark:bg-orange-900/20 text-[11px] font-bold border inline-flex items-center gap-1 ${critical.has(s) ? 'border-orange-400' : 'border-orange-100 dark:border-orange-800'}`}>
-                                {critical.has(s) && <span className="material-symbols-outlined text-[13px]" style={{ fontVariationSettings: "'FILL' 1" }} aria-label={t('jd.critical')}>star</span>}
-                                {s}
-                              </span>
-                            ))}
-                          </div>
-                          {critical.size > 0 && <span className="text-2xs text-[#896a61]">{t('jd.criticalLegend')}</span>}
-                        </div>
-                        <div className="flex flex-col gap-1.5">
-                          <span className="text-xs font-medium text-[#896a61]">{t('jd.mustHave')}</span>
-                          <ul className="text-sm font-medium text-[#181211] dark:text-gray-200 list-disc list-inside space-y-1">
-                            {jdMustHave(jd).map((m) => <li key={m}>{m}</li>)}
-                          </ul>
-                        </div>
-                        {!!jd.niceToHave?.length && (
-                          <div className="flex flex-col gap-1.5">
-                            <span className={SUB}>{t('jds.page.nice')}</span>
-                            <ul className="text-sm font-medium text-[#181211] dark:text-gray-200 list-disc list-inside space-y-1">
-                              {jd.niceToHave.map((m) => <li key={m}>{m}</li>)}
-                            </ul>
-                          </div>
-                        )}
-                      </div>
+                    <div className="grid grid-cols-2 gap-y-4 gap-x-2">
+                      <Fact label={t('jd.seniority')} value={req.seniority ?? '—'} />
+                      <Fact label={t('jd.experience')} value={req.years ? t('jd.yrs', { n: req.years }) : '—'} />
+                      <Fact label={t('jd.english')} value={req.english ?? t('jd.none')} />
+                      <Fact label={t('jd.employment')} value={t('jd.fullTime')} />
+                      {jd.location && <Fact label={t('jds.page.location')} value={jd.location} />}
+                      {jd.workingModel && <Fact label={t('jds.page.model')} value={t(`jds.page.model.${jd.workingModel}`)} />}
+                      <Fact label={t('jd.domain')} value={jd.domains.join(', ') || '—'} />
+                      <Fact label={t('jd.availability')} value={fullDate(jd.availableFrom ?? jd.createdAt)} />
                     </div>
-                    <div className="pt-6 border-t border-hairline dark:border-[#2a2423]">
-                      <h3 className="text-xs font-bold text-[#896a61] uppercase tracking-wider mb-4">{t('jd.breakdown')}</h3>
-                      <div className="grid grid-cols-2 gap-y-4 gap-x-2">
-                        <Fact label={t('jd.seniority')} value={req.seniority ?? '—'} />
-                        <Fact label={t('jd.experience')} value={req.years ? t('jd.yrs', { n: req.years }) : '—'} />
-                        <Fact label={t('jd.english')} value={req.english ?? t('jd.none')} />
-                        <Fact label={t('jd.domain')} value={jd.domains.join(', ') || '—'} />
-                        <Fact label={t('jd.availability')} value={fullDate(jd.availableFrom ?? jd.createdAt)} />
-                        <Fact label={t('jd.employment')} value={t('jd.fullTime')} />
-                        {jd.location && <Fact label={t('jds.page.location')} value={jd.location} />}
-                        {jd.workingModel && <Fact label={t('jds.page.model')} value={t(`jds.page.model.${jd.workingModel}`)} />}
+                    <div className="pt-6 border-t border-hairline dark:border-[#2a2423] flex flex-col gap-1.5">
+                      <h3 className="text-xs font-bold text-[#896a61] uppercase tracking-wider mb-1.5">{t('jd.techStack')}</h3>
+                      <div className="flex flex-wrap gap-2">
+                        {jd.skills.map((s) => (
+                          <span key={s} className={`px-2.5 py-1 rounded bg-orange-50 text-brand-vivid dark:bg-orange-900/20 text-[11px] font-bold border inline-flex items-center gap-1 ${critical.has(s) ? 'border-orange-400' : 'border-orange-100 dark:border-orange-800'}`}>
+                            {critical.has(s) && <span className="material-symbols-outlined text-[13px]" style={{ fontVariationSettings: "'FILL' 1" }} aria-label={t('jd.critical')}>star</span>}
+                            {s}
+                          </span>
+                        ))}
                       </div>
+                      {critical.size > 0 && <span className="text-2xs text-[#896a61]">{t('jd.criticalLegend')}</span>}
                     </div>
-                    {hasQualifications && (
-                      <div className="pt-6 border-t border-hairline dark:border-[#2a2423] space-y-4">
-                        <h3 className="text-xs font-bold text-[#896a61] uppercase tracking-wider">{t('jds.page.qualifications')}</h3>
-                        <div className="grid grid-cols-2 gap-y-4 gap-x-2">
-                          {jd.education && <Fact label={t('jds.page.education')} value={t(`education.${jd.education}`)} />}
-                          {jd.major && <Fact label={t('jds.page.major')} value={jd.major} />}
-                        </div>
-                        {!!jd.languages?.length && (
-                          <div className="flex flex-col gap-1.5">
-                            <span className={SUB}>{t('jds.page.languages')}</span>
-                            <div className="flex flex-wrap gap-2">{jd.languages.map((x) => <span key={x} className={CHIP}>{x}</span>)}</div>
-                          </div>
-                        )}
-                        {!!jd.certifications?.length && (
-                          <div className="flex flex-col gap-1.5">
-                            <span className={SUB}>{t('jds.page.certs')}</span>
-                            <div className="flex flex-wrap gap-2">{jd.certifications.map((x) => <span key={x} className={CHIP}>{x}</span>)}</div>
-                          </div>
-                        )}
-                        {jd.otherRequirements && (
-                          <div className="flex flex-col gap-1.5">
-                            <span className={SUB}>{t('jds.page.other')}</span>
-                            <p className="text-sm text-[#181211] dark:text-gray-200 whitespace-pre-wrap">{jd.otherRequirements}</p>
-                          </div>
-                        )}
-                      </div>
-                    )}
                   </div>
                 </div>
                 {showNew && (
-                  <div className="bg-white dark:bg-[#1e1e1e] rounded-2xl shadow-card border border-hairline dark:border-[#2a2423] p-6 h-fit">
+                  <div className={`${CARD} p-6 h-fit`}>
                     <h2 className="ty-section text-lg font-bold text-[#181211] dark:text-white mb-4 flex items-center gap-2">
                       <span className="material-symbols-outlined text-brand-vivid text-[22px]">work</span>{t('jd.jobs')}
                     </h2>
@@ -253,9 +198,10 @@ export function JdDetailPage() {
                 )}
               </div>
 
+              {/* Main column reads like a JD: what the role is → what it needs → the source text. */}
               <div className="lg:col-span-8 flex flex-col gap-6">
                 {hasOverview && (
-                  <div className="bg-white dark:bg-[#1e1e1e] rounded-2xl shadow-card border border-hairline dark:border-[#2a2423] p-8">
+                  <div className={`${CARD} p-8`}>
                     <h2 className="ty-section text-lg font-bold text-[#181211] dark:text-white flex items-center gap-2 mb-6">
                       <span className="material-symbols-outlined text-brand-vivid text-[22px]">article</span>{t('jd.overview')}
                     </h2>
@@ -266,27 +212,63 @@ export function JdDetailPage() {
                     </div>
                   </div>
                 )}
-                {(jd.body.trim() || !hasOverview) && (
-                <div className={`bg-white dark:bg-[#1e1e1e] rounded-2xl shadow-card border border-hairline dark:border-[#2a2423] p-8 ${hasOverview ? '' : 'h-full'}`}>
-                  <div className="flex items-center justify-between mb-8">
-                    <h2 className="ty-section text-lg font-bold text-[#181211] dark:text-white flex items-center gap-2">
-                      <span className="material-symbols-outlined text-brand-vivid text-[22px]">subject</span>{t('jd.original')}
-                    </h2>
-                    <button onClick={copy} className="text-[#896a61] hover:text-[#181211] dark:hover:text-white transition-colors" title={t('jd.copy')}>
-                      <span className="material-symbols-outlined text-[20px]">content_copy</span>
-                    </button>
-                  </div>
-                  <div className="prose prose-sm max-w-none text-[#332d2c] dark:text-gray-300 leading-relaxed space-y-6">
-                    <div><p className="whitespace-pre-wrap">{jd.body}</p></div>
+                <div className={`${CARD} p-8`}>
+                  <h2 className="ty-section text-lg font-bold text-[#181211] dark:text-white flex items-center gap-2 mb-6">
+                    <span className="material-symbols-outlined text-brand-vivid text-[22px]">psychology</span>{t('jd.requirements')}
+                  </h2>
+                  <div className="space-y-6">
+                    <Block title={t('jd.mustHave')} items={jdMustHave(jd)} />
+                    <Block title={t('jds.page.nice')} items={jd.niceToHave} />
+                    {hasQualifications && (
+                      <section className="space-y-4">
+                        <h3 className="text-xs font-bold text-[#896a61] uppercase tracking-wider">{t('jds.page.qualifications')}</h3>
+                        <div className="grid grid-cols-2 gap-y-4 gap-x-4">
+                          {jd.education && <Fact label={t('jds.page.education')} value={t(`education.${jd.education}`)} />}
+                          {jd.major && <Fact label={t('jds.page.major')} value={jd.major} />}
+                        </div>
+                        {!!jd.languages?.length && (
+                          <div className="flex flex-col gap-1.5">
+                            <span className={SUB}>{t('jds.page.languages')}</span>
+                            <div className="flex flex-wrap gap-2">{jd.languages.map((x) => <span key={x} className={CHIP}>{x}</span>)}</div>
+                          </div>
+                        )}
+                        {!!jd.certifications?.length && (
+                          <div className="flex flex-col gap-1.5">
+                            <span className={SUB}>{t('jds.page.certs')}</span>
+                            <div className="flex flex-wrap gap-2">{jd.certifications.map((x) => <span key={x} className={CHIP}>{x}</span>)}</div>
+                          </div>
+                        )}
+                        {jd.otherRequirements && (
+                          <div className="flex flex-col gap-1.5">
+                            <span className={SUB}>{t('jds.page.other')}</span>
+                            <p className="text-sm text-[#181211] dark:text-gray-200 whitespace-pre-wrap">{jd.otherRequirements}</p>
+                          </div>
+                        )}
+                      </section>
+                    )}
                   </div>
                 </div>
+                {/* The pasted text only shows for older JDs with no structured overview; otherwise it would repeat (and drift from) the sections above. It stays editable in the JD editor. */}
+                {!hasOverview && jd.body.trim() && (
+                  <div className={`${CARD} p-8`}>
+                    <div className="flex items-center justify-between gap-3 mb-6">
+                      <h2 className="ty-section text-lg font-bold text-[#181211] dark:text-white flex items-center gap-2">
+                        <span className="material-symbols-outlined text-brand-vivid text-[22px]">subject</span>{t('jd.original')}
+                      </h2>
+                      <button onClick={copy} className="text-[#896a61] hover:text-[#181211] dark:hover:text-white transition-colors" title={t('jd.copy')}>
+                        <span className="material-symbols-outlined text-[20px]">content_copy</span>
+                      </button>
+                    </div>
+                    <div className="prose prose-sm max-w-none text-[#332d2c] dark:text-gray-300 leading-relaxed">
+                      <p className="whitespace-pre-wrap">{jd.body}</p>
+                    </div>
+                  </div>
                 )}
               </div>
             </div>
           </div>
         </div>
       </div>
-      <DeleteJdModal jd={deleting ? jd : null} onClose={() => setDeleting(false)} onDeleted={() => navigate({ pathname: '/jds', search })} />
     </AppLayout>
   );
 }

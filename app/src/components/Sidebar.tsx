@@ -56,7 +56,8 @@ const GROUPS: Group[] = [
     items: [
       { to: '/jobs', icon: 'work', label: 'nav.jobs', perm: 'pipeline' },
       // JDs are the reusable requirement library behind jobs, so they sit next to Jobs.
-      { ...JDS, perm: 'jd.edit' },
+      // JD Matching has no menu item: it always needs a JD, so it opens from a JD or a job and highlights JD Management.
+      { ...JDS, also: ['/jd-matching'], perm: 'jd.edit' },
       { to: '/pipeline', icon: 'view_kanban', label: 'nav.pipeline', perm: 'pipeline' },
       { to: '/my-interviews', icon: 'event', label: 'nav.myInterviews', perm: 'scorecard' },
       { to: '/campaigns', icon: 'campaign', label: 'nav.campaigns', perm: 'campaign' },
@@ -71,8 +72,6 @@ const GROUPS: Group[] = [
       { ...POOL, also: ['/notes'], perm: 'pool' },
       { ...UPLOAD, label: 'nav.uploadCv', also: ['/upload-ultra'], perm: 'pool' },
       { ...SEARCH, perm: 'pool' },
-      // Matching searches the pool against a JD, so it lives with the other pool search tools.
-      { ...MATCH, perm: 'pool' },
     ],
   },
   APP_CONFIG,

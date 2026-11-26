@@ -123,15 +123,16 @@ function furthest(a: Application): number {
 /**
  * `cutoff` (epoch ms) scopes the period: hires and offers by when they happened, cohort figures
  * (new applications, funnel, sources, AI match, reject reasons) by when the application was added.
- * Stage counts and in-progress stay current.
+ * Stage counts and in-progress stay current. `until` (epoch ms, inclusive) closes a custom range.
  */
-function recruitment(state: DemoState, cutoff = -Infinity, now = Date.now()): DashboardMetrics['recruitment'] {
+function recruitment(state: DemoState, cutoff = -Infinity, now = Date.now(), until = Infinity): DashboardMetrics['recruitment'] {
+  const inWindow = (t: number) => t >= cutoff && t <= until;
   const byStage = Object.fromEntries(STAGES.map((s) => [s, 0])) as Record<Stage, number>;
   for (const a of state.applications) byStage[a.stage] += 1;
-  const cohort = state.applications.filter((a) => Date.parse(a.addedAt) >= cutoff);
+  const cohort = state.applications.filter((a) => inWindow(Date.parse(a.addedAt)));
   const hiredInPeriod = state.applications.filter((a) => {
     const at = hiredAt(a);
-    return at !== undefined && at >= cutoff && (a.stage === 'hired' || a.offer?.status === 'accepted');
+    return at !== undefined && inWindow(at) && (a.stage === 'hired' || a.offer?.status === 'accepted');
   });
   const isHire = (a: Application) => a.stage === 'hired' || a.offer?.status === 'accepted';
 
@@ -145,7 +146,7 @@ function recruitment(state: DemoState, cutoff = -Infinity, now = Date.now()): Da
     .filter((e) => e && !e.noCriteria);
   const answered = state.applications
     .map((a) => a.offer)
-    .filter((o) => o?.respondedAt && Date.parse(o.respondedAt) >= cutoff);
+    .filter((o) => o?.respondedAt && inWindow(Date.parse(o.respondedAt)));
   const jobById = new Map(state.jobs.map((j) => [j.id, j]));
   const today = localStamp(new Date(now)).slice(0, 10);
   // Local Monday-start week around `now`.
@@ -165,9 +166,9 @@ function recruitment(state: DemoState, cutoff = -Infinity, now = Date.now()): Da
     newApplications: cohort.length,
     interviews: state.applications
       .flatMap((a) => a.interviews ?? [])
-      .filter((i) => i.status !== 'cancelled' && Date.parse(i.at) >= cutoff).length,
+      .filter((i) => i.status !== 'cancelled' && inWindow(Date.parse(i.at))).length,
     byStage,
-    hires: state.applications.filter((a) => a.history.some((h) => h.stage === 'hired' && Date.parse(h.at) >= cutoff)).length,
+    hires: state.applications.filter((a) => a.history.some((h) => h.stage === 'hired' && inWindow(Date.parse(h.at)))).length,
     topSources: ranked(tally(cohort.map((a) => a.source)))
       .slice(0, 5)
       .map(([source, count]) => ({ source, count, hires: sourceHires.get(source) ?? 0 })),
@@ -295,4 +296,39 @@ export function dashboardMetrics(state: DemoState, period: Period, now: Date): D
       .map(([name, n]) => ({ name, pct: Math.round(pct(n, total)) })),
     recruitment: recruitment(state, cutoff, now.getTime()),
   };
+}
+
+/** A Dashboard date range: preset windows ending now, or a custom pair of local dates (YYYY-MM-DD, inclusive). */
+export type DateRange =
+  | { kind: 'all' | 'today' | 'week' | 'month' }
+  | { kind: 'custom'; from: string; to: string };
+
+/** Epoch-ms bounds of a range; the week starts on Monday, every bound is local time. */
+export function rangeBounds(range: DateRange, now: Date): { from: number; until: number } {
+  const start = new Date(now);
+  start.setHours(0, 0, 0, 0);
+  switch (range.kind) {
+    case 'all':
+      return { from: -Infinity, until: Infinity };
+    case 'today':
+      return { from: start.getTime(), until: Infinity };
+    case 'week':
+      start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
+      return { from: start.getTime(), until: Infinity };
+    case 'month':
+      start.setDate(1);
+      return { from: start.getTime(), until: Infinity };
+    case 'custom': {
+      const [lo, hi] = range.from <= range.to ? [range.from, range.to] : [range.to, range.from];
+      const from = lo ? new Date(`${lo}T00:00:00`).getTime() : -Infinity;
+      const until = hi ? new Date(`${hi}T23:59:59.999`).getTime() : Infinity;
+      return { from, until };
+    }
+  }
+}
+
+/** Recruitment figures for a Dashboard date range (the app Dashboard shows recruitment only). */
+export function recruitmentMetrics(state: DemoState, range: DateRange, now: Date): DashboardMetrics['recruitment'] {
+  const { from, until } = rangeBounds(range, now);
+  return recruitment(state, from, now.getTime(), until);
 }

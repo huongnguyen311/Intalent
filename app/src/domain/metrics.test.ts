@@ -100,3 +100,19 @@ describe('dashboardMetrics', () => {
     expect(m.topTa[0]).toMatchObject({ name: 'Lê Minh Châu', files: 170 });
   });
 });
+
+describe('rangeBounds', () => {
+  it('starts today at local midnight, the week on Monday, the month on the 1st; custom is inclusive of both days', async () => {
+    const { rangeBounds } = await import('./metrics');
+    const now = new Date(2026, 10, 26, 15, 30); // Thursday 26 Nov 2026
+    expect(rangeBounds({ kind: 'all' }, now)).toEqual({ from: -Infinity, until: Infinity });
+    expect(rangeBounds({ kind: 'today' }, now).from).toBe(new Date(2026, 10, 26).getTime());
+    expect(rangeBounds({ kind: 'week' }, now).from).toBe(new Date(2026, 10, 23).getTime());
+    expect(rangeBounds({ kind: 'month' }, now).from).toBe(new Date(2026, 10, 1).getTime());
+    const c = rangeBounds({ kind: 'custom', from: '2026-11-10', to: '2026-11-12' }, now);
+    expect(c.from).toBe(new Date(2026, 10, 10).getTime());
+    expect(c.until).toBe(new Date(2026, 10, 12, 23, 59, 59, 999).getTime());
+    // A reversed pair is read in order.
+    expect(rangeBounds({ kind: 'custom', from: '2026-11-12', to: '2026-11-10' }, now)).toEqual(c);
+  });
+});

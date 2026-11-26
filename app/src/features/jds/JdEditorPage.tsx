@@ -6,17 +6,17 @@ import { NotFoundState } from '../../components/NotFoundState';
 import { toast } from '../../components/Toast';
 import { extractJd, jdRequirements } from '../../domain/jdExtract';
 import { CERT_OPTIONS, domainOptions, LANGUAGE_OPTIONS, skillOptions, suggestDomains, suggestMustHave, suggestNiceToHave, suggestSkills } from '../../domain/jdSuggest';
-import { generateJdFromTitle } from '../../domain/jdWriter';
+import { generateJdFromTitle, rewriteJdStandard } from '../../domain/jdWriter';
 import { EDUCATIONS, type Education, type Jd, type JdInput, type TaxonomyItem } from '../../domain/types';
 import { useT } from '../../i18n/i18n';
 import { useStore } from '../../store/store';
 
 const INPUT =
   'w-full px-4 py-2.5 bg-white dark:bg-[#251f1e] border border-[#e6dddb] dark:border-[#3a3433] rounded-xl text-sm text-[#181211] dark:text-white placeholder-[#b5a7a3] focus:ring-1 focus:ring-primary focus:border-primary focus:outline-none';
-const BTN_GHOST =
-  'px-5 py-2.5 text-sm font-semibold border border-[#e6dddb] dark:border-[#3a3433] text-[#181211] dark:text-white rounded-full hover:border-primary/50 transition-colors inline-flex items-center gap-1.5';
-const BTN_PRIMARY =
-  'px-5 py-2.5 text-sm font-bold bg-brand-accent hover:bg-brand-strong text-white rounded-full shadow-lg shadow-orange-500/20 transition-colors inline-flex items-center gap-1.5 disabled:opacity-40 disabled:shadow-none';
+// Compact footer buttons, the same size as the JD detail action bar.
+const BTN_BAR = 'h-8 px-3.5 rounded-full text-[13px] font-semibold inline-flex items-center gap-1.5 whitespace-nowrap transition-colors';
+const BTN_GHOST = `${BTN_BAR} border border-[#e6dddb] dark:border-[#3a3433] text-[#181211] dark:text-white hover:bg-gray-50 dark:hover:bg-[#332d2c]`;
+const BTN_PRIMARY = `${BTN_BAR} font-bold text-white bg-brand-vivid hover:bg-[#e65e00] shadow-sm`;
 const BTN_SM_PRIMARY =
   'px-4 py-1.5 text-sm font-semibold bg-brand-accent hover:bg-brand-strong text-white rounded-full transition-colors inline-flex items-center gap-1 disabled:opacity-40';
 const BTN_SM_GHOST =
@@ -135,6 +135,8 @@ function Editor({ jd }: { jd?: Jd }) {
   const [dragging, setDragging] = useState(false);
   const [showErrors, setShowErrors] = useState(false);
   const [asking, setAsking] = useState(false);
+  // "Rewrite to standard": the tidied JD waits here for review; nothing reaches the form until the user applies it.
+  const [review, setReview] = useState<string | null>(null);
 
   const set = <K extends keyof Form>(k: K, v: Form[K]) => { setForm((f) => ({ ...f, [k]: v })); setTouched(true); };
   const options = (kind: 'seniority' | 'english', current: string) => {
@@ -169,9 +171,10 @@ function Editor({ jd }: { jd?: Jd }) {
   const missing = { ...forMatch, summary: !form.summary.trim(), responsibilities: !lines(form.responsibilities).length };
   // Required fields still empty, per section in form order (shown on the AI result bar).
   const gaps: string[][] = [
-    [missing.title && t('jds.page.title'), missing.seniority && t('jds.page.seniority'), missing.domains && t('jds.page.domain')],
-    [missing.skills && t('jds.page.stack'), missing.mustHave && t('jds.page.must'), missing.minYears && t('jds.page.years'), missing.english && t('jds.page.english')],
+    [missing.title && t('jds.page.title'), missing.domains && t('jds.page.domain')],
     [missing.summary && t('jds.page.summary'), missing.responsibilities && t('jds.page.duties')],
+    [missing.seniority && t('jds.page.seniority'), missing.minYears && t('jds.page.years'), missing.english && t('jds.page.english'),
+      missing.skills && t('jds.page.stack'), missing.mustHave && t('jds.page.must')],
   ].map((xs) => xs.filter((x): x is string => Boolean(x)));
   // One-click ideas under each tag field; they follow what is already filled in.
   const ideas = {
@@ -189,9 +192,13 @@ function Editor({ jd }: { jd?: Jd }) {
   // Typed text that is just a title is drafted from; anything longer is read as a JD.
   const generating = isJobTitle(source);
   /** One click: read the title or JD, fill the sections, and jump to section 1 so the user reviews from the top. */
-  const fillWithAi = () => {
-    const x = generating ? generateJdFromTitle(source, form.seniority || undefined) : extractJd(source, taxonomy);
-    setFilled({ from: generating ? source.trim() : t('jds.ai.fromText'), summary: aiSummary(x), before: form });
+  const readSource = (text = source) => (isJobTitle(text) ? generateJdFromTitle(text, form.seniority || undefined) : extractJd(text, taxonomy));
+  /** Rewrites the title or JD into the standard sections and shows it for review; the form stays untouched. */
+  const rewrite = () => setReview(rewriteJdStandard(readSource()));
+  const fillWithAi = (fromReview?: string) => {
+    const x = fromReview !== undefined ? extractJd(fromReview, taxonomy) : readSource();
+    setFilled({ from: fromReview !== undefined ? t('jds.ai.fromRewrite') : generating ? source.trim() : t('jds.ai.fromText'), summary: aiSummary(x), before: form });
+    setReview(null);
     setForm((f) => ({
       ...f,
       title: x.title || f.title, skills: x.skills.length ? x.skills : f.skills, domains: x.domains.length ? x.domains : f.domains,
@@ -220,44 +227,42 @@ function Editor({ jd }: { jd?: Jd }) {
     const join = (...xs: Array<string | false | undefined>) => xs.filter(Boolean).join(' · ');
     const nDuties = duties(x.responsibilities, x.dailyTasks).length;
     return [
-      [1, t('jds.sec.basic'), join(x.title, x.seniority, x.workingModel && t(`jds.page.model.${x.workingModel}`), x.domains.join(', '))],
-      [2, t('jds.sec.requirements'), join(
+      [1, t('jds.sec.basic'), join(x.title, x.domains.join(', '), x.workingModel && t(`jds.page.model.${x.workingModel}`))],
+      [2, t('jds.sec.overview'), join(!!x.summary && t('jds.page.summary'),
+        nDuties > 0 && t('jds.ai.n.duties', { n: nDuties }), !!x.aboutTeam && t('jds.page.team'))],
+      [3, t('jds.sec.requirements'), join(x.seniority,
         x.skills.length > 0 && t('jds.ai.n.skills', { n: x.skills.length }), !!x.mustHave?.length && t('jds.ai.n.must', { n: x.mustHave.length }),
         !!x.niceToHave?.length && t('jds.ai.n.nice', { n: x.niceToHave.length }), x.minYears !== undefined && t('jd.yrs', { n: x.minYears }),
         x.english, x.education && t(`education.${x.education}`))],
-      [3, t('jds.sec.overview'), join(!!x.summary && t('jds.page.summary'),
-        nDuties > 0 && t('jds.ai.n.duties', { n: nDuties }), !!x.aboutTeam && t('jds.page.team'))],
     ];
   };
 
   const upload = async (file: File | undefined) => {
     if (!file) return;
     if (!/\.(txt|md)$/i.test(file.name)) return toast(t('jds.page.std.fileUnsupported'), 'error');
-    setSource(await file.text());
+    const text = await file.text();
+    setSource(text);
     toast(t('jds.page.std.fileLoaded', { name: file.name }), 'info');
   };
 
-  /** Draft needs a title; Publish and Run Match need every required field. */
-  const save = (kind: 'draft' | 'publish' | 'match') => {
-    const full = kind !== 'draft';
-    const need = kind === 'publish' ? missing : forMatch;
-    if (missing.title || (full && Object.values(need).some(Boolean))) {
+  /** Draft needs a title; Run Match needs the matching fields. Publishing happens from the JD list menu. */
+  const save = (kind: 'draft' | 'match') => {
+    const full = kind === 'match';
+    if (missing.title || (full && Object.values(forMatch).some(Boolean))) {
       setShowErrors(true);
-      if (full && !missing.title) toast(t(kind === 'publish' ? 'jds.page.err.fix' : 'jds.page.err.fixMatch'), 'error');
+      if (full && !missing.title) toast(t('jds.page.err.fixMatch'), 'error');
       return;
     }
     const input = toInput(form);
-    // Run Match keeps the current status; an edited published JD stays published on "Save changes".
-    const status = kind === 'publish' ? 'Published' : kind === 'match' ? jd?.status ?? 'Draft' : jd?.status === 'Published' ? 'Published' : 'Draft';
-    const { createJd, updateJd, setJdStatus } = useStore.getState();
+    const { createJd, updateJd } = useStore.getState();
     let saved: Jd;
     if (jd) {
       updateJd(jd.id, input);
-      if (jd.status !== status) setJdStatus(jd.id, status as 'Published' | 'Draft');
-      saved = { ...jd, ...input, status };
-      toast(t(kind === 'publish' ? 'jds.toast.published' : 'jds.toast.saved'));
+      saved = { ...jd, ...input };
+      toast(t('jds.toast.saved'));
     } else {
-      saved = createJd({ ...input, status });
+      // Saving never changes the status: a new JD starts as a draft, an edited one keeps its own.
+      saved = createJd({ ...input, status: 'Draft' });
       toast(t('jds.toast.created', { code: saved.code }));
     }
     setTouched(false);
@@ -275,24 +280,19 @@ function Editor({ jd }: { jd?: Jd }) {
     </div>
   );
 
-  // Always on screen, like the Job editor: leave, save, publish, match.
+  // Always on screen, like the Job editor. Saving is the main action (far right); Save & Match saves, then opens matching.
   const footer = (
     <div className="bg-white dark:bg-[#1e1e1e] border-t border-[#e6dddb] dark:border-[#2a2423] shadow-[0_-2px_8px_rgba(0,0,0,0.04)]">
       {/* Right padding keeps the buttons clear of the floating AI button. */}
-      <div className="max-w-[1400px] mx-auto pl-8 pr-20 py-3 flex items-center gap-2 flex-wrap">
+      <div className="max-w-[1400px] mx-auto pl-8 pr-20 py-2 flex items-center gap-2 flex-wrap">
         <button type="button" onClick={leave} className={BTN_GHOST}>{t('common.cancel')}</button>
         <div className="ml-auto flex items-center gap-2 flex-wrap">
-          <button type="button" onClick={() => save('draft')} className={BTN_GHOST}>
-            <span aria-hidden="true" className="material-symbols-outlined text-[18px]">save_as</span>
-            {t(jd?.status === 'Published' ? 'jds.page.saveChanges' : 'jds.page.saveDraft')}
+          <button type="button" onClick={() => save('match')} className={BTN_GHOST}>
+            <span aria-hidden="true" className="material-symbols-outlined text-[16px]">play_arrow</span>{t('jds.page.runMatch')}
           </button>
-          {jd?.status !== 'Published' && (
-            <button type="button" onClick={() => save('publish')} className={BTN_GHOST}>
-              <span aria-hidden="true" className="material-symbols-outlined text-[18px]">publish</span>{t('jds.page.publish')}
-            </button>
-          )}
-          <button type="button" onClick={() => save('match')} className={BTN_PRIMARY}>
-            <span aria-hidden="true" className="material-symbols-outlined text-[18px]">play_arrow</span>{t('jds.page.runMatch')}
+          <button type="button" onClick={() => save('draft')} className={BTN_PRIMARY}>
+            <span aria-hidden="true" className="material-symbols-outlined text-[16px]">save</span>
+            {t(jd?.status === 'Published' ? 'jds.page.saveChanges' : 'jds.page.saveDraft')}
           </button>
         </div>
       </div>
@@ -353,7 +353,31 @@ function Editor({ jd }: { jd?: Jd }) {
                 <span className="text-xs text-[#896a61]">{t('jds.page.std.hint')}</span>
               </div>
 
-              {/* One box for a title or a whole JD; files can be attached or dropped on it. */}
+              {review !== null ? (
+                <div className="flex flex-col gap-2.5">
+                  <div className="rounded-xl bg-white dark:bg-[#251f1e] border border-[#e6dddb] dark:border-[#3a3433] focus-within:border-primary focus-within:ring-1 focus-within:ring-primary">
+                    <div className="flex items-center gap-2 px-4 pt-3 pb-2 border-b border-[#f0ebe9] dark:border-[#3a3433]">
+                      <span aria-hidden="true" className="material-symbols-outlined text-[16px] text-orange-500">spellcheck</span>
+                      <span className="text-sm font-bold text-[#181211] dark:text-white">{t('jds.ai.reviewTitle')}</span>
+                      <span className="text-xs text-[#896a61]">{t('jds.ai.reviewHint')}</span>
+                    </div>
+                    <textarea aria-label={t('jds.ai.reviewTitle')} rows={16} value={review} onChange={(e) => setReview(e.target.value)}
+                      className="w-full block resize-y bg-transparent border-0 px-4 py-3 text-sm leading-relaxed text-[#181211] dark:text-white focus:ring-0 focus:outline-none" />
+                    <div className="flex flex-wrap items-center gap-2 px-2.5 pb-2.5">
+                      <button type="button" onClick={() => setReview(null)} className={BTN_SM_GHOST}>
+                        <span aria-hidden="true" className="material-symbols-outlined text-[16px]">arrow_back</span>{t('jds.ai.backToSource')}
+                      </button>
+                      <button type="button" onClick={rewrite} className={BTN_SM_GHOST}>
+                        <span aria-hidden="true" className="material-symbols-outlined text-[16px]">refresh</span>{t('jds.ai.rewriteAgain')}
+                      </button>
+                      <button type="button" onClick={() => fillWithAi(review)} disabled={!review.trim()} className={`${BTN_SM_PRIMARY} ml-auto`}>
+                        <span aria-hidden="true" className="material-symbols-outlined text-[16px]">check</span>{t('jds.ai.applyRewrite')}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+              /* One box for a title or a whole JD; files can be attached or dropped on it. */
                 <div className="flex flex-col gap-2.5">
                   <div
                     onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
@@ -361,7 +385,7 @@ function Editor({ jd }: { jd?: Jd }) {
                     onDrop={(e) => { e.preventDefault(); setDragging(false); void upload(e.dataTransfer.files?.[0]); }}
                     className={`rounded-xl bg-white dark:bg-[#251f1e] border transition-colors focus-within:border-primary focus-within:ring-1 focus-within:ring-primary ${dragging ? 'border-primary border-dashed' : 'border-[#e6dddb] dark:border-[#3a3433]'}`}
                   >
-                    <textarea aria-label={t('jds.page.std.pasteLabel')} rows={3} value={source}
+                    <textarea aria-label={t('jds.page.std.pasteLabel')} rows={Math.min(Math.max(source.split('\n').length, 3), 18)} value={source}
                       onChange={(e) => setSource(e.target.value)}
                       onKeyDown={(e) => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && canRun) fillWithAi(); }}
                       placeholder={t('jds.page.std.pastePlaceholder')}
@@ -377,7 +401,10 @@ function Editor({ jd }: { jd?: Jd }) {
                           {t(generating ? 'jds.page.std.modeTitle' : 'jds.page.std.modeJd')}
                         </span>
                       )}
-                      <button type="button" onClick={fillWithAi} disabled={!canRun} className={`${BTN_SM_PRIMARY} ml-auto`}>
+                      <button type="button" onClick={rewrite} disabled={!canRun} className={`${BTN_SM_GHOST} ml-auto disabled:opacity-40`}>
+                        <span aria-hidden="true" className="material-symbols-outlined text-[16px]">spellcheck</span>{t('jds.ai.rewrite')}
+                      </button>
+                      <button type="button" onClick={() => fillWithAi()} disabled={!canRun} className={BTN_SM_PRIMARY}>
                         <span aria-hidden="true" className="material-symbols-outlined text-[16px]">auto_fix_high</span>{t('jds.ai.fill')}
                       </button>
                     </div>
@@ -392,6 +419,7 @@ function Editor({ jd }: { jd?: Jd }) {
                     ))}
                   </p>
                 </div>
+              )}
             </section>
           )}
 
@@ -406,22 +434,18 @@ function Editor({ jd }: { jd?: Jd }) {
 
           <Section n={1} id="basic" title={t('jds.sec.basic')} hint={t('jds.sec.basicHint')}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-6">
-              <div className="md:col-span-2">
-                <Field id="jd-title" label={t('jds.page.title')} required error={err('title')}>
-                  <input id="jd-title" className={INPUT} value={form.title} placeholder={t('jds.page.titlePlaceholder')} onChange={(e) => set('title', e.target.value)} />
-                </Field>
-              </div>
+              <Field id="jd-title" label={t('jds.page.title')} required error={err('title')}>
+                <input id="jd-title" className={INPUT} value={form.title} placeholder={t('jds.page.titlePlaceholder')} onChange={(e) => set('title', e.target.value)} />
+              </Field>
               <Field id="jd-client" label={t('jds.page.clientPlaceholder')}>
                 <input id="jd-client" list="jd-client-list" className={INPUT} value={form.client} placeholder={t('jds.page.clientHint')} onChange={(e) => set('client', e.target.value)} />
                 <datalist id="jd-client-list">{clients.map((c) => <option key={c} value={c} />)}</datalist>
-              </Field>
-              <Field id="jd-seniority" label={t('jds.page.seniority')} required error={err('seniority')}>
-                {select('jd-seniority', form.seniority, (v) => set('seniority', v), options('seniority', form.seniority))}
               </Field>
               <div className="md:col-span-2">
                 <TagField id="jd-domain" label={t('jds.page.domain')} required placeholder={t('jds.page.domainAdd')} values={form.domains} onChange={(v) => set('domains', v)} options={allDomains} quick={ideas.domains} error={err('domains')} />
               </div>
             </div>
+            {/* Where and when: working conditions on one row. */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-6">
               <Field id="jd-location" label={t('jds.page.location')}>
                 <input id="jd-location" className={INPUT} placeholder={t('jds.page.locationPlaceholder')} value={form.location} onChange={(e) => set('location', e.target.value)} />
@@ -435,14 +459,26 @@ function Editor({ jd }: { jd?: Jd }) {
             </div>
           </Section>
 
-          <Section n={2} id="requirements" title={t('jds.sec.requirements')} hint={t('jds.sec.requirementsHint')} badge={aiBadge}>
+          {/* What the role is comes before what it needs, as candidates (and the standard rewrite) read it. */}
+          <Section n={2} id="overview" title={t('jds.sec.overview')} hint={t('jds.sec.overviewHint')}>
+            <Field id="jd-summary" label={t('jds.page.summary')} required error={err('summary')}>
+              <textarea id="jd-summary" rows={3} className={INPUT} placeholder={t('jds.page.summaryPlaceholder')} value={form.summary} onChange={(e) => set('summary', e.target.value)} />
+            </Field>
+            <Field id="jd-duties" label={t('jds.page.duties')} required error={err('responsibilities')}>
+              <textarea id="jd-duties" rows={6} className={INPUT} placeholder={t('jds.page.dutiesPlaceholder')} value={form.responsibilities} onChange={(e) => set('responsibilities', e.target.value)} />
+            </Field>
+            <Field id="jd-team" label={t('jds.page.team')}>
+              <textarea id="jd-team" rows={2} className={INPUT} placeholder={t('jds.page.teamPlaceholder')} value={form.aboutTeam} onChange={(e) => set('aboutTeam', e.target.value)} />
+            </Field>
+          </Section>
+
+          <Section n={3} id="requirements" title={t('jds.sec.requirements')} hint={t('jds.sec.requirementsHint')} badge={aiBadge}>
             <SectionHead active>{t('jds.page.core')}</SectionHead>
-            <TagField id="jd-stack" label={t('jds.page.stack')} required placeholder={t('jds.page.stackAdd')} values={form.skills} onChange={(v) => set('skills', v)} error={err('skills')} options={allSkills} quick={ideas.skills}
-              starred={form.criticalSkills} hint={t('jds.page.criticalHint')}
-              onStar={(v) => set('criticalSkills', form.criticalSkills.includes(v) ? form.criticalSkills.filter((x) => x !== v) : [...form.criticalSkills, v])} />
-            <TagField id="jd-must" label={t('jds.page.must')} required placeholder={t('jds.page.mustAdd')} values={form.mustHave} onChange={(v) => set('mustHave', v)} error={err('mustHave')} list options={mustLibrary} quick={ideas.mustHave} />
-            <TagField id="jd-nice" label={t('jds.page.nice')} placeholder={t('jds.page.niceAdd')} values={form.niceToHave} onChange={(v) => set('niceToHave', v)} list quick={ideas.niceToHave} />
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-6">
+            {/* Level, years and English go together (Senior ~ 5 yrs): one row, ahead of the lists. */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-6">
+              <Field id="jd-seniority" label={t('jds.page.seniority')} required error={err('seniority')}>
+                {select('jd-seniority', form.seniority, (v) => set('seniority', v), options('seniority', form.seniority))}
+              </Field>
               <Field id="jd-years" label={t('jds.page.years')} required error={err('minYears')}>
                 <input id="jd-years" type="number" min={0} max={40} className={INPUT} value={form.minYears} onChange={(e) => set('minYears', e.target.value)} />
               </Field>
@@ -450,6 +486,11 @@ function Editor({ jd }: { jd?: Jd }) {
                 {select('jd-english', form.english, (v) => set('english', v), options('english', form.english))}
               </Field>
             </div>
+            <TagField id="jd-stack" label={t('jds.page.stack')} required placeholder={t('jds.page.stackAdd')} values={form.skills} onChange={(v) => set('skills', v)} error={err('skills')} options={allSkills} quick={ideas.skills}
+              starred={form.criticalSkills} hint={t('jds.page.criticalHint')}
+              onStar={(v) => set('criticalSkills', form.criticalSkills.includes(v) ? form.criticalSkills.filter((x) => x !== v) : [...form.criticalSkills, v])} />
+            <TagField id="jd-must" label={t('jds.page.must')} required placeholder={t('jds.page.mustAdd')} values={form.mustHave} onChange={(v) => set('mustHave', v)} error={err('mustHave')} list options={mustLibrary} quick={ideas.mustHave} />
+            <TagField id="jd-nice" label={t('jds.page.nice')} placeholder={t('jds.page.niceAdd')} values={form.niceToHave} onChange={(v) => set('niceToHave', v)} list quick={ideas.niceToHave} />
             <div className="pt-6 border-t border-[#f0ebe9] dark:border-[#2a2423] flex flex-col gap-6">
               <SectionHead>{t('jds.page.qualifications')}</SectionHead>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-6">
@@ -460,24 +501,12 @@ function Editor({ jd }: { jd?: Jd }) {
                   <input id="jd-major" className={INPUT} placeholder={t('jds.page.majorPlaceholder')} value={form.major} onChange={(e) => set('major', e.target.value)} />
                 </Field>
               </div>
-              <TagField id="jd-languages" label={t('jds.page.languages')} placeholder={t('jds.page.languagesAdd')} values={form.languages} onChange={(v) => set('languages', v)} options={LANGUAGE_OPTIONS} />
               <TagField id="jd-certs" label={t('jds.page.certs')} placeholder={t('jds.page.certsAdd')} values={form.certifications} onChange={(v) => set('certifications', v)} options={CERT_OPTIONS} />
-              <Field id="jd-other" label={t('jds.page.other')}>
+              <TagField id="jd-languages" label={t('jds.page.languages')} placeholder={t('jds.page.languagesAdd')} values={form.languages} onChange={(v) => set('languages', v)} options={LANGUAGE_OPTIONS} />
+              <Field id="jd-other" label={t('jds.page.other')} aside={<span className="text-2xs text-[#896a61]">{t('jds.page.otherAside')}</span>}>
                 <textarea id="jd-other" rows={3} className={INPUT} placeholder={t('jds.page.otherPlaceholder')} value={form.otherRequirements} onChange={(e) => set('otherRequirements', e.target.value)} />
               </Field>
             </div>
-          </Section>
-
-          <Section n={3} id="overview" title={t('jds.sec.overview')} hint={t('jds.sec.overviewHint')}>
-            <Field id="jd-summary" label={t('jds.page.summary')} required error={err('summary')}>
-              <textarea id="jd-summary" rows={3} className={INPUT} placeholder={t('jds.page.summaryPlaceholder')} value={form.summary} onChange={(e) => set('summary', e.target.value)} />
-            </Field>
-            <Field id="jd-duties" label={t('jds.page.duties')} required error={err('responsibilities')}>
-              <textarea id="jd-duties" rows={6} className={INPUT} placeholder={t('jds.page.dutiesPlaceholder')} value={form.responsibilities} onChange={(e) => set('responsibilities', e.target.value)} />
-            </Field>
-            <Field id="jd-team" label={t('jds.page.team')}>
-              <textarea id="jd-team" rows={2} className={INPUT} placeholder={t('jds.page.teamPlaceholder')} value={form.aboutTeam} onChange={(e) => set('aboutTeam', e.target.value)} />
-            </Field>
           </Section>
         </div>
       </div>

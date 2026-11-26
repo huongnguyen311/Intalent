@@ -1,6 +1,5 @@
 import { jobStageLabel, jobStages } from '../../domain/pipelineConfig';
 import { STAGES, stageLabel } from '../../domain/stages';
-import type { JobTag } from '../../domain/jobInsights';
 import type { Job, Stage } from '../../domain/types';
 import { useLang, useT } from '../../i18n/i18n';
 
@@ -19,24 +18,6 @@ export function JobStatusBadge({ status }: { status: Job['status'] }) {
     <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-2xs font-bold ${s.pill}`}>
       <span className={`size-1.5 rounded-full ${s.dot}`}></span>
       {t(`jobs.status.${status}`)}
-    </span>
-  );
-}
-
-const TAG_STYLE: Record<JobTag, { cls: string; icon: string }> = {
-  high_match: { cls: 'bg-amber-50 text-amber-700 border-amber-100', icon: 'workspace_premium' },
-  fast_hiring: { cls: 'bg-sky-50 text-sky-700 border-sky-100', icon: 'local_fire_department' },
-  needs_attention: { cls: 'bg-rose-50 text-rose-600 border-rose-100', icon: 'error' },
-};
-
-/** Highlight chip next to a job title on the Jobs list. */
-export function JobTagChip({ tag }: { tag: JobTag }) {
-  const t = useT();
-  const s = TAG_STYLE[tag];
-  return (
-    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-2xs font-semibold whitespace-nowrap ${s.cls}`}>
-      <span className="material-symbols-outlined text-[13px]">{s.icon}</span>
-      {t(`jobs.tag.${tag}`)}
     </span>
   );
 }
@@ -71,14 +52,16 @@ export function StageBar({ counts, compact, job }: { counts: Record<Stage, numbe
   const stages = job ? jobStages(job, used) : STAGES;
   const label = (s: Stage) => (job ? jobStageLabel(job, s, lang) : stageLabel(s, lang));
   return (
-    <div className={`relative group ${compact ? 'w-28' : 'w-40'}`}>
+    <div className={`relative group/bar ${compact ? 'w-28' : 'w-40'}`}>
       <div className="flex h-2 rounded-full overflow-hidden bg-gray-100">
         {stages.filter((s) => counts[s] > 0).map((s) => (
           <div key={s} data-stage={s} style={{ width: `${(counts[s] / total) * 100}%`, background: STAGE_COLOR[s] }} />
         ))}
       </div>
-      <div className="text-2xs font-bold text-muted mt-1">{t('jobs.bar.total', { n: total })}</div>
-      <div role="tooltip" className="hidden group-hover:block absolute left-0 top-full mt-1 z-20 bg-white border border-gray-100 shadow-lg rounded-xl p-3 w-52 space-y-1">
+      {/* Compact (Jobs list): the count only shows while the pointer is on this cell (not the row); it keeps its space so rows don't jump.
+          Named groups (bar / cell) so hovering the row's `group` elsewhere never opens anything here. */}
+      <div className={`text-2xs font-bold text-muted mt-1 ${compact ? 'opacity-0 transition-opacity group-hover/cell:opacity-100' : ''}`}>{t('jobs.bar.total', { n: total })}</div>
+      <div role="tooltip" className="hidden group-hover/bar:block absolute left-0 top-full mt-1 z-20 bg-white border border-gray-100 shadow-lg rounded-xl p-3 w-52 space-y-1">
         {stages.map((s) => (
           <div key={s} className="flex items-center justify-between text-xs text-slate-600">
             <span className="flex items-center gap-2">

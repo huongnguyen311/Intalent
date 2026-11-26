@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { jobOptimizations, jobStats, jobTag, jobUpdatedAt, sortJobs, type JobStats } from './jobInsights';
+import { jobOptimizations, jobStats, jobUpdatedAt, sortJobs, type JobStats } from './jobInsights';
 import type { Activity, AiEvaluation, Application, Job } from './types';
 
 const NOW = Date.parse('2026-11-19T12:00:00.000Z');
@@ -27,10 +27,9 @@ describe('jobStats', () => {
     expect(jobStats(job(), apps, [], NOW)).toMatchObject({ applicants: 4, aiAvg: 70, evaluated: 2 });
   });
 
-  it('has no average before anything is scored and counts applications from the last 7 days', () => {
+  it('has no average before anything is scored', () => {
     const s = jobStats(job(), [app('a', { addedAt: daysAgo(2) }), app('b', { addedAt: daysAgo(9) })], [], NOW);
     expect(s.aiAvg).toBeUndefined();
-    expect(s.recent).toBe(1);
   });
 });
 
@@ -43,18 +42,7 @@ describe('jobUpdatedAt', () => {
   });
 });
 
-const stats = (over: Partial<JobStats> = {}): JobStats => ({ applicants: 10, evaluated: 5, recent: 0, updatedAt: daysAgo(1), aiAvg: 65, ...over });
-
-describe('jobTag', () => {
-  it('flags problems before good news and only tags open jobs', () => {
-    expect(jobTag(job(), stats({ aiAvg: 25 }), NOW)).toBe('needs_attention');
-    expect(jobTag(job({ openedAt: daysAgo(40) }), stats({ applicants: 2 }), NOW)).toBe('needs_attention');
-    expect(jobTag(job(), stats({ aiAvg: 82 }), NOW)).toBe('high_match');
-    expect(jobTag(job(), stats({ recent: 4 }), NOW)).toBe('fast_hiring');
-    expect(jobTag(job(), stats(), NOW)).toBeUndefined();
-    expect(jobTag(job({ status: 'draft' }), stats({ aiAvg: 90 }), NOW)).toBeUndefined();
-  });
-});
+const stats = (over: Partial<JobStats> = {}): JobStats => ({ applicants: 10, evaluated: 5, updatedAt: daysAgo(1), aiAvg: 65, ...over });
 
 describe('jobOptimizations', () => {
   it('lists the most urgent tips first', () => {
@@ -69,18 +57,17 @@ describe('jobOptimizations', () => {
 });
 
 describe('sortJobs', () => {
-  it('sorts by AI match with unscored jobs last', () => {
+  it('sorts by applicants', () => {
     const jobs = [job({ id: 'a' }), job({ id: 'b' }), job({ id: 'c' })];
-    const m = new Map([['a', stats({ aiAvg: 50 })], ['b', stats({ aiAvg: undefined })], ['c', stats({ aiAvg: 90 })]]);
-    expect(sortJobs(jobs, 'ai_match', m).map((j) => j.id)).toEqual(['c', 'a', 'b']);
+    const m = new Map([['a', stats({ applicants: 2 })], ['b', stats({ applicants: 9 })], ['c', stats({ applicants: 5 })]]);
+    expect(sortJobs(jobs, 'applicants', m).map((j) => j.id)).toEqual(['b', 'c', 'a']);
   });
 });
 
 describe('requirementsForJob', () => {
-  it('uses the job minimum years over the JD', async () => {
+  it('takes the minimum years from the JD, never the job', async () => {
     const { requirementsForJob } = await import('./aiEvaluation');
     const jd = { id: 'jd', code: 'JD-1', title: 'Dev', client: '', domains: [], body: '5+ years of experience', skills: ['React'], status: 'Published', createdAt: '', updatedAt: '' };
-    expect(requirementsForJob(job({ minYears: 8 }), [jd], []).years).toBe(8);
-    expect(requirementsForJob(job(), [jd], []).years).not.toBe(8);
+    expect(requirementsForJob(job({ minYears: 8 }), [jd], []).years).toBe(5);
   });
 });

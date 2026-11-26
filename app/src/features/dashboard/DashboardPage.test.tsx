@@ -27,13 +27,20 @@ describe('Login and Dashboard screens', () => {
     expect(screen.getByTestId('dashboard-recruitment')).toBeInTheDocument();
   });
 
-  it('dashboard defaults to All and shows the recruitment row outside fixture mode', () => {
+  it('dashboard defaults to All time and filters by a date-range dropdown with a custom range', () => {
     at('/');
-    expect(screen.getByRole('button', { name: 'All' })).toHaveAttribute('aria-pressed', 'true');
+    const range = screen.getByRole('combobox', { name: 'Date range' });
+    expect(range).toHaveValue('all');
     expect(screen.getByTestId('dashboard-recruitment')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Week' }));
-    expect(screen.getByRole('button', { name: 'Week' })).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByRole('combobox', { name: 'Recruiter' })).toBeInTheDocument();
+    expect([...range.querySelectorAll('option')].map((o) => o.textContent)).toEqual(['All time', 'Today', 'This week', 'This month', 'Custom…']);
+    expect(screen.queryByLabelText('From')).toBeNull();
+    fireEvent.change(range, { target: { value: 'custom' } });
+    expect(screen.getByLabelText('From')).toBeInTheDocument();
+    expect(screen.getByLabelText('To')).toBeInTheDocument();
+    // Only the two dashboard recruiters are offered, and there is no Create job button.
+    const recruiter = screen.getByRole('combobox', { name: 'Recruiter' });
+    expect([...recruiter.querySelectorAll('option')].map((o) => o.textContent)).toEqual(['All recruiters', 'Hòa Đặng', 'Tiên Nguyễn']);
+    expect(screen.queryByRole('link', { name: /Create job/i })).toBeNull();
   });
 
   it('a recruiter sees open jobs for their own jobs only, and the card opens the job list', () => {
@@ -45,39 +52,9 @@ describe('Login and Dashboard screens', () => {
     const card = screen.getByRole('link', { name: /Open Jobs/i });
     expect(card).toHaveTextContent(String(mine));
     expect(card).toHaveAttribute('href', '/jobs?status=open');
-    // Their dashboard is already their own jobs: no recruiter filter, only the job filter.
+    // Their dashboard is already their own jobs: no recruiter filter, and no job filter either.
     expect(screen.queryByRole('combobox', { name: 'Recruiter' })).toBeNull();
-    expect(screen.getByRole('combobox', { name: 'Job' })).toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: 'Job' })).toBeNull();
     signInAs(undefined);
   });
 });
-
-describe('Dashboard hiring urgency tiles', () => {
-  it('counts open urgent and overdue jobs in scope and links to the filtered Jobs list', async () => {
-    const { isOverdue, isUrgent, todayIso } = await import('../../domain/jobUrgency');
-    const { buildSeed } = await import('../../data/seed');
-    useStore.setState({ ...buildSeed() });
-    const st = useStore.getState();
-    const open = st.jobs.filter((j) => j.status === 'open');
-    at('/dashboard');
-    const urgent = screen.getByTestId('tile-urgent-jobs');
-    const overdue = screen.getByTestId('tile-overdue-jobs');
-    expect(urgent).toHaveTextContent(String(open.filter(isUrgent).length));
-    expect(overdue).toHaveTextContent(String(open.filter((j) => isOverdue(j, st.applications, todayIso())).length));
-    expect(urgent.closest('a') ?? urgent.querySelector('a')).toHaveAttribute('href', '/jobs?priority=urgent,critical&status=open');
-    expect(overdue.closest('a') ?? overdue.querySelector('a')).toHaveAttribute('href', '/jobs?overdue=1');
-  });
-
-  it('a recruiter only counts jobs in their scope', async () => {
-    const { isUrgent } = await import('../../domain/jobUrgency');
-    const { buildSeed } = await import('../../data/seed');
-    useStore.setState({ ...buildSeed() });
-    signInAs('u-chau');
-    const st = useStore.getState();
-    const mine = jobsInScope(st.users.find((u) => u.id === 'u-chau'), st.jobs).filter((j) => j.status === 'open');
-    at('/dashboard');
-    expect(screen.getByTestId('tile-urgent-jobs')).toHaveTextContent(String(mine.filter(isUrgent).length));
-    signInAs(undefined);
-  });
-});
-

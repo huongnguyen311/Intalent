@@ -13,8 +13,8 @@ import {
 import { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { sortByAiScore } from '../../domain/aiEvaluation';
-import { filterApplications, hasFilter, type ApplicationQuery } from '../../domain/pipelineFilter';
-import { END_STAGES, STAGES } from '../../domain/stages';
+import { filterApplications, type ApplicationQuery } from '../../domain/pipelineFilter';
+import { STAGES } from '../../domain/stages';
 import { jobStages } from '../../domain/pipelineConfig';
 import type { Application, Job, Stage } from '../../domain/types';
 import { toast } from '../../components/Toast';
@@ -62,12 +62,6 @@ const columnKeyboardCoordinates: KeyboardCoordinateGetter = (event, { active, co
 
 const KEYBOARD_CODES = { start: ['Space'], cancel: ['Escape'], end: ['Space', 'Enter'] };
 
-/** End strips (Hired/Rejected/Withdrawn) start collapsed once the open stages hold more than this many applications. */
-const BUSY_ACTIVE = 3;
-
-/** Columns are a fixed 252px and the board scrolls sideways; beyond this many, empty columns still fold to save scrolling. */
-const MAX_OPEN_COLUMNS = 7;
-
 /**
  * Per-job Kanban (or list): drag (pointer or keyboard) or "Move to…" between stages.
  * Without `job` it is the "All jobs" board: every application of `jobs`, cards labelled with their job.
@@ -100,7 +94,6 @@ function BoardInner({ job, jobs, filter, view = 'kanban', sort = 'board', onConf
   // `?app=<id>` (from the to-do list) opens that application's drawer.
   const [params] = useSearchParams();
   const [openId, setOpenId] = useState<string | null>(() => params.get('app'));
-  const [collapseOverride, setCollapseOverride] = useState<Partial<Record<Stage, boolean>>>({});
   const [activeId, setActiveId] = useState<string | null>(null);
   const [picked, setPicked] = useState<Set<string>>(() => new Set());
 
@@ -128,15 +121,6 @@ function BoardInner({ job, jobs, filter, view = 'kanban', sort = 'board', onConf
     useSensor(KeyboardSensor, { coordinateGetter: columnKeyboardCoordinates, keyboardCodes: KEYBOARD_CODES }),
   );
 
-  // Frozen at mount so moving a card never flips the end strips open or shut by itself.
-  const [busyAtMount] = useState(() => jobApps.filter((a) => !END_STAGES.includes(a.stage)).length > BUSY_ACTIVE);
-  const filtering = hasFilter(filter ?? {});
-  // While a filter is on, a strip that holds matches opens so they are not hidden.
-  // With more columns than fit, empty ones fold into a narrow strip (still a drop target).
-  const isCollapsed = (stage: Stage) =>
-    collapseOverride[stage] ??
-    ((stages.length > MAX_OPEN_COLUMNS && !apps.some((a) => a.stage === stage) && apps.length > 0) ||
-      (stages.length > MAX_OPEN_COLUMNS && END_STAGES.includes(stage) && busyAtMount && !(filtering && apps.some((a) => a.stage === stage))));
 
   const { move, moveMany, dialog } = useStageMove();
   const stages = useJobStages();
@@ -242,8 +226,6 @@ function BoardInner({ job, jobs, filter, view = 'kanban', sort = 'board', onConf
               showJob={allJobs}
               onOpen={setOpenId}
               onMove={moveTo}
-              collapsed={isCollapsed(stage)}
-              onToggleCollapse={() => setCollapseOverride((o) => ({ ...o, [stage]: !isCollapsed(stage) }))}
               selected={selected}
               onSelect={select}
             />

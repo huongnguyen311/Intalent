@@ -1,39 +1,32 @@
 import { useState } from 'react';
 import { AiTextField } from '../../../components/AiTextField';
 import { Modal } from '../../../components/Modal';
-import { TagField } from '../../../components/TagField';
 import { CONTENT_TEMPLATE, draftAdditionalInfo } from '../../../domain/jdWriter';
 import type { JobQuestion } from '../../../domain/types';
 import { useT } from '../../../i18n/i18n';
 import { useStore } from '../../../store/store';
 import type { JobForm } from '../useJobForm';
-import { BTN_GHOST, BTN_PRIMARY, CHECKBOX, Field, FIELD, LEGEND } from './ui';
+import { BTN_GHOST, BTN_PRIMARY, CHECKBOX, FIELD, GROUP, GROUPS, GroupHeader, PostArea } from './ui';
 
 const template = (id: string) => useStore.getState().prompts.find((p) => p.id === id)?.text ?? '';
 
-/** Job post & application section: job post copy and screening questions. */
+/** Job post & application section: job post copy and screening questions. Skills and requirements live in RequirementsStep. */
 export function PublishStep({ form }: { form: JobForm }) {
   const t = useT();
   const { values: v, set } = form;
   const questions = v.questions;
   const editQuestion = (id: string, p: Partial<JobQuestion>) => set.questions(questions.map((x) => (x.id === id ? { ...x, ...p } : x)));
   const [confirming, setConfirming] = useState(false);
-  const allSkills = useStore((s) => s.jds);
-  const skillOptions = [...new Set(allSkills.flatMap((j) => j.skills))].sort((a, b) => a.localeCompare(b));
   // Replacing what is already there asks first; an empty post just loads.
   const loadFromJd = () => (form.hasPostContent ? setConfirming(true) : form.loadFromJd());
-  const area = (id: string, label: string, key: 'summary' | 'responsibilities' | 'mustHave' | 'niceToHave' | 'aboutTeam', rows: number, perLine = false) => (
-    <Field id={id} label={label}>
-      <textarea id={id} rows={rows} className={FIELD} value={v[key]} onChange={(e) => set[key](e.target.value)}
-        placeholder={perLine ? t('jobs.post.perLine') : undefined} />
-    </Field>
+  const area = (id: string, label: string, key: 'summary' | 'responsibilities' | 'aboutTeam', rows: number, perLine = false) => (
+    <PostArea form={form} id={id} label={label} field={key} rows={rows} perLine={perLine} />
   );
   return (
-    <>
-      <fieldset className="grid gap-4 lg:grid-cols-2">
-        <legend className={`${LEGEND} lg:col-span-2`}>{t('jobs.drawer.content')}</legend>
-        <div className="lg:col-span-2 flex items-center justify-between gap-2">
-          <p className="text-xs text-[#896a61]">{t('jobs.post.hint')}</p>
+    <div className={GROUPS}>
+      <fieldset className={`${GROUP} lg:grid lg:grid-cols-2`}>
+        <legend className="sr-only">{t('jobs.drawer.content')}</legend>
+        <div className="lg:col-span-2 flex justify-end">
           <button type="button" className={`${BTN_GHOST} inline-flex items-center gap-1.5 !py-1.5`} disabled={!form.selected} onClick={loadFromJd}
             title={form.selected ? undefined : t('jobs.post.pickJdFirst')}>
             <span aria-hidden="true" className="material-symbols-outlined text-[18px]">sync</span>{t('jobs.post.loadFromJd')}
@@ -41,12 +34,6 @@ export function PublishStep({ form }: { form: JobForm }) {
         </div>
         <div className="lg:col-span-2">{area('job-summary', t('jobs.post.summary'), 'summary', 4)}</div>
         <div className="lg:col-span-2">{area('job-duties', t('jobs.post.duties'), 'responsibilities', 6, true)}</div>
-        <div className="lg:col-span-2">
-          <TagField id="job-skills" label={t('jobs.post.skills')} placeholder={t('jobs.post.skillsPlaceholder')} values={v.skills} onChange={set.skills} options={skillOptions}
-            labelClass="text-xs font-semibold text-[#896a61]" />
-        </div>
-        {area('job-must-have', t('jobs.post.mustHave'), 'mustHave', 5, true)}
-        {area('job-nice-to-have', t('jobs.post.niceToHave'), 'niceToHave', 5, true)}
         <div className="lg:col-span-2">{area('job-team', t('jobs.post.team'), 'aboutTeam', 3)}</div>
         <AiTextField id="job-why-love" label={t('jobs.drawer.whyLove')} value={v.whyLove} onChange={set.whyLove} draft={() => template(CONTENT_TEMPLATE.whyLove)} />
         <AiTextField
@@ -57,9 +44,9 @@ export function PublishStep({ form }: { form: JobForm }) {
           draft={() => draftAdditionalInfo({ location: v.location, employment: v.employment, level: v.level }, template(CONTENT_TEMPLATE.additionalInfo))}
         />
       </fieldset>
-      <fieldset className="flex flex-col gap-2">
-        <legend className={LEGEND}>{t('jobs.drawer.questions')}</legend>
-        {questions.length === 0 && <p className="text-xs text-[#896a61]">{t('jobs.drawer.questionsNone')}</p>}
+      <fieldset className={`${GROUP} !gap-3`}>
+        <legend className="sr-only">{t('jobs.drawer.questions')}</legend>
+        <GroupHeader title={t('jobs.drawer.questions')} hint={questions.length === 0 ? t('jobs.drawer.questionsNone') : undefined} />
         {questions.map((q, i) => (
           <div key={q.id} className="flex items-center gap-2">
             <input
@@ -113,6 +100,6 @@ export function PublishStep({ form }: { form: JobForm }) {
       >
         <p>{t('jobs.post.confirmBody')}</p>
       </Modal>
-    </>
+    </div>
   );
 }

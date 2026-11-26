@@ -27,6 +27,14 @@ export interface QueueRow {
   duplicateName?: string;
 }
 
+/** Counts for one finished run (files added since the queue last went idle). */
+export interface RunResult {
+  created: number;
+  merged: number;
+  review: number;
+  failed: number;
+}
+
 const TICK_MS = 120;
 const STEP = 25;
 
@@ -38,17 +46,22 @@ interface Options {
   concurrency: number;
   /** Start parsing as soon as files are added; otherwise wait for `start()`. */
   autoStart: boolean;
+  /** Rows already in the queue when the page opens (sample states for the demo). */
+  initialRows?: () => QueueRow[];
 }
 
 /** Simulated CV parsing queue: queued, parsing (timer-driven progress), done (created or merged) or failed. */
-export function useUploadQueue({ limits, source, concurrency, autoStart }: Options) {
+export function useUploadQueue({ limits, source, concurrency, autoStart, initialRows }: Options) {
   const t = useT();
-  const rowsRef = useRef<QueueRow[]>([]);
+  const [initial] = useState(() => initialRows?.() ?? []);
+  const rowsRef = useRef<QueueRow[]>(initial);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const runRef = useRef({ created: 0, merged: 0, review: 0 });
-  const nextId = useRef(1);
-  const [rows, setRows] = useState<QueueRow[]>([]);
+  const runRef = useRef({ created: 0, merged: 0, review: 0, failed: 0 });
+  const nextId = useRef(initial.reduce((m, r) => Math.max(m, r.id), 0) + 1);
+  const [rows, setRows] = useState<QueueRow[]>(initial);
   const [running, setRunning] = useState(false);
+  /** Result of the last finished run, for the completion banner; null while a run is in progress or after clear. */
+  const [lastRun, setLastRun] = useState<RunResult | null>(null);
 
   const publish = () => setRows([...rowsRef.current]);
 
@@ -103,13 +116,15 @@ export function useUploadQueue({ limits, source, concurrency, autoStart }: Optio
       } catch {
         r.status = 'failed';
         r.reason = 'parse';
+        runRef.current.failed++;
       }
     }
     publish();
     if (!all.some((r) => r.status === 'queued' || r.status === 'parsing')) {
       stopTimer();
-      const { created, merged, review } = runRef.current;
-      runRef.current = { created: 0, merged: 0, review: 0 };
+      const { created, merged, review, failed } = runRef.current;
+      runRef.current = { created: 0, merged: 0, review: 0, failed: 0 };
+      setLastRun({ created, merged, review, failed });
       if (created + merged > 0) toast(t('upload.toast.done', { created, merged }), 'success');
       if (review > 0) toast(t('upload.toast.review', { n: review }), 'info');
     }
@@ -132,22 +147,34 @@ export function useUploadQueue({ limits, source, concurrency, autoStart }: Optio
       })),
     ];
     if (!fresh.length) return;
-    rowsRef.current = [...rowsRef.current, ...fresh];
+    // Newest batch on top, where the user is looking right after the drop.
+    rowsRef.current = [...fresh, ...rowsRef.current];
     publish();
     if (rejected.length) toast(t('upload.toast.rejected', { n: rejected.length }), 'error');
+    if (accepted.length) {
+      setLastRun(null);
+      toast(t(autoStart ? 'upload.toast.added' : 'upload.toast.addedManual', { n: accepted.length }), 'info');
+    }
     if (autoStart && accepted.length) ensureTimer();
   };
 
-  const start = () => ensureTimer();
+  const start = () => {
+    setLastRun(null);
+    ensureTimer();
+  };
 
   /** HR's answer for a `review` row: merge into the matching profile, or leave it untouched. */
   const resolve = (id: number, choice: 'merge' | 'skip') => {
     const r = rowsRef.current.find((x) => x.id === id);
     if (!r || r.status !== 'review' || !r.input) return;
-    if (choice === 'merge') commit(r, r.input);
-    else {
+    const name = r.duplicateName ?? '';
+    if (choice === 'merge') {
+      commit(r, r.input);
+      toast(t('upload.toast.merged', { name }), 'success');
+    } else {
       r.status = 'skipped';
       r.input = undefined;
+      toast(t('upload.toast.skipped', { file: r.name }), 'info');
     }
     publish();
   };
@@ -167,8 +194,9 @@ export function useUploadQueue({ limits, source, concurrency, autoStart }: Optio
     if (timerRef.current) clearInterval(timerRef.current);
     timerRef.current = null;
     rowsRef.current = [];
-    runRef.current = { created: 0, merged: 0, review: 0 };
+    runRef.current = { created: 0, merged: 0, review: 0, failed: 0 };
     setRunning(false);
+    setLastRun(null);
     setRows([]);
   }, []);
 
@@ -180,5 +208,7 @@ export function useUploadQueue({ limits, source, concurrency, autoStart }: Optio
     [],
   );
 
-  return { rows, running, add, start, clear, resolve, retry };
+  const dismissResult = useCallback(() => setLastRun(null), []);
+
+  return { rows, running, lastRun, dismissResult, add, start, clear, resolve, retry };
 }

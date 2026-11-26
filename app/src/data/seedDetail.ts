@@ -4,7 +4,7 @@ import { CAREERS_ACTOR, SOURCE_CV_UPLOAD, SOURCE_MANUAL } from '../domain/source
 import { stageLabel } from '../domain/stages';
 import { translate } from '../i18n/translate';
 import type {
-  Activity, Application, Candidate, ChatMessage, DemoState, EducationEntry, Interview, Job, Offer,
+  Activity, Application, Candidate, ChatMessage, CvBullet, CvCompetency, CvProject, DemoState, EducationEntry, Interview, Job, Offer,
   Recommendation, Scorecard, SentEmail, WorkExperience,
 } from '../domain/types';
 
@@ -54,6 +54,8 @@ const COMPANIES: Record<string, string[]> = {
   Education: ['EduSprout', 'Bright Classroom'],
   Robotics: ['Kite Robotics', 'Red River Automation'],
 };
+/** Expected monthly rate (USD) per seniority rank, as in RANKS. */
+const RATES = [400, 900, 1600, 2600, 3500, 4200, 5000];
 const CITIES = ['Ho Chi Minh City', 'Hanoi', 'Da Nang', 'Ho Chi Minh City', 'Hanoi', 'Can Tho'];
 const BUSINESS_TITLES = new Set([
   'Growth Marketer', 'Sales Executive', 'Product Manager', 'Business Analyst', 'Project Manager', 'Customer Success Manager',
@@ -96,9 +98,84 @@ function experience(c: Candidate, i: number, base: number): WorkExperience[] {
       description: `Delivered ${domain} products using ${s1} and ${s2}. Worked with ${s3} day to day in a cross-functional team.${lead}`,
     };
     back += len;
-    return entry;
+    return { ...entry, highlights: highlights(c, i, k, domain, rank) };
   });
 }
+
+// ---------------------------------------------------------------- original-document detail (bullets, projects...)
+
+const STREETS = ['Nguyen Thi Minh Khai', 'Le Van Sy', 'Tran Hung Dao', 'Hai Ba Trung', 'Pham Van Dong', 'Vo Van Tan'];
+const PROJECT_KINDS = ['Customer Portal', 'Payments Gateway', 'Analytics Dashboard', 'Mobile App', 'Order Platform', 'Partner API'];
+const TECH_CERTS = [
+  'AWS Certified Developer – Associate (2024)', 'Professional Scrum Master I (2023)', 'Google Cloud Associate Cloud Engineer (2022)',
+  'Microsoft Certified: Azure Fundamentals (2021)', 'Oracle Certified Professional, Java SE 11 (2020)',
+];
+const BUSINESS_CERTS = ['Google Analytics Certification (2024)', 'PMP – Project Management Professional (2022)', 'HubSpot Inbound Sales (2021)', 'Professional Scrum Product Owner I (2023)'];
+
+function highlights(c: Candidate, i: number, k: number, domain: string, rank: number): CvBullet[] {
+  const [s1, s2 = s1, s3 = s2] = c.skills;
+  const users = 20 + ((i * 7 + k * 13) % 180);
+  const pct = 15 + ((i + k * 5) % 40);
+  if (BUSINESS_TITLES.has(c.title)) {
+    return [
+      { text: `Owned the ${domain} portfolio end to end, from discovery to launch, working with sales, delivery and finance teams.` },
+      { text: `Achievements:`, sub: [
+        `Grew managed revenue ${pct}% year over year across ${8 + (i % 12)} key accounts.`,
+        `Shortened the deal / delivery cycle from ${10 + (i % 6)} to ${6 + (i % 3)} weeks.`,
+        `Introduced weekly reporting in ${s1} used by the leadership team.`,
+      ] },
+      { text: `Ran workshops with clients to turn business needs into clear scope, timelines and acceptance criteria.` },
+      ...(k === 0 && rank >= 3 ? [{ text: `Coached ${2 + (i % 4)} junior team members; set up onboarding and playbooks.` }] : []),
+    ];
+  }
+  return [
+    { text: `Built and maintained ${domain} features with ${s1} and ${s2}, serving ${users}k+ monthly active users.` },
+    { text: `Key results:`, sub: [
+      `Cut p95 API latency from ${600 + (i % 5) * 80} ms to ${180 + (i % 4) * 30} ms by caching and query tuning.`,
+      `Raised automated test coverage from ${35 + (i % 15)}% to ${75 + (i % 15)}%.`,
+      `Reduced cloud cost ${pct}% by right-sizing services and cleaning up unused resources.`,
+    ] },
+    { text: `Used ${s3} with CI/CD pipelines, code review and trunk-based development in a team of ${4 + (i % 6)} engineers.` },
+    { text: `Wrote technical design documents and worked closely with product owners, QA and designers in two-week sprints.` },
+    ...(k === 0 && rank >= 3 ? [{ text: `Mentored ${2 + (i % 4)} junior developers and ran the weekly architecture review.` }] : []),
+  ];
+}
+
+function competencies(c: Candidate): CvCompetency[] {
+  const domains = c.domains.length ? c.domains.join(', ') : 'SaaS';
+  if (BUSINESS_TITLES.has(c.title)) {
+    return [
+      { label: 'Strategy & Planning', text: 'Go-to-market planning, roadmap prioritisation, forecasting and KPI tracking.' },
+      { label: 'Stakeholder Management', text: 'Executive reporting, client workshops, negotiation and cross-team alignment.' },
+      { label: 'Tools', text: c.skills.join(', ') },
+      { label: 'Domain Knowledge', text: domains },
+    ];
+  }
+  return [
+    { label: 'Programming & Frameworks', text: c.skills.slice(0, 4).join(', ') },
+    { label: 'Architecture & Practices', text: 'Clean architecture, REST / GraphQL APIs, unit and integration testing, code review.' },
+    { label: 'Cloud & DevOps', text: (c.techStack?.length ? c.techStack : ['Docker', 'GitHub Actions', 'AWS (EC2, S3, RDS)']).join(', ') },
+    { label: 'Domain Knowledge', text: domains },
+    { label: 'Ways of Working', text: 'Agile / Scrum, technical documentation, mentoring, cross-functional collaboration.' },
+  ];
+}
+
+function projects(c: Candidate, i: number, base: number): CvProject[] {
+  const rank = RANKS.indexOf(c.seniority);
+  if (BUSINESS_TITLES.has(c.title) || rank < 2) return [];
+  const domains = c.domains.length ? c.domains : ['SaaS'];
+  return [0, 1].map((k) => {
+    const kind = PROJECT_KINDS[(i + k * 2) % PROJECT_KINDS.length];
+    return {
+      name: `${domains[k % domains.length]} ${kind}`,
+      role: k === 0 && rank >= 3 ? 'Technical Lead' : c.title,
+      period: `${month(monthsBack(base, 10 + k * 14))} – ${month(monthsBack(base, k * 14))}`,
+      description: `Delivered ${/^[aeiou]/i.test(kind) ? 'an' : 'a'} ${kind.toLowerCase()} for a client with ${50 + ((i * 11) % 400)}k users: requirements, design, build, release and support. Team of ${5 + (i % 5)}.`,
+      tech: c.skills.slice(k, k + 4),
+    };
+  });
+}
+const month = (m: string) => m.replace('-', '/');
 
 /**
  * Full CV profile (headline, summary, jobs, education...) for every candidate except about half of the
@@ -121,8 +198,15 @@ export function withProfiles(candidates: Candidate[], base: number): Candidate[]
       primarySkills: c.skills.slice(0, 3),
       secondarySkills: c.skills.slice(3),
       openToWork: i % 4 !== 3,
+      // Every third candidate has not shared a rate ("Contact for rate"); the rest vary a little around their level.
+      expectedRate: i % 3 === 2 ? undefined : (RATES[rank < 0 ? 2 : rank] ?? 1600) + (i % 5) * 100,
       experience: experience(c, i, base),
       education: education(c, i, base),
+      address: `${12 + ((i * 37) % 400)} ${STREETS[i % STREETS.length]} Street, District ${1 + (i % 10)}, ${CITIES[i % CITIES.length]}`,
+      competencies: competencies(c),
+      projects: projects(c, i, base),
+      certifications: (BUSINESS_TITLES.has(c.title) ? BUSINESS_CERTS : TECH_CERTS).filter((_, k) => (i + k) % 2 === 0).slice(0, 1 + (i % 3)),
+      languages: ['Vietnamese — Native', `English — ${c.english || 'Intermediate'}`, ...(i % 5 === 0 ? ['Japanese — JLPT N3'] : [])],
     };
   });
 }

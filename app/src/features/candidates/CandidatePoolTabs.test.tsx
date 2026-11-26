@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { buildSeed } from '../../data/seed';
@@ -25,35 +25,17 @@ beforeEach(() => {
   useStore.getState().addNote({ name: 'Lan Pham', contact: 'lan@example.com', text: 'Met at a meetup' }, 'u-admin');
 });
 
-describe('Candidate pool tabs', () => {
-  it('notes route redirects to candidates notes tab', () => {
+describe('Candidate pool without a Notes tab', () => {
+  it('old notes links land on the pool', () => {
     renderAt('/notes');
-    expect(screen.getByTestId('loc')).toHaveTextContent('/candidates?tab=notes');
-    expect(screen.getByText('Lan Pham')).toBeInTheDocument();
-  });
-
-  it('notes tab lists notes and convert still works', () => {
-    renderAt('/candidates?tab=notes');
-    const before = useStore.getState().candidates.length;
-    fireEvent.click(screen.getByRole('button', { name: 'Convert to Talent Pool' }));
-    const s = useStore.getState();
-    expect(s.candidates).toHaveLength(before + 1);
-    expect(s.notes[0].convertedToCandidateId).toBeTruthy();
-    expect(screen.getByRole('link', { name: 'View profile' })).toBeInTheDocument();
-  });
-
-  it('profiles tab is default', () => {
-    renderAt('/candidates');
-    expect(screen.getByRole('button', { name: 'Profiles' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByTestId('loc')).toHaveTextContent(/^\/candidates$/);
     expect(screen.queryByText('Lan Pham')).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: 'Notes' }));
-    expect(screen.getByText('Lan Pham')).toBeInTheDocument();
   });
 
-  it('fixture mode shows no tabs or switch', () => {
-    window.history.pushState({}, '', '/?fixture=mockup');
+  it('the pool shows no Profiles / Notes switch', () => {
     renderAt('/candidates');
     expect(screen.queryByRole('button', { name: 'Profiles' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Notes' })).toBeNull();
   });
 
   it('fixture mode keeps the notes page at /notes', () => {

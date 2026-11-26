@@ -3,7 +3,7 @@ import { Drawer } from '../../components/Drawer';
 import { MenuItem, Popover } from '../../components/Popover';
 import { toast } from '../../components/Toast';
 import { FIXED_END, FIXED_START, middleStages, OPTIONAL_STAGES, REJECT_CODES, suggestedRules } from '../../domain/pipelineConfig';
-import { CUSTOM_STAGES, END_STAGES, isCustomStage, stageLabel } from '../../domain/stages';
+import { END_STAGES, isCustomStage, stageLabel } from '../../domain/stages';
 import type { AutomationRule, Job, RejectCode, Stage } from '../../domain/types';
 import { useLang, useT } from '../../i18n/i18n';
 import { useStore } from '../../store/store';
@@ -52,8 +52,8 @@ export function PipelineConfigDrawer({ job, open, onClose }: Props) {
   const on = (s: Stage) => columns.includes(s);
   const nameOf = (s: Stage) => names[s]?.trim() || stageLabel(s, lang);
   const occupied = (s: Stage) => jobApps.filter((a) => a.stage === s).length;
-  const addable: Stage[] = [...OPTIONAL_STAGES.filter((s) => !isCustomStage(s) && !mid.includes(s)), ...(withdrawn ? [] : (['withdrawn'] as Stage[]))];
-  const freeCustom = CUSTOM_STAGES.find((s) => !mid.includes(s));
+  // Only the standard rounds can be added: no Assessment, custom columns or Withdrawn (old jobs that have them can still remove them).
+  const addable: Stage[] = OPTIONAL_STAGES.filter((s) => !isCustomStage(s) && s !== 'assessment' && !mid.includes(s));
 
   const moveCol = (s: Stage, dir: -1 | 1) =>
     setMid((cur) => {
@@ -112,24 +112,25 @@ export function PipelineConfigDrawer({ job, open, onClose }: Props) {
         <section className="flex flex-col gap-2">
           <div className="flex items-center justify-between gap-2">
             <h4 className="font-bold text-slate-800 dark:text-white">{t('pipeline.config.stages')}</h4>
-            <Popover
-              align="right"
-              trigger={({ toggle }) => (
-                <button onClick={toggle} className="h-8 px-3 rounded-full border border-[#e6dddb] dark:border-[#3a3433] text-xs font-bold flex items-center gap-1 hover:border-primary/50">
-                  <span aria-hidden="true" className="material-symbols-outlined text-[16px]">add</span>
-                  {t('pipeline.config.addColumn')}
-                </button>
-              )}
-            >
-              {(close) => (
-                <>
-                  {freeCustom && <MenuItem onClick={() => { close(); addCol(freeCustom); }}>{t('pipeline.config.addCustom')}</MenuItem>}
-                  {addable.map((s) => (
-                    <MenuItem key={s} onClick={() => { close(); addCol(s); }}>{nameOf(s)}</MenuItem>
-                  ))}
-                </>
-              )}
-            </Popover>
+            {addable.length > 0 && (
+              <Popover
+                align="right"
+                trigger={({ toggle }) => (
+                  <button onClick={toggle} className="h-8 px-3 rounded-full border border-[#e6dddb] dark:border-[#3a3433] text-xs font-bold flex items-center gap-1 hover:border-primary/50">
+                    <span aria-hidden="true" className="material-symbols-outlined text-[16px]">add</span>
+                    {t('pipeline.config.addColumn')}
+                  </button>
+                )}
+              >
+                {(close) => (
+                  <>
+                    {addable.map((s) => (
+                      <MenuItem key={s} onClick={() => { close(); addCol(s); }}>{nameOf(s)}</MenuItem>
+                    ))}
+                  </>
+                )}
+              </Popover>
+            )}
           </div>
           <p className="text-xs text-[#896a61]">{t('pipeline.config.stagesHint')}</p>
           <ul className="flex flex-col divide-y divide-[#f4f1f0] dark:divide-[#2a2423] rounded-xl border border-[#e6dddb] dark:border-[#3a3433]">

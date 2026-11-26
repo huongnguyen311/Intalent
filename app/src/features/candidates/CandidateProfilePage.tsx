@@ -1,11 +1,13 @@
 import { useRef, useState } from 'react';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { AppLayout } from '../../components/AppLayout';
 import { BackButton } from '../../components/BackButton';
 import { normalizePhone } from '../../domain/normalize';
 import { toast } from '../../components/Toast';
 import { isFixtureMode } from '../../data/fixtureMockup';
-import type { Candidate } from '../../domain/types';
+import { shortDate } from '../../domain/hiring';
+import { estimateYears } from '../../domain/scoring';
+import type { Candidate, EducationEntry, WorkExperience } from '../../domain/types';
 import { userName } from '../../domain/users';
 import { useShowNew } from '../../hooks';
 import { useT } from '../../i18n/i18n';
@@ -13,7 +15,9 @@ import { useStore } from '../../store/store';
 import { EmailComposer } from '../hiring/EmailComposer';
 import { candidateInScope, homeFor } from '../../domain/permissions';
 import { NotFoundState } from '../../components/NotFoundState';
-import { useCan, useMe } from '../../store/session';
+import { me, useCan, useMe } from '../../store/session';
+import { ActivityHistory } from './ActivityHistory';
+import { ChipsField, EducationEditor, ExperienceEditor } from './ProfileEditors';
 import { AddToPipelineModal } from './AddToPipelineModal';
 import { CvVersions, ParseReview, SuggestionsReview } from './SelfServicePanels';
 import { PrivacyPanel } from './PrivacyPanel';
@@ -34,15 +38,10 @@ const LABEL = 'text-sm font-semibold text-[#181211] dark:text-white';
 const SECTION_H3 = 'text-sm font-bold text-[#896a61] uppercase tracking-wider mb-4 flex items-center gap-2';
 const SECTION_H3_ROW = 'text-sm font-bold text-[#896a61] uppercase tracking-wider flex items-center gap-2';
 const HR = 'border-[#e6dddb] dark:border-[#2a2423]';
-const CARD = 'p-4 rounded-xl border border-[#e6dddb] dark:border-[#3a3433] bg-[#f8f6f6] dark:bg-[#251f1e]';
-const SUB_LABEL = 'block text-xs font-medium text-[#896a61]';
-const SUB_INPUT =
-  'w-full rounded border-[#e6dddb] dark:border-[#3a3433] bg-gray-100 dark:bg-gray-700 text-sm text-[#181211] dark:text-white focus:ring-0 focus:border-[#e6dddb] dark:focus:border-[#3a3433] p-2 cursor-default';
 const PILL_PRIMARY =
   'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-200 dark:border-blue-800';
 const PILL_SECONDARY =
   'inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 border border-gray-200 dark:border-gray-700';
-const SKILL_LABEL = 'block text-sm font-medium text-[#181211] dark:text-[#e6dddb] mb-2';
 const BTN_EDIT = 'flex items-center gap-2 px-4 py-1.5 text-sm font-medium rounded-lg shadow-sm transition-colors bg-primary hover:bg-primary-hover text-white';
 const BTN_GHOST =
   'flex items-center gap-2 px-4 py-1.5 text-sm font-medium rounded-lg border border-[#e6dddb] dark:border-[#3a3433] text-[#181211] dark:text-white hover:border-primary/50 transition-colors';
@@ -56,8 +55,8 @@ const whatsappUrl = (phone?: string) => (phone ? `https://wa.me/${intlPhone(phon
 
 /** The rendered CV page as a standalone HTML document (what Download saves and Open in new tab shows). */
 function cvHtml(node: HTMLElement | null, name: string): string {
-  const page = node?.firstElementChild?.firstElementChild?.outerHTML ?? '';
-  return `<!doctype html><html><head><meta charset="utf-8"><title>${name} - CV</title></head><body style="margin:0;padding:24px 0;background:#525659">${page}</body></html>`;
+  const pages = node?.querySelector('[data-cv-pages]')?.outerHTML ?? '';
+  return `<!doctype html><html><head><meta charset="utf-8"><title>${name} - CV</title></head><body style="margin:0;padding:24px 0;background:#525659">${pages}</body></html>`;
 }
 
 function cvBlobUrl(node: HTMLElement | null, name: string): string {
@@ -76,11 +75,22 @@ function openCv(node: HTMLElement | null, name: string) {
   window.open(cvBlobUrl(node, name), '_blank', 'noopener');
 }
 
-type Draft = Pick<Candidate, 'name' | 'title' | 'email' | 'phone' | 'seniority' | 'english'> & { summary: string };
+type Draft = Pick<Candidate, 'name' | 'title' | 'email' | 'phone' | 'seniority' | 'english' | 'domains' | 'tags'> & {
+  summary: string; location: string; linkedin: string; openToWork: boolean;
+  primary: string[]; secondary: string[]; techStack: string[];
+  experience: WorkExperience[]; education: EducationEntry[];
+};
 
 const toDraft = (c: Candidate): Draft => ({
   name: c.name, title: c.title, email: c.email, phone: c.phone, summary: c.summary ?? '', seniority: c.seniority, english: c.english,
+  location: c.location ?? '', linkedin: c.linkedin ?? '', openToWork: Boolean(c.openToWork),
+  domains: c.domains, tags: c.tags, primary: c.primarySkills ?? c.skills, secondary: c.secondarySkills ?? [], techStack: c.techStack ?? [],
+  experience: c.experience ?? [], education: c.education ?? [],
 });
+
+const CHIP_TAG = 'inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-primary/10 text-primary';
+const CHIP_DOMAIN = 'inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-white dark:bg-[#1e1e1e] border border-[#e6dddb] dark:border-[#3a3433] text-[#181211] dark:text-white';
+const CHIP_TECH = 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-white dark:bg-[#1e1e1e] border border-[#e6dddb] dark:border-[#3a3433] text-sm text-[#181211] dark:text-white';
 
 function TextField({ label, value, editing, onChange, testId }: {
   label: string; value: string; editing: boolean; onChange?: (v: string) => void; testId?: string;
@@ -138,18 +148,6 @@ function SecretField({ label, value, editing, onChange, locked = false }: {
   );
 }
 
-function SubField({ label, value, area }: { label: string; value: string; area?: boolean }) {
-  return (
-    <div className="space-y-1">
-      <label className={SUB_LABEL}>{label}</label>
-      {area ? (
-        <textarea readOnly rows={3} className={SUB_INPUT} value={value} />
-      ) : (
-        <input readOnly className={SUB_INPUT} type="text" value={value} />
-      )}
-    </div>
-  );
-}
 
 const SectionTitle = ({ icon, children }: { icon: string; children: string }) => (
   <h3 className={SECTION_H3}>
@@ -181,6 +179,8 @@ export function CandidateProfilePage() {
   const [mailing, setMailing] = useState(false);
   const fixture = isFixtureMode();
   const search = fixture ? '?fixture=mockup' : '';
+  // Opened from the pool: the breadcrumb returns to the same filters and page.
+  const poolSearch = (useLocation().state as { poolSearch?: string } | null)?.poolSearch ?? search;
 
   if (!candidate) {
     // Someone outside the user's scope (a Hiring Manager or Interviewer) is "no access", not "not found".
@@ -198,7 +198,7 @@ export function CandidateProfilePage() {
   }
   const c = candidate;
   const form = editing ? (draft ?? toDraft(c)) : toDraft(c);
-  const set = (k: keyof Draft) => (v: string) => setDraft({ ...form, [k]: v });
+  const set = <K extends keyof Draft>(k: K) => (v: Draft[K]) => setDraft({ ...form, [k]: v });
 
   const startEdit = () => {
     setDraft(toDraft(c));
@@ -217,7 +217,19 @@ export function CandidateProfilePage() {
       seniority: form.seniority.trim(),
       english: form.english.trim(),
       summary: form.summary.trim(),
-    });
+      location: form.location.trim(),
+      linkedin: form.linkedin.trim(),
+      openToWork: form.openToWork,
+      tags: form.tags,
+      domains: form.domains,
+      primarySkills: form.primary,
+      secondarySkills: form.secondary,
+      // Search and matching read `skills`: keep it as every skill the profile lists.
+      skills: [...new Set([...form.primary, ...form.secondary])],
+      techStack: form.techStack,
+      experience: form.experience.filter((x) => x.title.trim() || x.company.trim()),
+      education: form.education.filter((x) => x.degree.trim() || x.institution.trim()),
+    }, me());
     if (!res.ok) {
       toast(t('profile.err.duplicate'), 'error');
       return;
@@ -226,8 +238,13 @@ export function CandidateProfilePage() {
     stopEdit();
   };
 
-  const primary = c.primarySkills ?? c.skills;
-  const secondary = c.secondarySkills ?? [];
+  // Last edit stamp; older records fall back to the latest thing logged about the candidate.
+  const lastLog = useStore.getState().activities
+    .filter((a) => a.candidateId === c.id)
+    .reduce<{ by: string; at: string } | undefined>((best, a) => (!best || a.at > best.at ? { by: a.by, at: a.at } : best), undefined);
+  const lastEdit = c.updatedBy && c.updatedAt ? { by: c.updatedBy, at: c.updatedAt } : lastLog;
+  const lastEditText = lastEdit ? `${userName(users, lastEdit.by) || lastEdit.by} · ${shortDate(lastEdit.at)}` : '—';
+  const years = c.experience?.length ? estimateYears(c) : 0;
 
   return (
     <AppLayout title={t('profile.title')} bare>
@@ -238,7 +255,7 @@ export function CandidateProfilePage() {
               <nav className="flex items-center text-sm font-medium text-[#896a61]">
                 {full ? (
                   <>
-                    <button className="hover:text-primary transition-colors" onClick={() => navigate({ pathname: '/candidates', search })}>{t('nav.candidatePool')}</button>
+                    <button className="hover:text-primary transition-colors" onClick={() => navigate({ pathname: '/candidates', search: poolSearch })}>{t('nav.candidatePool')}</button>
                     <span className="material-symbols-outlined text-[16px] mx-2">chevron_right</span>
                   </>
                 ) : (
@@ -300,6 +317,17 @@ export function CandidateProfilePage() {
                   <a href={whatsappUrl(c.phone)} target="_blank" rel="noopener noreferrer" aria-disabled={!c.phone || undefined} className={`${c.phone ? "" : "pointer-events-none opacity-50 "}flex-1 flex items-center justify-center gap-2 px-6 py-2.5 text-sm font-semibold rounded-xl shadow-sm transition-all whitespace-nowrap bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white shadow-emerald-500/20`} title={t('profile.tip.whatsapp')}>
                     <span className="material-symbols-outlined text-[20px]">call</span>{t('profile.openWhatsapp')}
                   </a></>}
+                  <TextField label={t('profile.field.location')} value={form.location} editing={editing} onChange={set('location')} />
+                  <div className="space-y-1.5">
+                    <TextField label={t('profile.field.linkedin')} value={form.linkedin} editing={editing} onChange={set('linkedin')} />
+                    {!editing && c.linkedin && (
+                      <a href={c.linkedin.startsWith('http') ? c.linkedin : `https://${c.linkedin}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline">
+                        <span className="material-symbols-outlined text-[14px]">open_in_new</span>{t('profile.openLinkedin')}
+                      </a>
+                    )}
+                  </div>
+                  <TextField label={t('profile.field.source')} value={c.source || '—'} editing={false} />
+                  <TextField label={t('profile.field.createdAt')} value={shortDate(c.createdAt)} editing={false} />
                 </div>
               </section>
               {showNew && full && <CvVersions candidate={c} />}
@@ -324,21 +352,16 @@ export function CandidateProfilePage() {
               <section>
                 <SectionTitle icon="star">{t('profile.section.skills')}</SectionTitle>
                 <div className="space-y-4">
-                  <div>
-                    <label className={SKILL_LABEL}>{t('profile.skills.primary')}</label>
-                    <div className="flex flex-wrap gap-2">
-                      {primary.map((s) => <span key={s} className={PILL_PRIMARY}>{s}</span>)}
-                    </div>
-                  </div>
-                  {secondary.length > 0 && (
-                    <div>
-                      <label className={SKILL_LABEL}>{t('profile.skills.secondary')}</label>
-                      <div className="flex flex-wrap gap-2">
-                        {secondary.map((s) => <span key={s} className={PILL_SECONDARY}>{s}</span>)}
-                      </div>
-                    </div>
+                  <ChipsField label={t('profile.skills.primary')} values={form.primary} editing={editing} onChange={set('primary')} chipClass={PILL_PRIMARY} />
+                  {(editing || form.secondary.length > 0) && (
+                    <ChipsField label={t('profile.skills.secondary')} values={form.secondary} editing={editing} onChange={set('secondary')} chipClass={PILL_SECONDARY} />
                   )}
                 </div>
+              </section>
+              <hr className={HR} />
+              <section>
+                <SectionTitle icon="sell">{t('profile.section.tags')}</SectionTitle>
+                <ChipsField values={form.tags} editing={editing} onChange={set('tags')} chipClass={CHIP_TAG} emptyText={t('profile.tags.empty')} />
               </section>
               <hr className={HR} />
               <section>
@@ -351,20 +374,18 @@ export function CandidateProfilePage() {
                     <div className="flex items-center gap-3 mt-1">
                       <div className="flex flex-col gap-2 ">
                         <div className="flex items-center gap-3 mt-1">
-                          <label className="relative inline-flex items-center cursor-pointer">
-                            <input className="sr-only peer" disabled readOnly type="checkbox" checked={Boolean(c.openToWork)} aria-label={t('profile.field.openToWork')} />
+                          <label className={`relative inline-flex items-center ${editing ? 'cursor-pointer' : 'cursor-default'}`}>
+                            <input className="sr-only peer" disabled={!editing} type="checkbox" checked={form.openToWork} onChange={(e) => set('openToWork')(e.target.checked)} aria-label={t('profile.field.openToWork')} />
                             <div className="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/20 dark:peer-focus:ring-primary/40 rounded-full peer dark:bg-[#2a2423] peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary"></div>
                           </label>
                         </div>
                       </div>
                     </div>
                   </div>
+                  <TextField label={t('profile.field.years')} value={years > 0 ? t('candidates.years', { n: years }) : '—'} editing={false} />
                   <div className="space-y-1 md:col-span-2">
-                    <label className="block text-sm font-medium text-[#181211] dark:text-[#e6dddb]">{t('profile.field.domain')}</label>
-                    <div className="w-full rounded-lg border border-[#e6dddb] dark:border-[#3a3433] bg-[#f8f6f6] dark:bg-[#251f1e] p-2.5 flex flex-wrap gap-1.5">
-                      {c.domains.map((d) => (
-                        <span key={d} className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-white dark:bg-[#1e1e1e] border border-[#e6dddb] dark:border-[#3a3433] text-[#181211] dark:text-white">{d}</span>
-                      ))}
+                    <div className="w-full rounded-lg border border-[#e6dddb] dark:border-[#3a3433] bg-[#f8f6f6] dark:bg-[#251f1e] p-2.5">
+                      <ChipsField label={t('profile.field.domain')} values={form.domains} editing={editing} onChange={set('domains')} chipClass={CHIP_DOMAIN} />
                     </div>
                   </div>
                 </div>
@@ -377,7 +398,7 @@ export function CandidateProfilePage() {
                     <TextField label={t('profile.field.cvOwner')} value={userName(users, c.cvOwner)} editing={false} testId="candidate-detail-cvowner-input" />
                     {full && <OwnerControls c={c} fixture={fixture} />}
                   </div>
-                  <TextField label={t('profile.field.lastUpdatedBy')} value="—" editing={false} testId="candidate-detail-lastupdatedby-input" />
+                  <TextField label={t('profile.field.lastUpdatedBy')} value={lastEditText} editing={false} testId="candidate-detail-lastupdatedby-input" />
                 </div>
               </section>
               <hr className={HR} />
@@ -385,10 +406,8 @@ export function CandidateProfilePage() {
                 <div className="grid grid-cols-1 gap-6">
                   <div>
                     <SectionTitle icon="code">{t('profile.section.techStack')}</SectionTitle>
-                    <div className="p-3 rounded-lg border border-[#e6dddb] dark:border-[#3a3433] bg-[#f8f6f6] dark:bg-[#251f1e] flex flex-wrap gap-2">
-                      {(c.techStack ?? []).map((s) => (
-                        <span key={s} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-white dark:bg-[#1e1e1e] border border-[#e6dddb] dark:border-[#3a3433] text-sm text-[#181211] dark:text-white">{s}</span>
-                      ))}
+                    <div className="p-3 rounded-lg border border-[#e6dddb] dark:border-[#3a3433] bg-[#f8f6f6] dark:bg-[#251f1e]">
+                      <ChipsField values={form.techStack} editing={editing} onChange={set('techStack')} chipClass={CHIP_TECH} />
                     </div>
                   </div>
                 </div>
@@ -400,21 +419,7 @@ export function CandidateProfilePage() {
                     <span className="material-symbols-outlined text-[18px]">work</span> {t('profile.section.experience')}
                   </h3>
                 </div>
-                <div className="space-y-4">
-                  {(c.experience ?? []).map((x) => (
-                    <div key={`${x.company}-${x.start}`} className={CARD}>
-                      <div className="grid grid-cols-2 gap-4 mb-4">
-                        <SubField label={t('profile.exp.title')} value={x.title} />
-                        <SubField label={t('profile.exp.company')} value={x.company} />
-                      </div>
-                      <div className="grid grid-cols-2 gap-4 mb-4">
-                        <SubField label={t('profile.exp.start')} value={x.start} />
-                        <SubField label={t('profile.exp.end')} value={x.end} />
-                      </div>
-                      <SubField label={t('profile.exp.desc')} value={x.description} area />
-                    </div>
-                  ))}
-                </div>
+                <ExperienceEditor items={form.experience} editing={editing} onChange={set('experience')} />
               </section>
               <hr className={HR} />
               <section>
@@ -423,22 +428,18 @@ export function CandidateProfilePage() {
                     <span className="material-symbols-outlined text-[18px]">school</span> {t('profile.section.education')}
                   </h3>
                 </div>
-                <div className="space-y-4">
-                  {(c.education ?? []).map((e) => (
-                    <div key={e.degree} className={CARD}>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <SubField label={t('profile.edu.degree')} value={e.degree} />
-                        <SubField label={t('profile.edu.institution')} value={e.institution} />
-                        <SubField label={t('profile.edu.year')} value={e.year} />
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                <EducationEditor items={form.education} editing={editing} onChange={set('education')} />
               </section>
               {showNew && (
                 <>
                   <hr className={HR} />
                   <UsedIn candidateId={c.id} />
+                </>
+              )}
+              {showNew && full && (
+                <>
+                  <hr className={HR} />
+                  <ActivityHistory candidateId={c.id} />
                 </>
               )}
               <div className="h-8"></div>

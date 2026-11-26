@@ -4,7 +4,6 @@ import { fold } from '../../domain/techVocab';
 import { useLang, useT } from '../../i18n/i18n';
 import { useStore } from '../../store/store';
 
-const LIMIT = 50;
 const FIELD =
   'w-full px-3 py-2 bg-white dark:bg-[#251f1e] border border-[#e6dddb] dark:border-[#3a3433] rounded-lg text-sm text-[#181211] dark:text-white focus:ring-1 focus:ring-primary focus:border-primary focus:outline-none';
 
@@ -20,7 +19,6 @@ export function PoolSearch({ jobId, selected, onChange }: Props) {
 
   const needle = fold(q.trim());
   const matches = candidates.filter((c) => !needle || fold(`${c.name} ${c.title} ${c.email}`).includes(needle));
-  const shown = matches.slice(0, LIMIT);
   const toggle = (id: string) =>
     onChange(selected.includes(id) ? selected.filter((x) => x !== id) : [...selected, id]);
 
@@ -28,7 +26,7 @@ export function PoolSearch({ jobId, selected, onChange }: Props) {
     <div className="flex flex-col gap-2">
       <input aria-label={t('atp.search')} className={FIELD} placeholder={t('atp.search')} value={q} onChange={(e) => setQ(e.target.value)} />
       <ul className="max-h-64 overflow-y-auto custom-scrollbar border border-[#e6dddb] dark:border-[#3a3433] rounded-lg divide-y divide-[#f4f1f0] dark:divide-[#2a2423]">
-        {shown.map((c) => {
+        {matches.map((c) => {
           const existing = applications.find((a) => a.candidateId === c.id && a.jobId === jobId);
           return (
             <li key={c.id}>
@@ -53,12 +51,8 @@ export function PoolSearch({ jobId, selected, onChange }: Props) {
             </li>
           );
         })}
-        {shown.length === 0 && <li className="px-3 py-6 text-center text-[#896a61]">{t('atp.noMatch')}</li>}
+        {matches.length === 0 && <li className="px-3 py-6 text-center text-[#896a61]">{t('atp.noMatch')}</li>}
       </ul>
-      <div className="flex justify-between text-xs text-[#896a61]">
-        <span>{t('atp.count', { count: selected.length })}</span>
-        {matches.length > LIMIT && <span>{t('atp.more', { n: LIMIT })}</span>}
-      </div>
     </div>
   );
 }

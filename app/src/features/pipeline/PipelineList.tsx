@@ -221,5 +221,5 @@ function ScoreCell({ app }: { app: Application }) {
   if (app.aiPending) return <span className="text-xs text-gray-400">{t('ai.badge.pending')}</span>;
   const e = latestEvaluation(app);
   if (!e || e.noCriteria) return <span className="text-gray-300">–</span>;
-  return <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${AI_PILL}`}>{`✦ ${e.score}`}</span>;
+  return <span className={`text-xs font-bold ${AI_PILL}`}>{`✦ ${e.score}`}</span>;
 }

@@ -33,8 +33,8 @@ export function AppLayout({ title, subtitle, actions, back, bare, footer, childr
       <Sidebar />
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
         {!bare && <Header title={title} subtitle={subtitle} actions={actions} back={back} />}
-        {/* Room under the content so the floating AI button never covers the last row or the pager. */}
-        <main className={`flex-1 overflow-y-auto custom-scrollbar ${showAi && !fixture && !footer ? 'pb-16' : ''}`}>{children}</main>
+        {/* 18px + the page's own 32px = 50px under the last box on every page. */}
+        <main className={`flex-1 overflow-y-auto custom-scrollbar ${showAi && !fixture && !footer ? 'pb-[18px]' : ''}`}>{children}</main>
         {footer && <div className="shrink-0">{footer}</div>}
       </div>
       {showAi && <AiButton search={fixture ? '?fixture=mockup' : ''} />}

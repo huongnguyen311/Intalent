@@ -37,15 +37,17 @@ describe('seed', () => {
     const s = buildSeed();
     expect(s.candidates).toHaveLength(150);
     // 8 staff (one demo account per internal role at least) + 2 candidate logins.
-    expect(s.users.filter((u) => u.role !== 'Candidate')).toHaveLength(8);
+    expect(s.users.filter((u) => u.role !== 'Candidate')).toHaveLength(10);
     expect(s.users.filter((u) => u.role === 'Candidate' && u.candidateId)).toHaveLength(2);
     expect(s.users.some((u) => u.email === 'admin@company.demo' && u.role === 'Super Admin')).toBe(true);
-    expect(s.jobs).toHaveLength(7);
-    expect(s.jobs.filter((j) => j.status === 'open')).toHaveLength(5);
-    // The one unpublished job waits for approval, so the approval flow can be demoed straight away.
-    expect(s.jobs.filter((j) => j.status === 'pending_approval')).toHaveLength(1);
-    expect(s.jobs.filter((j) => j.status === 'closed')).toHaveLength(1);
-    expect(s.applications).toHaveLength(49);
+    // 7 core jobs + 10 that show every Jobs list state (data/demoJobs).
+    expect(s.jobs).toHaveLength(17);
+    expect(s.jobs.filter((j) => j.status === 'open')).toHaveLength(10);
+    // Unpublished jobs wait for approval, so the approval flow can be demoed straight away.
+    expect(s.jobs.filter((j) => j.status === 'pending_approval')).toHaveLength(2);
+    expect(s.jobs.filter((j) => j.status === 'closed')).toHaveLength(2);
+    expect(s.jobs.filter((j) => j.status === 'on_hold')).toHaveLength(1);
+    expect(s.applications).toHaveLength(85);
     // Every column of the default board has cards; optional columns (AI Screening, Assessment, custom...) start empty.
     for (const stage of jobStages({})) {
       expect(s.applications.some((a) => a.stage === stage)).toBe(true);

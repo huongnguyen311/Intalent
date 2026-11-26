@@ -35,7 +35,7 @@ export function MoveToMenu({ current, onMove, button }: MoveProps) {
 /** `showJob` ("All jobs" board): the second line names the job instead of the candidate's title. */
 type BodyProps = { app: Application; candidate?: Candidate; job: Job; menu?: ReactNode; showJob?: boolean };
 
-const CARD = 'relative group bg-slate-50 dark:bg-[#232323] rounded-lg border border-gray-200/80 dark:border-white/10 shadow-[0_1px_2px_rgba(15,23,42,0.06)] px-3 pt-2.5 pb-1.5 space-y-1';
+const CARD = 'relative group bg-white dark:bg-[#232323] rounded-lg border border-gray-200/80 dark:border-white/10 shadow-[0_1px_3px_rgba(15,23,42,0.08)] px-3 pt-2.5 pb-1.5 space-y-1';
 
 
 /** An over-SLA card gets this accent; the text stays neutral. */
@@ -69,8 +69,8 @@ export function CardBody({ app, candidate, job, menu, showJob }: BodyProps) {
   );
 }
 
-/** AI colour on the pipeline (card pill and list cell): soft yellow, kept apart from the SLA red. */
-export const AI_PILL = 'bg-yellow-50 text-yellow-700 dark:bg-yellow-400/15 dark:text-yellow-300';
+/** AI colour on the pipeline (card and list cell): yellow text and icon only, no background, kept apart from the SLA red. */
+export const AI_PILL = 'text-yellow-600 dark:text-yellow-400';
 
 /** Shared pill shape for the AI score. */
 const PILL = 'shrink-0 h-5 px-1.5 rounded-md flex items-center gap-0.5 text-[11px] font-bold tabular-nums';
@@ -101,7 +101,7 @@ function AiBadge({ app }: { app: Application }) {
   }
   // One soft yellow for every score so the pill never reads as the red/amber SLA warning; the number carries the band.
   return (
-    <span data-testid="ai-pill" title={t('ai.badge.score', { n: e.score })} aria-label={t('ai.badge.score', { n: e.score })} className={`${PILL} ${AI_PILL}`}>
+    <span data-testid="ai-pill" title={t('ai.badge.score', { n: e.score })} aria-label={t('ai.badge.score', { n: e.score })} className={`shrink-0 h-5 flex items-center gap-0.5 text-[11px] font-bold tabular-nums ${AI_PILL}`}>
       {spark()}<span>{`${e.score}%`}</span>
     </span>
   );
@@ -175,7 +175,7 @@ export function CandidateCard({ app, candidate, job, showJob, onOpen, onMove, se
         current={app.stage}
         onMove={onMove}
         button={(toggle) => (
-          <button aria-label={t('pipeline.moveTo')} onClick={toggle} className="size-6 shrink-0 rounded-md flex items-center justify-center text-slate-500 hover:text-primary hover:bg-white dark:hover:bg-white/5">
+          <button aria-label={t('pipeline.moveTo')} onClick={toggle} className="size-6 shrink-0 rounded-md flex items-center justify-center text-slate-500 hover:text-primary hover:bg-slate-100 dark:hover:bg-white/5">
             <span className="material-symbols-outlined text-[18px]">more_horiz</span>
           </button>
         )}

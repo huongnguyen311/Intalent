@@ -1,14 +1,16 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { AppLayout } from '../../components/AppLayout';
 import { Avatar, toneFor } from '../../components/Avatar';
+import { Drawer } from '../../components/Drawer';
 import { toast } from '../../components/Toast';
 import { isFixtureMode } from '../../data/fixtureMockup';
 import type { ChatMessage } from '../../domain/types';
 import { useT, type TKey } from '../../i18n/i18n';
 import { useStore } from '../../store/store';
 
-const CHIPS = ['Frontend Developer', 'Backend Developer', 'Fullstack Developer'];
+/** Example queries; each exercises criteria the search understands (skill, seniority, years, domain, English). */
+const EXAMPLES = ['assistant.example.1', 'assistant.example.2', 'assistant.example.3'] as const;
 
 interface Session {
   id: string;
@@ -39,8 +41,9 @@ function History({ sessions, active, onOpen, onDelete }: { sessions: Session[]; 
   const groups = (['today', 'yesterday', 'older'] as const)
     .map((g) => [g, sessions.filter((s) => groupOf(s.at, now) === g)] as const)
     .filter(([, list]) => list.length > 0);
+  if (groups.length === 0) return <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-8">{t('assistant.history.empty')}</p>;
   return (
-    <div className="flex-1 overflow-y-auto custom-scrollbar px-2 pb-4">
+    <div className="-mx-4 -mt-4">
       {groups.map(([g, list]) => (
         <div key={g} className="mb-3">
           <p className="text-2xs font-bold text-muted uppercase tracking-widest px-2 py-2">{t(`assistant.group.${g}` as TKey)}</p>
@@ -48,17 +51,19 @@ function History({ sessions, active, onOpen, onDelete }: { sessions: Session[]; 
             {list.map((s) => (
               <div
                 key={s.id}
-                onClick={() => onOpen(s.id)}
-                className={`group/item flex items-center gap-1 px-2 py-2 rounded-lg cursor-pointer transition-colors hover:bg-gray-50 dark:hover:bg-white/5${s.id === active ? ' bg-gray-50 dark:bg-white/5' : ''}`}
+                className={`group/item flex items-center gap-1 pr-2 rounded-lg transition-colors hover:bg-gray-50 dark:hover:bg-white/5${s.id === active ? ' bg-gray-50 dark:bg-white/5' : ''}`}
               >
-                <span className="material-symbols-outlined text-[16px] shrink-0 text-gray-400">chat_bubble</span>
-                <span className="flex-1 text-xs font-medium truncate text-slate-700 dark:text-gray-300">{s.title}</span>
+                <button onClick={() => onOpen(s.id)} className="flex-1 min-w-0 flex items-center gap-1 pl-2 py-2 text-left rounded-lg">
+                  <span aria-hidden className="material-symbols-outlined text-[16px] shrink-0 text-gray-400">chat_bubble</span>
+                  <span className="flex-1 text-xs font-medium truncate text-slate-700 dark:text-gray-300">{s.title}</span>
+                </button>
                 <button
-                  onClick={(e) => { e.stopPropagation(); onDelete(s.id); }}
-                  className="opacity-0 group-hover/item:opacity-100 p-0.5 text-gray-400 hover:text-red-500 transition-all shrink-0"
+                  onClick={() => onDelete(s.id)}
+                  className="opacity-0 group-hover/item:opacity-100 focus-visible:opacity-100 p-0.5 text-gray-400 hover:text-red-500 transition-all shrink-0"
                   title={t('assistant.delete')}
+                  aria-label={t('assistant.delete')}
                 >
-                  <span className="material-symbols-outlined text-[16px]">delete</span>
+                  <span aria-hidden className="material-symbols-outlined text-[16px]">delete</span>
                 </button>
               </div>
             ))}
@@ -124,7 +129,8 @@ export function AssistantPage() {
   const chats = useStore((s) => s.chats);
   const [active, setActive] = useState<string | null>(null);
   const [text, setText] = useState('');
-  const [historyOpen, setHistoryOpen] = useState(true);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
   const sessions = useMemo(() => sessionsOf(chats), [chats]);
   const messages = active ? chats.filter((m) => m.sessionId === active) : [];
   const search = isFixtureMode() ? '?fixture=mockup' : '';
@@ -139,70 +145,93 @@ export function AssistantPage() {
     useStore.getState().deleteChat(id);
     if (id === active) setActive(null);
   };
+  const open = (id: string) => {
+    setActive(id);
+    setHistoryOpen(false);
+  };
+  const newChat = () => {
+    setActive(null);
+    setText('');
+    setHistoryOpen(false);
+  };
+  const pickExample = (q: string) => {
+    setText(q);
+    inputRef.current?.focus();
+  };
 
   return (
     <AppLayout title={t('nav.aiSearch')} bare>
       <div className="flex flex-col h-full bg-[#fbf9f8] dark:bg-background-dark overflow-hidden">
-        <div className="px-6 h-16 flex items-center shrink-0 border-b border-gray-100 dark:border-border-dark bg-white dark:bg-surface-dark z-10 gap-3">
-          <button onClick={() => setHistoryOpen((o) => !o)} className="p-2 rounded-lg text-gray-400 hover:text-slate-700 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/5 transition-colors flex items-center justify-center" title={t('assistant.toggleHistory')}>
-            <span className="material-symbols-outlined text-[22px]">menu</span>
-          </button>
-          <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-3">
+        <div className="px-6 h-16 flex items-center shrink-0 border-b border-gray-100 dark:border-border-dark bg-white dark:bg-surface-dark z-20 gap-3">
+          <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2.5">
             {t('assistant.title')}
             <span className="px-2 py-0.5 bg-orange-100 text-primary text-2xs font-bold uppercase rounded">{t('assistant.beta')}</span>
           </h2>
+          <button
+            onClick={() => setHistoryOpen(true)}
+            aria-expanded={historyOpen}
+            className="ml-auto h-9 px-3 rounded-lg text-sm font-semibold flex items-center gap-1.5 text-slate-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5 transition-colors"
+          >
+            <span aria-hidden className="material-symbols-outlined text-[20px]">history</span>
+            {t('assistant.history')}
+          </button>
+          <button
+            onClick={newChat}
+            className="h-9 px-3.5 rounded-lg text-sm font-semibold flex items-center gap-1.5 bg-primary hover:bg-primary-hover text-white shadow-sm transition-colors"
+          >
+            <span aria-hidden className="material-symbols-outlined text-[20px]">add</span>
+            {t('assistant.newChat')}
+          </button>
         </div>
-        <div className="flex flex-1 overflow-hidden">
-          <div className="shrink-0 overflow-hidden transition-[width] duration-300 ease-in-out" style={{ width: historyOpen ? 256 : 0 }}>
-            <div className="w-64 h-full flex flex-col border-r border-gray-100 dark:border-border-dark bg-white dark:bg-surface-dark overflow-hidden">
-              <div className="p-3">
-                <button onClick={() => { setActive(null); setText(''); }} className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold text-slate-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/5 transition-colors border border-dashed border-gray-200 dark:border-border-dark disabled:opacity-40 disabled:cursor-not-allowed disabled:pointer-events-none">
-                  <span className="material-symbols-outlined text-[20px] text-primary">add</span>{t('assistant.newChat')}
-                </button>
-              </div>
-              <History sessions={sessions} active={active} onOpen={setActive} onDelete={remove} />
+        <div className="flex-1 relative overflow-hidden flex flex-col">
+          <Drawer open={historyOpen} size="sm" title={t('assistant.history')} onClose={() => setHistoryOpen(false)}>
+            <History sessions={sessions} active={active} onOpen={open} onDelete={remove} />
+          </Drawer>
+          <div className="flex-1 overflow-y-auto custom-scrollbar p-8">
+            <div className="max-w-4xl mx-auto space-y-12 pb-48">
+              {messages.length === 0 && (
+                <div className="flex flex-col items-center justify-center py-16 text-center">
+                  <div className="size-20 rounded-2xl bg-primary/10 flex items-center justify-center text-primary mb-6">
+                    <span className="material-symbols-outlined text-[48px] icon-filled">person_search</span>
+                  </div>
+                  <h3 className="ty-title text-2xl font-bold text-slate-900 dark:text-white mb-3">{t('assistant.welcome.title')}</h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 max-w-md">{t('assistant.welcome.body')}</p>
+                  <p className="mt-8 mb-3 text-2xs font-bold text-muted uppercase tracking-widest">{t('assistant.examplesLabel')}</p>
+                  <div className="flex flex-wrap justify-center gap-2.5 max-w-2xl">
+                    {EXAMPLES.map((k) => (
+                      <button
+                        key={k}
+                        onClick={() => pickExample(t(k))}
+                        className="px-4 py-2 bg-white dark:bg-surface-dark rounded-full border border-gray-200 dark:border-border-dark text-sm font-medium text-slate-700 dark:text-gray-300 hover:border-primary hover:text-primary transition-colors shadow-sm"
+                      >
+                        {t(k)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <div>{messages.length > 0 && <Conversation messages={messages} search={search} />}</div>
             </div>
           </div>
-          <div className="flex-1 relative overflow-hidden flex flex-col">
-            <div className="flex-1 overflow-y-auto custom-scrollbar p-8">
-              <div className="max-w-4xl mx-auto space-y-12 pb-48">
-                {messages.length === 0 && (
-                  <div className="flex flex-col items-center justify-center py-20 text-center">
-                    <div className="size-20 rounded-2xl bg-primary/10 flex items-center justify-center text-primary mb-6">
-                      <span className="material-symbols-outlined text-[48px] icon-filled">person_search</span>
-                    </div>
-                    <h3 className="ty-title text-2xl font-bold text-slate-900 dark:text-white mb-3">{t('assistant.welcome.title')}</h3>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 max-w-md">{t('assistant.welcome.body')}</p>
-                  </div>
-                )}
-                <div>{messages.length > 0 && <Conversation messages={messages} search={search} />}</div>
-              </div>
-            </div>
-            <div className="absolute bottom-0 left-0 w-full p-8 bg-gradient-to-t from-[#fbf9f8] via-[#fbf9f8] to-transparent dark:from-background-dark dark:via-background-dark">
-              <div className="max-w-4xl mx-auto space-y-4">
-                <div className="flex gap-2.5 overflow-x-auto no-scrollbar py-2">
-                  {CHIPS.map((c) => (
-                    <button key={c} onClick={() => ask(c)} className="px-5 py-2.5 bg-white dark:bg-surface-dark rounded-full border border-gray-200 dark:border-border-dark text-[11px] font-bold text-slate-700 dark:text-gray-300 hover:border-primary hover:text-primary transition-all whitespace-nowrap shadow-sm">{c}</button>
-                  ))}
-                </div>
-                <div className="relative group">
-                  <div className="bg-white dark:bg-surface-dark border border-gray-100 dark:border-border-dark rounded-full shadow-2xl p-2.5 flex items-center gap-2">
-                    <button onClick={() => toast(t('assistant.attach'), 'info')} className="p-3 text-gray-400 hover:text-slate-900 dark:hover:text-white transition-colors">
-                      <span className="material-symbols-outlined text-[24px]">attach_file</span>
-                    </button>
-                    <input
-                      className="flex-1 bg-transparent border-0 focus:ring-0 text-sm font-semibold placeholder:text-gray-400 py-2 disabled:opacity-50"
-                      placeholder={t('assistant.placeholder')}
-                      type="text"
-                      value={text}
-                      onChange={(e) => setText(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && ask(text)}
-                    />
-                    <button aria-label={t('assistant.send')} disabled={!text.trim()} onClick={() => ask(text)} className="size-11 bg-primary hover:bg-primary-hover text-white rounded-full flex items-center justify-center shadow-lg transition-all transform active:scale-90 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none">
-                      <span className="material-symbols-outlined text-[24px]">arrow_upward</span>
-                    </button>
-                  </div>
-                  <p className="text-center text-2xs text-muted font-bold mt-3 opacity-80">{t('assistant.disclaimer')}</p>
+          <div className="absolute bottom-0 left-0 w-full p-8 bg-gradient-to-t from-[#fbf9f8] via-[#fbf9f8] to-transparent dark:from-background-dark dark:via-background-dark">
+            <div className="max-w-4xl mx-auto">
+              <div className="relative group">
+                <div className="bg-white dark:bg-surface-dark border border-gray-100 dark:border-border-dark rounded-full shadow-2xl p-2.5 flex items-center gap-2">
+                  <button onClick={() => toast(t('assistant.attach'), 'info')} className="p-3 text-gray-400 hover:text-slate-900 dark:hover:text-white transition-colors">
+                    <span className="material-symbols-outlined text-[24px]">attach_file</span>
+                  </button>
+                  <input
+                    ref={inputRef}
+                    className="flex-1 bg-transparent border-0 focus:ring-0 text-sm font-semibold placeholder:text-gray-400 py-2 disabled:opacity-50"
+                    placeholder={t('assistant.placeholder')}
+                    type="text"
+                    value={text}
+                    onChange={(e) => setText(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && ask(text)}
+                  />
+                  <button aria-label={t('assistant.send')} disabled={!text.trim()} onClick={() => ask(text)} className="size-11 bg-primary hover:bg-primary-hover text-white rounded-full flex items-center justify-center shadow-lg transition-all transform active:scale-90 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none">
+                    <span className="material-symbols-outlined text-[24px]">arrow_upward</span>
+                  </button>
                 </div>
               </div>
             </div>

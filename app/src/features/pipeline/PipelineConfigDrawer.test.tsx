@@ -20,18 +20,24 @@ describe('PipelineConfigDrawer columns', () => {
     expect(rows()).toEqual(['col-new', 'col-screening', 'col-interview', 'col-final_interview', 'col-offer', 'col-hired', 'col-rejected']);
   });
 
-  it('adds a named custom column before Offer, renames, reorders and removes columns, then saves', () => {
+  it('Add column offers no Assessment, Withdrawn or custom column', () => {
     open();
     fireEvent.click(screen.getByRole('button', { name: 'Add column' }));
-    fireEvent.click(screen.getByRole('menuitem', { name: 'New custom column' }));
-    expect(rows()).toEqual(['col-new', 'col-screening', 'col-interview', 'col-final_interview', 'col-custom_1', 'col-offer', 'col-hired', 'col-rejected']);
-    fireEvent.change(within(screen.getByTestId('col-custom_1')).getByRole('textbox'), { target: { value: 'Technical test' } });
+    const items = screen.getAllByRole('menuitem').map((el) => el.textContent);
+    expect(items).toEqual(['AI Screening']);
+  });
+
+  it('adds a column before Offer, renames, reorders and removes columns, then saves', () => {
+    open();
+    fireEvent.click(screen.getByRole('button', { name: 'Add column' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'AI Screening' }));
+    expect(rows()).toEqual(['col-new', 'col-screening', 'col-interview', 'col-final_interview', 'col-ai_screening', 'col-offer', 'col-hired', 'col-rejected']);
     fireEvent.change(within(screen.getByTestId('col-screening')).getByRole('textbox'), { target: { value: 'CV review' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Move Technical test left' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Move AI Screening left' }));
     fireEvent.click(screen.getByRole('button', { name: 'Remove 2nd Interview' }));
     fireEvent.click(screen.getByRole('button', { name: 'Save settings' }));
-    expect(job().pipeline).toEqual(['screening', 'interview', 'custom_1', 'offer']);
-    expect(job().stageNames).toEqual({ screening: 'CV review', custom_1: 'Technical test' });
+    expect(job().pipeline).toEqual(['screening', 'interview', 'ai_screening', 'offer']);
+    expect(job().stageNames).toEqual({ screening: 'CV review' });
   });
 
   it('New, Hired and Rejected cannot be removed', () => {

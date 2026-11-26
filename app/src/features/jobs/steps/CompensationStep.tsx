@@ -9,9 +9,9 @@ export function CompensationStep({ form }: { form: JobForm }) {
   const { values: v, set } = form;
   return (
     <div className="lg:w-2/3">
-        <fieldset className="flex flex-col gap-2">
-          <legend className={LEGEND}>{t('jobs.drawer.salary')}</legend>
-          <div className="grid grid-cols-[1fr_1fr_110px] gap-3">
+        <fieldset className="flex flex-col gap-3">
+          <legend className={`${LEGEND} !mb-3`}>{t('jobs.drawer.salary')}</legend>
+          <div className="grid grid-cols-[1fr_1fr_120px] gap-4">
             <Field id="job-salary-min" label={t('jobs.drawer.salaryMin')}>
               <input id="job-salary-min" inputMode="numeric" className={FIELD} value={v.salaryMin} onChange={(e) => set.salaryMin(e.target.value)} />
             </Field>

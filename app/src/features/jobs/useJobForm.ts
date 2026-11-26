@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from '../../components/Toast';
+import { jdRequirements } from '../../domain/jdExtract';
 import { CONTENT_TEMPLATE } from '../../domain/jdWriter';
 import { JOB_POST_KEYS, jobPostFromJd, type JobPost } from '../../domain/jobPost';
 import { can, seesAllJobs } from '../../domain/permissions';
@@ -23,7 +24,7 @@ export type JobFormValues = {
   /** Recruiter(s), stored in `job.collaborators`. */
   collaborators: string[]; interviewers: string[]; questions: JobQuestion[];
   whyLove: string; additionalInfo: string; minYears: string; education: Education | '';
-  hiringPriority: HiringPriority; targetHiringDate: string; urgencyReason: string; priorityNotes: string;
+  hiringPriority: HiringPriority; targetHiringDate: string; urgencyReason: string;
   /** '' = no campaign. */
   campaignId: string;
   /** Careers-page copy, filled from the JD; list sections hold one item per line. */
@@ -35,6 +36,7 @@ const postValues = (p: Partial<JobPost>): PostValues => ({
   summary: p.summary ?? '', responsibilities: (p.responsibilities ?? []).join('\n'), skills: p.skills ?? [],
   mustHave: (p.mustHave ?? []).join('\n'), niceToHave: (p.niceToHave ?? []).join('\n'), aboutTeam: p.aboutTeam ?? '',
 });
+const jdYears = (jd: Parameters<typeof jdRequirements>[0]) => String(jdRequirements(jd).years ?? '');
 const isEmptyValue = (x: string | string[]) => (Array.isArray(x) ? x.length === 0 : !x.trim());
 /** One item per line; a bullet typed at the start ("- ", "• ", "1. ") is dropped, since the careers page adds its own. */
 const lines = (s: string) => s.split(/\r?\n/).map((l) => l.replace(/^\s*(?:[-*•–·]|\d+[.)])\s+/, '').trim()).filter(Boolean);
@@ -46,7 +48,7 @@ const blank = (): JobFormValues => ({
   jd: '', title: '', department: '', location: '', level: '', employment: EMPLOYMENTS[0], workplace: 'onsite', headcount: '1',
   manager: me(), publish: false, salaryMin: '', salaryMax: '', currency: 'VND', showSalary: false,
   collaborators: [], interviewers: [], questions: [], whyLove: '', additionalInfo: '', minYears: '', education: '',
-  hiringPriority: 'normal', targetHiringDate: todayIso(new Date(Date.now() + 60 * 86_400_000)), urgencyReason: '', priorityNotes: '',
+  hiringPriority: 'normal', targetHiringDate: todayIso(new Date(Date.now() + 60 * 86_400_000)), urgencyReason: '',
   campaignId: '',
   ...postValues({}),
 });
@@ -123,6 +125,8 @@ export function useJobForm({ open, mode, job: source, jdId, onSaved }: Opts) {
         .map((k) => [k, fromJd[k]]),
     ) as Partial<JobFormValues>);
     jdPost.current = fromJd;
+    // AI scores against the JD, so the job's minimum years always follow it.
+    patch({ minYears: jdYears(picked) });
     clearError('jd', 'title');
   };
   const pickJd = (id: string) => { applyJd(id); touch(); };
@@ -149,7 +153,7 @@ export function useJobForm({ open, mode, job: source, jdId, onSaved }: Opts) {
       minYears: src.minYears ? String(src.minYears) : '', education: src.education ?? '',
       // A job saved before urgency existed gets the same 60-day default as a new one.
       hiringPriority: src.hiringPriority ?? 'normal', targetHiringDate: src.targetHiringDate?.slice(0, 10) || blank().targetHiringDate,
-      urgencyReason: src.urgencyReason ?? '', priorityNotes: src.priorityNotes ?? '',
+      urgencyReason: src.urgencyReason ?? '',
       campaignId: src.campaignId ?? '',
       ...postValues(post),
     });
@@ -198,7 +202,8 @@ export function useJobForm({ open, mode, job: source, jdId, onSaved }: Opts) {
       whyLove: v.whyLove.trim(), additionalInfo: v.additionalInfo.trim(),
       minYears: num(v.minYears), education: v.education || undefined,
       hiringPriority: v.hiringPriority, targetHiringDate: v.targetHiringDate,
-      urgencyReason: v.urgencyReason.trim() || undefined, priorityNotes: v.priorityNotes.trim() || undefined,
+      // The reason field is hidden at Normal priority, so a stale reason is dropped rather than saved unseen.
+      urgencyReason: (v.hiringPriority !== 'normal' && v.urgencyReason.trim()) || undefined,
       campaignId: v.campaignId || undefined,
       // Saved even when empty: a cleared section means "none on this job", not "use the JD's".
       summary: v.summary.trim(), responsibilities: lines(v.responsibilities),
@@ -212,7 +217,7 @@ export function useJobForm({ open, mode, job: source, jdId, onSaved }: Opts) {
     const picked = useStore.getState().jds.find((j) => j.id === v.jd);
     if (!picked) return;
     jdPost.current = postValues(jobPostFromJd(picked));
-    patch(jdPost.current);
+    patch({ ...jdPost.current, minYears: jdYears(picked) });
     touch();
   };
   const hasPostContent = (Object.keys(postValues({})) as (keyof PostValues)[]).some((k) => !isEmptyValue(v[k]));

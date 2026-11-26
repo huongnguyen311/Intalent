@@ -1,15 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { AppLayout } from '../../components/AppLayout';
-import { Drawer } from '../../components/Drawer';
 import { NotFoundState } from '../../components/NotFoundState';
 import { jobsInScope } from '../../domain/permissions';
-import type { Job } from '../../domain/types';
+import type { Jd, Job } from '../../domain/types';
 import { userName } from '../../domain/users';
-import { useT } from '../../i18n/i18n';
+import { useLang, useT } from '../../i18n/i18n';
 import { useMe } from '../../store/session';
 import { useStore } from '../../store/store';
-import { CareersPreviewTab } from './JobTabs';
+import { CareersJobView } from '../careers/CareersJob';
 import { CompensationStep } from './steps/CompensationStep';
 import { DetailsStep } from './steps/DetailsStep';
 import { PublishStep } from './steps/PublishStep';
@@ -95,8 +94,6 @@ function Editor({ mode, job }: { mode: JobFormMode; job?: Job }) {
   // "+ Create a new JD" opens the full JD page; saving there comes back here with the new JD picked.
   const newJd = () => go('/jds/new', { returnTo: location.pathname });
 
-  // The careers post as it would look if saved now, with the picked JD's body and skills.
-  const preview = <CareersPreviewTab job={form.draftJob()} jd={form.selected} compact />;
 
   const bodies = {
     details: <DetailsStep form={form} onNewJd={newJd} />,
@@ -166,7 +163,48 @@ function Editor({ mode, job }: { mode: JobFormMode; job?: Job }) {
           ))}
         </div>
       </div>
-      <Drawer open={previewPanel} title={t('jobs.editor.preview')} onClose={() => setPreviewPanel(false)}>{preview}</Drawer>
+      {previewPanel && <JobPreviewModal job={form.draftJob()} jd={form.selected} onClose={() => setPreviewPanel(false)} />}
     </AppLayout>
+  );
+}
+
+/**
+ * The careers job detail as candidates would see it if the job were saved now, in a large pop-up.
+ * Links inside are inert so a click cannot leave the editor and lose the form.
+ */
+function JobPreviewModal({ job, jd, onClose }: { job: Job; jd?: Jd; onClose: () => void }) {
+  const t = useT();
+  const [lang, setLang] = useLang('careers');
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center p-3 sm:p-4 bg-black/50" onClick={onClose}>
+      <div role="dialog" aria-modal="true" aria-label={t('jobs.editor.preview')} onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-[1600px] h-full flex flex-col rounded-2xl overflow-hidden bg-background-light shadow-2xl">
+        <div className="shrink-0 px-5 py-3 flex items-center gap-3 bg-white dark:bg-[#1e1e1e] border-b border-[#e6dddb] dark:border-[#2a2423] text-sm">
+          <span aria-hidden="true" className="material-symbols-outlined text-[20px] text-[#896a61]">visibility</span>
+          <div className="min-w-0">
+            <p className="font-bold text-[#181211] dark:text-white">{t('jobs.preview.note')}</p>
+            {job.status !== 'open' && <p className="text-xs text-orange-600">{t('jobs.preview.unpublished')}</p>}
+          </div>
+          <div role="group" aria-label={t('careers.lang.label')} className="ml-auto flex rounded-full border border-[#e6dddb] dark:border-[#3a3433] p-0.5 text-xs font-bold">
+            {(['vi', 'en'] as const).map((l) => (
+              <button key={l} type="button" aria-pressed={lang === l} onClick={() => setLang(l)}
+                className={`px-2.5 py-1 rounded-full uppercase ${lang === l ? 'bg-primary text-white' : 'text-[#896a61] hover:text-primary'}`}>{l}</button>
+            ))}
+          </div>
+          <button type="button" autoFocus onClick={onClose} aria-label={t('jobs.preview.close')}
+            className="size-9 grid place-items-center rounded-full text-[#896a61] hover:bg-gray-100 dark:hover:bg-white/10 hover:text-[#181211] dark:hover:text-white">
+            <span aria-hidden="true" className="material-symbols-outlined text-[22px]">close</span>
+          </button>
+        </div>
+        <div className="flex-1 overflow-y-auto p-6 sm:p-8 text-[#181211]" onClickCapture={(e) => { if ((e.target as HTMLElement).closest('a')) e.preventDefault(); }}>
+          <CareersJobView job={job} jd={jd} preview />
+        </div>
+      </div>
+    </div>
   );
 }

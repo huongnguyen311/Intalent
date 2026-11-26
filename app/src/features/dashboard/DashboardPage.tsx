@@ -1,15 +1,14 @@
-import { Link } from 'react-router-dom';
-import { can, jobsInScope, seesAllJobs } from '../../domain/permissions';
+import { jobsInScope, seesAllJobs } from '../../domain/permissions';
 import { useMe } from '../../store/session';
 import { useMemo, useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { AppLayout } from '../../components/AppLayout';
 import { RecruitmentRow } from './RecruitmentRow';
-import { PeriodControl, UrgencyTiles } from './DashboardWidgets';
-import { isOverdue, isUrgent, todayIso } from '../../domain/jobUrgency';
-import { dashboardMetrics, type Period } from '../../domain/metrics';
+import { DateRangeControl } from './DashboardWidgets';
+import { dashboardMetrics, recruitmentMetrics, type DateRange, type Period } from '../../domain/metrics';
+import { localStamp } from '../../domain/hiring';
+import { DASHBOARD_RECRUITERS } from '../../data/seed';
 import { useShowNew } from '../../hooks';
-import { useT } from '../../i18n/i18n';
 import { useStore } from '../../store/store';
 import { EnglishDonut, SeniorityBars, StackPie } from './charts';
 
@@ -52,8 +51,8 @@ export function seniorityRows(seniority: Record<string, number>) {
 
 export function DashboardPage() {
   const [period, setPeriod] = useState<Period>('all');
-  // PRD 3.8: the recruitment row filters by job and recruiter (the period buttons are the date range).
-  const [jobFilter, setJobFilter] = useState('');
+  const [range, setRange] = useState<DateRange>({ kind: 'all' });
+  // The recruitment row filters by date range and recruiter.
   const [recruiterFilter, setRecruiterFilter] = useState('');
   const data = useStore(
     useShallow((s) => ({
@@ -70,42 +69,29 @@ export function DashboardPage() {
     // The recruitment row counts only the jobs this user works on, like the Jobs page (all of them for admins).
     const scoped = showNew ? jobsInScope(user, data.jobs) : data.jobs;
     const jobs = scoped.filter(
-      (j) => (!jobFilter || j.id === jobFilter) &&
-        (!recruiterFilter || !seesAllJobs(user) || j.hiringManager === recruiterFilter || !!j.collaborators?.includes(recruiterFilter)),
+      (j) => (!recruiterFilter || !seesAllJobs(user) || j.hiringManager === recruiterFilter || !!j.collaborators?.includes(recruiterFilter)),
     );
     const ids = new Set(jobs.map((j) => j.id));
     const applications = showNew ? data.applications.filter((a) => ids.has(a.jobId)) : data.applications;
     // dashboardMetrics only reads these slices of DemoState.
-    return dashboardMetrics({ ...data, jobs, applications } as Parameters<typeof dashboardMetrics>[0], period, new Date());
-  }, [data, period, showNew, user, jobFilter, recruiterFilter]);
-  const tr = useT();
+    const state = { ...data, jobs, applications } as Parameters<typeof dashboardMetrics>[0];
+    const all = dashboardMetrics(state, period, new Date());
+    // The app Dashboard filters by its date-range dropdown; the mockup keeps its period buttons.
+    return showNew ? { ...all, recruitment: recruitmentMetrics(state, range, new Date()) } : all;
+  }, [data, period, range, showNew, user, recruiterFilter]);
 
   // App: the Dashboard is recruitment only; the talent-pool charts live on Candidate Pool (PoolInsights).
   if (showNew) {
     return (
       <AppLayout title="Dashboard">
         <div className="p-4 sm:p-8 max-w-[1600px] mx-auto bg-canvas min-h-full">
-          {(() => {
-            const open = jobsInScope(user, data.jobs).filter((j) => j.status === 'open');
-            const today = todayIso();
-            return <UrgencyTiles urgent={open.filter(isUrgent).length} overdue={open.filter((j) => isOverdue(j, data.applications, today)).length} />;
-          })()}
           <RecruitmentRow
             metrics={m.recruitment}
-            jobs={jobsInScope(user, data.jobs)}
             // Comparing recruiters is for those who see every job; a recruiter's dashboard is already just their jobs.
-            recruiters={seesAllJobs(user) ? data.users.filter((u) => data.jobs.some((j) => j.hiringManager === u.id || j.collaborators?.includes(u.id))) : undefined}
-            jobFilter={jobFilter}
+            recruiters={seesAllJobs(user) ? data.users.filter((u) => DASHBOARD_RECRUITERS.includes(u.id)) : undefined}
             recruiterFilter={recruiterFilter}
-            onJob={setJobFilter}
             onRecruiter={setRecruiterFilter}
-            cta={can(user, 'job.edit') ? (
-              <Link to="/jobs/new" className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-primary px-3.5 text-xs font-bold text-white hover:bg-primary-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
-                <span aria-hidden="true" className="material-symbols-outlined text-[18px]">add</span>
-                {tr('jobs.create')}
-              </Link>
-            ) : undefined}
-            period={<PeriodControl value={period} onChange={setPeriod} />}
+            period={<DateRangeControl value={range} onChange={setRange} today={localStamp(new Date()).slice(0, 10)} />}
           />
         </div>
       </AppLayout>

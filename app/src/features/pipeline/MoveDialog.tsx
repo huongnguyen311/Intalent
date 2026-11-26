@@ -62,7 +62,11 @@ export function MoveDialog({ open, name, to, canEmail = false, onCancel, onConfi
       }
     >
       <div className="flex flex-col gap-3">
-        <p className="text-[#896a61]">{t(reject ? 'pipeline.reject.desc' : 'pipeline.move.desc', { name, stage: label(to) })}</p>
+        {(() => {
+          const desc = t(reject ? 'pipeline.reject.desc' : 'pipeline.move.desc', { name, stage: label(to) });
+          // Move: one line, cut with "…" if a long name would wrap; the full text is in the tooltip.
+          return <p className={`text-[#896a61] ${reject ? '' : 'whitespace-nowrap truncate'}`} title={reject ? undefined : desc}>{desc}</p>;
+        })()}
         {reject && (
           <div className="flex flex-col gap-1">
             <span className="text-xs font-semibold text-[#896a61]"><label htmlFor="reject-code">{t('pipeline.reject.category')}</label><span aria-hidden="true" className="text-red-500"> *</span></span>
@@ -73,9 +77,11 @@ export function MoveDialog({ open, name, to, canEmail = false, onCancel, onConfi
           </div>
         )}
         <div className="flex flex-col gap-1">
-          <span className="text-xs font-semibold text-[#896a61]"><label htmlFor="move-note">{t(reject ? (code === 'other' ? 'pipeline.reject.reason' : 'pipeline.reject.detail') : 'pipeline.move.note')}</label>{reject && code === 'other' && <span aria-hidden="true" className="text-red-500"> *</span>}</span>
+          {/* Move: no visible label, the placeholder says what to write; screen readers still get "Note". */}
+          {reject && <span className="text-xs font-semibold text-[#896a61]"><label htmlFor="move-note">{t(code === 'other' ? 'pipeline.reject.reason' : 'pipeline.reject.detail')}</label>{code === 'other' && <span aria-hidden="true" className="text-red-500"> *</span>}</span>}
           <textarea
             id="move-note"
+            aria-label={reject ? undefined : t('pipeline.move.note')}
             rows={3}
             autoFocus
             className={FIELD}

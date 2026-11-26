@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { buildSeed } from '../../data/seed';
@@ -139,8 +139,8 @@ describe('Board', () => {
     expect(screen.getByRole('dialog', { name: 'Move to Offer' })).toBeInTheDocument();
   });
 
-  describe('collapsible end columns', () => {
-    // A wide board (more than 7 columns) with a busy pipeline: that is when the end columns fold.
+  describe('columns', () => {
+    // A wide board (more than 7 columns) with a busy pipeline.
     const busy = () => {
       const cs = buildSeed().candidates;
       useStore.setState((s) => ({
@@ -149,14 +149,13 @@ describe('Board', () => {
       }));
     };
 
-    it('end columns collapsed by default when busy on a wide board', () => {
+    it('every column is open by default, even on a busy wide board, so all cards show', () => {
       busy();
       renderBoard();
-      expect(screen.getByTestId('column-rejected')).toHaveClass('w-12');
-      expect(screen.getByTestId('column-hired')).toHaveClass('w-12');
-      expect(screen.getByTestId('column-new')).not.toHaveClass('w-12');
-      fireEvent.click(within(screen.getByTestId('column-rejected')).getByRole('button', { name: 'Expand Rejected' }));
-      expect(screen.getByTestId('column-rejected')).not.toHaveClass('w-12');
+      for (const id of ['column-new', 'column-ai_screening', 'column-assessment', 'column-hired', 'column-rejected']) {
+        expect(screen.getByTestId(id)).not.toHaveClass('w-12');
+      }
+      expect(screen.queryByRole('button', { name: /^Expand / })).not.toBeInTheDocument();
     });
 
     it('default board: the 7 basic columns, all open when the pipeline is quiet', () => {
@@ -165,17 +164,6 @@ describe('Board', () => {
       expect(ids).toEqual(['column-new', 'column-screening', 'column-interview', 'column-final_interview', 'column-offer', 'column-hired', 'column-rejected']);
       expect(screen.getByTestId('column-rejected')).not.toHaveClass('w-12');
       expect(screen.getByTestId('column-offer')).not.toHaveClass('w-12');
-    });
-
-    it('with more than 7 columns, empty ones fold and can be opened by hand', () => {
-      useStore.setState((s) => ({
-        jobs: s.jobs.map((j) => (j.id === 'job-1' ? { ...j, pipeline: ['ai_screening', 'screening', 'interview', 'assessment', 'final_interview', 'offer', 'withdrawn'] } : j)),
-      }));
-      renderBoard();
-      expect(screen.getByTestId('column-withdrawn')).toHaveClass('w-12');
-      expect(screen.getByTestId('column-ai_screening')).toHaveClass('w-12');
-      fireEvent.click(within(screen.getByTestId('column-ai_screening')).getByRole('button', { name: 'Expand AI Screening' }));
-      expect(screen.getByTestId('column-ai_screening')).not.toHaveClass('w-12');
     });
 
     it('a job can rename and reorder its columns, and add a custom one', () => {
@@ -193,44 +181,7 @@ describe('Board', () => {
       expect(screen.getByRole('menuitem', { name: 'Phone call' })).toBeInTheDocument();
     });
 
-    it('collapsed rejected strip still requires reason', () => {
-      busy();
-      renderBoard();
-      expect(handleDrop('a1', 'rejected')).toBe('needs_note');
-      fireEvent.click(within(card(names[0])).getByRole('button', { name: 'Move to…' }));
-      fireEvent.click(screen.getByRole('menuitem', { name: 'Rejected' }));
-      const dialog = screen.getByRole('dialog', { name: 'Reject candidate' });
-      expect(within(dialog).getByRole('button', { name: 'Reject' })).toBeDisabled();
-      expect(screen.getByTestId('column-rejected')).toHaveClass('w-12');
-    });
-
-    it('collapse default is frozen at mount: moving a card does not flip the strips', () => {
-      busy();
-      renderBoard();
-      expect(screen.getByTestId('column-hired')).toHaveClass('w-12');
-      // 5 active -> 3 active: a per-render default would now flip the strips open
-      act(() => { commitMove('a1', 'hired', ''); commitMove('a2', 'hired', ''); });
-      expect(screen.getByTestId('column-hired')).toHaveClass('w-12');
-      expect(screen.getByTestId('column-rejected')).toHaveClass('w-12');
-    });
-
-    it('a text filter auto-expands a collapsed strip that holds matches, with the filtered count', () => {
-      busy();
-      const cs = buildSeed().candidates;
-      useStore.setState({ applications: [...useStore.getState().applications, app('h1', cs[5].id, 'hired', 1)] });
-      const hiredName = cs[5].name;
-      const { rerender } = render(<MemoryRouter><Board job={job()} filter={{ text: '' }} /></MemoryRouter>);
-      expect(screen.getByTestId('column-hired')).toHaveClass('w-12');
-      rerender(<MemoryRouter><Board job={job()} filter={{ text: hiredName }} /></MemoryRouter>);
-      const hired = screen.getByTestId('column-hired');
-      expect(hired).not.toHaveClass('w-12');
-      expect(within(hired).getByTestId('column-count')).toHaveTextContent('1');
-      expect(screen.getAllByText(hiredName).length).toBeGreaterThan(0);
-      rerender(<MemoryRouter><Board job={job()} filter={{ text: '' }} /></MemoryRouter>);
-      expect(screen.getByTestId('column-hired')).toHaveClass('w-12');
-    });
-
-    it('collapsed hired strip accepts move', () => {
+    it('hired column accepts a move', () => {
       busy();
       renderBoard();
       fireEvent.click(within(card(names[0])).getByRole('button', { name: 'Move to…' }));
@@ -238,6 +189,16 @@ describe('Board', () => {
       fireEvent.click(within(screen.getByRole('dialog', { name: 'Move to Hired' })).getByRole('button', { name: 'Move' }));
       expect(stageOf('a1')).toBe('hired');
       expect(within(screen.getByTestId('column-hired')).getByTestId('column-count')).toHaveTextContent('1');
+    });
+
+    it('rejecting still requires a reason', () => {
+      busy();
+      renderBoard();
+      expect(handleDrop('a1', 'rejected')).toBe('needs_note');
+      fireEvent.click(within(card(names[0])).getByRole('button', { name: 'Move to…' }));
+      fireEvent.click(screen.getByRole('menuitem', { name: 'Rejected' }));
+      const dialog = screen.getByRole('dialog', { name: 'Reject candidate' });
+      expect(within(dialog).getByRole('button', { name: 'Reject' })).toBeDisabled();
     });
   });
 

@@ -32,3 +32,30 @@
 .jm-bar > div { height: 100%; border-radius: 9999px; }
 .jm-row:hover { background: #fafafa; }
 .jm-sticky { position: sticky; top: 0; }
+
+/* Sideways table scroll: the thumb stays visible (the shared style hides it until hover, so people missed it). */
+.overflow-x-auto.custom-scrollbar { scrollbar-color: rgba(0,0,0,.28) transparent; }
+.overflow-x-auto.custom-scrollbar::-webkit-scrollbar { height: 10px; }
+.overflow-x-auto.custom-scrollbar::-webkit-scrollbar-track { background: #f4f1f0; border-radius: 10px; }
+.overflow-x-auto.custom-scrollbar::-webkit-scrollbar-thumb,
+.overflow-x-auto.custom-scrollbar:hover::-webkit-scrollbar-thumb { background: rgba(0,0,0,.28); border-radius: 10px; }
+.overflow-x-auto.custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,.45); }
+.dark .overflow-x-auto.custom-scrollbar { scrollbar-color: rgba(255,255,255,.3) transparent; }
+.dark .overflow-x-auto.custom-scrollbar::-webkit-scrollbar-track { background: #2a2423; }
+.dark .overflow-x-auto.custom-scrollbar::-webkit-scrollbar-thumb,
+.dark .overflow-x-auto.custom-scrollbar:hover::-webkit-scrollbar-thumb { background: rgba(255,255,255,.3); }
+
+/* Upload CVs workspace: a soft border glow on the dropzone when the page opens, and a fade for new queue rows. */
+@keyframes upload-glow {
+  /* Only the peak: start and end come from the element's own (light or dark) border. */
+  50% { border-color: rgb(238 77 45 / .55); background-color: rgb(238 77 45 / .03); }
+}
+@keyframes upload-row-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+@keyframes upload-hold { to { opacity: 1; } }
+.upload-glow { animation: upload-glow 2.4s ease-in-out 2; }
+.upload-row-in { animation: upload-row-in .3s ease-out both; }
+@media (prefers-reduced-motion: reduce) {
+  .upload-row-in { animation: none !important; }
+  /* No glow, but the entry state still ends on its own (animationend). */
+  .upload-glow { animation: upload-hold 4.8s linear 1; }
+}

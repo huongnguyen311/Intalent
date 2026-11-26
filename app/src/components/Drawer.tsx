@@ -19,10 +19,12 @@ type Props = {
   footer?: ReactNode;
   /** Edits the form makes without a DOM change event (adding a row, an AI draft...) — counted like typed changes. */
   dirty?: boolean;
+  /** Side variant width: `md` (default, forms) or `sm` (short lists such as chat history). */
+  size?: 'md' | 'sm';
 };
 
 /** Right-hand slide-over or centred dialog (`animate-slide-left` / `animate-pop-in` come from supplement.css). */
-export function Drawer({ open, title, subtitle, onClose, children, guardUnsaved, variant = 'side', subheader, footer, dirty: dirtyProp }: Props) {
+export function Drawer({ open, title, subtitle, onClose, children, guardUnsaved, variant = 'side', subheader, footer, dirty: dirtyProp, size = 'md' }: Props) {
   const center = variant === 'center';
   const t = useT();
   const ref = useRef<HTMLElement>(null);
@@ -46,7 +48,7 @@ export function Drawer({ open, title, subtitle, onClose, children, guardUnsaved,
         className={`outline-none w-full bg-white dark:bg-[#1e1e1e] shadow-2xl flex flex-col ${
           center
             ? 'max-w-3xl max-h-[min(90vh,960px)] rounded-xl border border-[#e6dddb] dark:border-[#2a2423] overflow-hidden animate-pop-in'
-            : 'max-w-xl h-full animate-slide-left'
+            : `${size === 'sm' ? 'max-w-sm' : 'max-w-xl'} h-full animate-slide-left`
         }`}
         onClick={(e) => e.stopPropagation()}
         // Any input in the body, subheader or footer counts as an unsaved edit.

@@ -20,11 +20,12 @@ const KINDS: Array<{ kind: Kind; tab: TKey; add: TKey; search: TKey }> = [
 const SORTS: Array<[Sort, TKey]> = [['newest', 'taxonomy.sort.newest'], ['oldest', 'taxonomy.sort.oldest'], ['name', 'taxonomy.sort.name']];
 const STATUSES: Array<[StatusFilter, TKey]> = [['', 'taxonomy.filter.all'], ['active', 'taxonomy.filter.active'], ['inactive', 'taxonomy.filter.inactive']];
 
-const TAB_ON = 'px-4 py-3 text-sm font-semibold relative text-primary border-b-2 border-primary';
-const TAB_OFF = 'px-4 py-3 text-sm font-semibold relative text-[#5a4a46] dark:text-gray-400 hover:text-[#181211] dark:hover:text-gray-200 transition-colors';
+const TAB_ON = '-mb-px px-3 py-2.5 text-sm font-semibold text-primary border-b-2 border-primary';
+const TAB_OFF = '-mb-px px-3 py-2.5 text-sm font-semibold border-b-2 border-transparent text-[#5a4a46] dark:text-gray-400 hover:text-[#181211] dark:hover:text-gray-200 transition-colors';
 const FILTER_BTN =
-  'flex items-center gap-2 px-3 py-2 bg-white dark:bg-[#251f1e] border border-[#e6dddb] dark:border-[#3a3433] rounded-lg text-sm font-medium text-[#181211] dark:text-white hover:border-primary/50 transition-colors whitespace-nowrap ';
-const TH = 'px-6 py-4 text-xs font-bold text-[#896a61] uppercase tracking-wider border-b border-[#e6dddb] dark:border-[#2a2423]  ';
+  'flex items-center gap-1.5 h-9 px-3 bg-white dark:bg-[#251f1e] border border-[#e6dddb] dark:border-[#3a3433] rounded-lg text-sm font-medium text-[#181211] dark:text-white hover:border-primary/50 transition-colors whitespace-nowrap';
+const TH = 'px-4 py-2.5 text-xs font-bold text-[#896a61] uppercase tracking-wider border-b border-[#e6dddb] dark:border-[#2a2423] whitespace-nowrap';
+const TD = 'px-4 py-2.5 whitespace-nowrap';
 const CHECK = 'rounded border-gray-300 text-primary focus:ring-primary dark:bg-[#1e1e1e] dark:border-[#3a3433]';
 const PRIMARY_BTN = 'px-4 py-2 bg-primary hover:bg-primary-hover text-white rounded-lg font-semibold text-sm transition-colors';
 const FIELD = 'w-full px-3 py-2 bg-white dark:bg-[#251f1e] border border-[#e6dddb] dark:border-[#3a3433] focus:border-primary focus:ring-0 rounded-lg text-sm text-[#181211] dark:text-white';
@@ -40,7 +41,7 @@ function FilterButton({ icon, label, onClick }: { icon: string; label: string; o
     <button onClick={onClick} className={FILTER_BTN}>
       <span className="material-symbols-outlined text-[18px] text-[#896a61]">{icon}</span>
       <span>{label}</span>
-      <span className="material-symbols-outlined text-[18px] text-[#896a61]">expand_more</span>
+      <span className="material-symbols-outlined text-[18px] text-[#896a61] -mr-1">expand_more</span>
     </button>
   );
 }
@@ -127,31 +128,24 @@ export function TaxonomyPage() {
 
   return (
     <AppLayout title={t('taxonomy.title')} subtitle={t('taxonomy.subtitle')}>
-      <div className="p-8 max-w-[1400px] mx-auto space-y-8">
-        <div className="flex flex-col md:flex-row md:items-end justify-end gap-4">
-          <div className="flex items-center gap-3">
-            <button onClick={() => setDialog({})} className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary-hover text-white rounded-lg font-semibold text-sm transition-colors shadow-md shadow-orange-900/20">
-              <span className="material-symbols-outlined text-[20px]">add</span>{t(cfg.add)}
-            </button>
-          </div>
-        </div>
+      <div className="px-6 py-5 max-w-[1400px] mx-auto space-y-4">
         <div className="flex border-b border-[#e6dddb] dark:border-[#2a2423] gap-1">
           {KINDS.map((k) => (
             <button key={k.kind} onClick={() => { setKind(k.kind); setSelected(new Set()); }} className={k.kind === kind ? TAB_ON : TAB_OFF}>{t(k.tab)}</button>
           ))}
         </div>
-        <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
-          <div className="relative w-full md:w-96">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#896a61] material-symbols-outlined text-[20px]">search</span>
+        <div className="flex flex-wrap gap-2 items-center">
+          <div className="relative w-full sm:w-80">
+            <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#896a61] material-symbols-outlined text-[18px]">search</span>
             <input
-              className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-[#251f1e] border border-[#e6dddb] dark:border-[#3a3433] focus:border-primary focus:ring-0 rounded-lg text-sm text-[#181211] dark:text-white transition-all placeholder-[#896a61]"
+              className="w-full h-9 pl-9 pr-3 bg-white dark:bg-[#251f1e] border border-[#e6dddb] dark:border-[#3a3433] focus:border-primary focus:ring-0 rounded-lg text-sm text-[#181211] dark:text-white transition-all placeholder-[#896a61]"
               placeholder={t(cfg.search)}
               type="text"
               value={q}
               onChange={(e) => setQ(e.target.value)}
             />
           </div>
-          <div className="flex items-center gap-3 w-full md:w-auto">
+          <div className="flex items-center gap-2">
             <Popover trigger={({ toggle: tg }) => <FilterButton icon="filter_list" label={t('taxonomy.filter.label', { value: t(STATUSES.find(([v]) => v === status)![1]) })} onClick={tg} />}>
               {(close) => STATUSES.map(([v, key]) => <MenuItem key={v} active={v === status} onClick={() => { setStatus(v); close(); }}>{t(key)}</MenuItem>)}
             </Popover>
@@ -159,40 +153,44 @@ export function TaxonomyPage() {
               {(close) => SORTS.map(([v, key]) => <MenuItem key={v} active={v === sort} onClick={() => { setSort(v); close(); }}>{t(key)}</MenuItem>)}
             </Popover>
           </div>
+          <button onClick={() => setDialog({})} className="ml-auto flex items-center gap-1.5 h-9 pl-3 pr-4 bg-primary hover:bg-primary-hover text-white rounded-lg font-semibold text-sm transition-colors">
+            <span className="material-symbols-outlined text-[18px]">add</span>{t(cfg.add)}
+          </button>
         </div>
-        <div className="bg-white dark:bg-[#1e1e1e] rounded-xl border border-[#e6dddb] dark:border-[#2a2423] shadow-sm flex flex-col border-0 shadow-sm">
-          <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-320px)] custom-scrollbar">
+        <div className="bg-white dark:bg-[#1e1e1e] rounded-xl border border-[#e6dddb] dark:border-[#2a2423] shadow-sm overflow-hidden">
+          <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-220px)] custom-scrollbar">
             <table className="w-full text-left border-collapse">
               <thead className="bg-[#f8f6f6] dark:bg-[#251f1e] sticky top-0 z-10">
                 <tr>
-                  <th className="px-6 py-4 w-12 border-b border-[#e6dddb] dark:border-[#2a2423]">
-                    <div className="flex items-center"><input aria-label={t('taxonomy.selectAll')} className={CHECK} type="checkbox" checked={allSelected} onChange={toggleAll} /></div>
+                  <th className={`${TH} w-10 pr-0`}>
+                    <input aria-label={t('taxonomy.selectAll')} className={`${CHECK} align-middle`} type="checkbox" checked={allSelected} onChange={toggleAll} />
                   </th>
-                  {(['taxonomy.col.name', 'taxonomy.col.usage', 'taxonomy.col.status', 'taxonomy.col.modified'] as const).map((k) => (
-                    <th key={k} className={TH}><div className="flex items-center gap-1">{t(k)}</div></th>
-                  ))}
-                  <th className="px-6 py-4 w-16 border-b border-[#e6dddb] dark:border-[#2a2423] text-xs font-bold text-[#896a61] uppercase tracking-wider text-center">{t('taxonomy.col.actions')}</th>
+                  <th className={TH}>{t('taxonomy.col.name')}</th>
+                  <th className={`${TH} w-28 text-right`}>{t('taxonomy.col.usage')}</th>
+                  <th className={`${TH} w-36`}>{t('taxonomy.col.status')}</th>
+                  <th className={`${TH} w-36`}>{t('taxonomy.col.modified')}</th>
+                  <th className={`${TH} w-16 text-center`}>{t('taxonomy.col.actions')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#f4f1f0] dark:divide-[#2a2423]">
                 {rows.map((i) => (
-                  <tr key={i.id} className="hover:bg-gray-50 dark:hover:bg-white/5 transition-colors group ">
-                    <td className="px-6 py-4 whitespace-nowrap"><input className={CHECK} type="checkbox" checked={selected.has(i.id)} onChange={() => toggle(i.id)} /></td>
-                    <td className="px-6 py-4 whitespace-nowrap "><span className="font-semibold text-sm text-[#181211] dark:text-white">{i.label}</span></td>
-                    <td className="px-6 py-4 whitespace-nowrap "><span className="text-sm text-[#5a4a46] dark:text-gray-400">{usage(i)}</span></td>
-                    <td className="px-6 py-4 whitespace-nowrap ">
+                  <tr key={i.id} className="hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
+                    <td className={`${TD} pr-0`}><input className={`${CHECK} align-middle`} type="checkbox" checked={selected.has(i.id)} onChange={() => toggle(i.id)} /></td>
+                    <td className={TD}><span className="font-semibold text-sm text-[#181211] dark:text-white">{i.label}</span></td>
+                    <td className={`${TD} text-right tabular-nums`}><span className="text-sm text-[#5a4a46] dark:text-gray-400">{usage(i)}</span></td>
+                    <td className={TD}>
                       <div className="flex items-center gap-2">
                         <span className={`size-2 rounded-full ${i.active ? 'bg-emerald-500' : 'bg-gray-400'}`}></span>
                         <span className="text-sm font-medium text-[#181211] dark:text-white">{t(i.active ? 'taxonomy.active' : 'taxonomy.inactive')}</span>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap "><span className="text-sm text-[#896a61]">{mdy(i.updatedAt)}</span></td>
-                    <td className="px-6 py-4 whitespace-nowrap text-center">
+                    <td className={TD}><span className="text-sm text-[#896a61] tabular-nums">{mdy(i.updatedAt)}</span></td>
+                    <td className={`${TD} py-1 text-center`}>
                       <Popover
                         align="right"
                         trigger={({ toggle: tg }) => (
-                          <button aria-label={t('taxonomy.col.actions')} onClick={tg} className="p-2 hover:bg-gray-100 dark:hover:bg-white/10 rounded-full transition-colors text-gray-400 hover:text-slate-900 dark:hover:text-white">
-                            <span className="material-symbols-outlined">more_horiz</span>
+                          <button aria-label={t('taxonomy.col.actions')} onClick={tg} className="p-1.5 hover:bg-gray-100 dark:hover:bg-white/10 rounded-full transition-colors text-gray-400 hover:text-slate-900 dark:hover:text-white">
+                            <span className="material-symbols-outlined text-[20px] block">more_horiz</span>
                           </button>
                         )}
                       >
@@ -209,7 +207,7 @@ export function TaxonomyPage() {
                   </tr>
                 ))}
                 {rows.length === 0 && (
-                  <tr><td colSpan={6} className="px-6 py-10 text-center text-sm text-[#896a61]">{t('taxonomy.empty')}</td></tr>
+                  <tr><td colSpan={6} className="px-4 py-8 text-center text-sm text-[#896a61]">{t('taxonomy.empty')}</td></tr>
                 )}
               </tbody>
             </table>

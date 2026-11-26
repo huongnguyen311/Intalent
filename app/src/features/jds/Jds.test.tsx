@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { buildMockupFixture } from '../../data/fixtureMockup';
@@ -70,6 +70,23 @@ describe('JdListPage', () => {
     expect(screen.queryByText('Senior Flutter & Java Engineer')).toBeNull();
   });
 
+  it('shows level and how many jobs use each JD, and blocks deleting a JD in use', () => {
+    const seed = buildSeed();
+    const usedId = seed.jobs[0].jdId;
+    const usedJd = seed.jds.find((j) => j.id === usedId)!;
+    const n = seed.jobs.filter((j) => j.jdId === usedId).length;
+    useStore.setState({ jds: seed.jds.map((j) => (j.id === usedId ? { ...j, seniority: 'Senior', minYears: 5 } : j)) });
+    renderAt('/jds');
+    const row = screen.getByText(usedJd.title).closest('tr')!;
+    expect(within(row).getByText('Senior · 5+ yrs')).toBeInTheDocument();
+    expect(within(row).getByRole('button', { name: new RegExp(`${n} job\\(s\\)`) })).toBeInTheDocument();
+    fireEvent.click(within(row).getByRole('button', { name: `Actions ${usedJd.title}` }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Delete' }));
+    const dialog = screen.getByRole('dialog', { name: 'Delete job description' });
+    expect(within(dialog).getByText(new RegExp(`used by ${n} job`))).toBeInTheDocument();
+    expect(within(dialog).getByRole('button', { name: 'Delete' })).toBeDisabled();
+  });
+
   it('unpublishes from the row menu and deletes only after confirming', () => {
     const jd = useStore.getState().createJd({ title: 'Temp role', domains: [], skills: [], body: '', status: 'Published' });
     renderAt('/jds');
@@ -134,6 +151,23 @@ describe('JdDetailPage structured fields', () => {
     expect(screen.queryByRole('heading', { name: /Original/ })).toBeNull();
   });
 
+  it('hides the pasted text when the structured overview already covers it', () => {
+    const jd = useStore.getState().createJd({
+      title: 'QA Lead', domains: [], skills: ['Playwright'], body: 'PASTED SOURCE TEXT',
+      summary: 'Lead QA.', responsibilities: ['Own the test plan'],
+    });
+    renderAt(`/jds/${jd.id}`);
+    expect(screen.getByRole('heading', { name: /Job Overview/ })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /Original/ })).toBeNull();
+    expect(screen.queryByText('PASTED SOURCE TEXT')).toBeNull();
+  });
+
+  it('shows the pasted text for an older JD without an overview', () => {
+    makeLegacyJd('jd-2026-001');
+    renderAt('/jds/jd-2026-001');
+    expect(screen.getByRole('heading', { name: /Original Job Description/ })).toBeInTheDocument();
+  });
+
   it('keeps an older JD without structured fields as before', () => {
     makeLegacyJd('jd-2026-001');
     renderAt('/jds/jd-2026-001');
@@ -148,7 +182,7 @@ describe('JdDetailPage jobs', () => {
     renderAt('/jds/jd-2026-001');
     const card = screen.getByRole('heading', { name: /Jobs using this JD/ }).parentElement!;
     expect(within(card).getByRole('link', { name: /Senior Flutter & Java Engineer/ })).toHaveAttribute('href', '/jobs/job-3');
-    expect(within(card).getByRole('link', { name: /Mobile Engineer \(Flutter\)/ })).toHaveAttribute('href', '/jobs/job-5');
+    expect(within(card).getByRole('link', { name: /^Mobile Engineer \(Flutter\)/ })).toHaveAttribute('href', '/jobs/job-5');
   });
 
   it('says when no job uses the JD', () => {
@@ -214,6 +248,37 @@ describe('JdEditorPage', () => {
     expect(screen.getByLabelText('Job title or JD text')).toHaveValue('Senior Backend Engineer');
   });
 
+  it('an uploaded .md file shows its text on the page; rewriting or filling is up to the user', async () => {
+    renderAt('/jds/new');
+    const file = new File([JD_TEXT], 'jd.md', { type: 'text/markdown' });
+    fireEvent.change(document.querySelector('input[type="file"]')!, { target: { files: [file] } });
+    const box = screen.getByLabelText('Job title or JD text') as HTMLTextAreaElement;
+    await waitFor(() => expect(box.value).toContain('SENIOR DATA ENGINEER'));
+    // Tall enough to read the whole file; nothing is rewritten or filled yet.
+    expect(box.rows).toBeGreaterThan(3);
+    expect(screen.queryByLabelText('Standard JD draft')).toBeNull();
+    expect(screen.getByLabelText(/JD Title/)).toHaveValue('');
+    fireEvent.click(screen.getByRole('button', { name: /Rewrite to standard/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Looks right, fill the form/ }));
+    expect(screen.getByLabelText(/JD Title/)).toHaveValue('Senior Data Engineer');
+  });
+
+  it('Rewrite to standard shows an editable standard draft and only fills the form once confirmed', () => {
+    renderAt('/jds/new');
+    fireEvent.change(screen.getByLabelText('Job title or JD text'), { target: { value: JD_TEXT } });
+    fireEvent.click(screen.getByRole('button', { name: /Rewrite to standard/ }));
+    const draft = screen.getByLabelText('Standard JD draft') as HTMLTextAreaElement;
+    expect(draft.value).toMatch(/^Senior Data Engineer\n/);
+    expect(draft.value).toContain('Requirements (must-have):\n- 5+ years with Python and PostgreSQL');
+    // Nothing reaches the form while reviewing.
+    expect(screen.getByLabelText(/JD Title/)).toHaveValue('');
+    fireEvent.change(draft, { target: { value: draft.value.replace('Senior Data Engineer', 'Lead Data Engineer') } });
+    fireEvent.click(screen.getByRole('button', { name: /Looks right, fill the form/ }));
+    expect(screen.getByLabelText(/JD Title/)).toHaveValue('Lead Data Engineer');
+    expect(screen.getByLabelText(/Responsibilities/)).toHaveValue('Build data pipelines\nOwn the warehouse');
+    expect(screen.getByRole('heading', { name: 'Form filled by AI from “the standard rewrite”' })).toBeInTheDocument();
+  });
+
   it('standardizes pasted text, applies it to the form and saves a draft with the client', () => {
     renderAt('/jds/new');
     expect(screen.getByRole('button', { name: /Fill form with AI/ })).toBeDisabled();
@@ -247,14 +312,12 @@ describe('JdEditorPage', () => {
     expect(screen.queryByText('Go')).toBeNull();
   });
 
-  it('needs only a title for a draft but every required field to publish', () => {
+  it('needs only a title for a draft and has no Publish button', () => {
     renderAt('/jds/new');
+    expect(screen.queryByRole('button', { name: /^Publish$/ })).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: /Save Draft/ }));
     expect(useStore.getState().jds).toHaveLength(5);
     fireEvent.change(screen.getByLabelText(/JD Title/), { target: { value: 'QA Lead' } });
-    fireEvent.click(screen.getByRole('button', { name: /^Publish$/ }));
-    expect(useStore.getState().jds).toHaveLength(5);
-    expect(screen.getAllByText('Required').length).toBeGreaterThan(0);
     fireEvent.click(screen.getByRole('button', { name: /Save Draft/ }));
     expect(useStore.getState().jds.find((j) => j.title === 'QA Lead')!.status).toBe('Draft');
   });
@@ -267,10 +330,10 @@ describe('JdEditorPage', () => {
     expect(screen.getByLabelText(/Min\. Experience/)).toHaveValue(5);
     addTag(/Must-Have Skills/, 'React 18');
     // The seed JD never states an English level, which Run Match requires.
-    fireEvent.click(screen.getByRole('button', { name: /Run Match/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Save & Match/ }));
     expect(screen.queryByTestId('where')).toBeNull();
     fireEvent.change(screen.getByLabelText(/English Level/), { target: { value: 'Intermediate' } });
-    fireEvent.click(screen.getByRole('button', { name: /Run Match/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Save & Match/ }));
     expect(screen.getByTestId('where')).toHaveTextContent('/jd-matching?jd=jd-2026-002');
     expect(useStore.getState().jds.find((j) => j.id === 'jd-2026-002')).toMatchObject({ status: 'Published', mustHave: ['React 18'], english: 'Intermediate' });
   });
@@ -354,16 +417,13 @@ describe('JdEditorPage', () => {
     });
   });
 
-  it('Publish needs a summary and responsibilities; Run Match does not', () => {
+  it('Run Match does not need a summary or responsibilities', () => {
     renderAt('/jds/new');
     fireEvent.change(screen.getByLabelText(/JD Title/), { target: { value: 'Go Engineer' } });
     addTag(/Tech Stack Tags/, 'Go');
     addTag(/Must-Have Skills/, '3+ years of Go');
     addTag(/^Domain/, 'Fintech');
-    fireEvent.click(screen.getByRole('button', { name: /^Publish$/ }));
-    expect(useStore.getState().jds).toHaveLength(5);
-    expect(screen.getAllByText('Required')).toHaveLength(2);
-    fireEvent.click(screen.getByRole('button', { name: /Run Match/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Save & Match/ }));
     expect(screen.getByTestId('where')).toHaveTextContent('/jd-matching?jd=');
   });
 

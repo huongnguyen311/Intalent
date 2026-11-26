@@ -57,7 +57,8 @@ export interface DemoActions {
     input: CandidateInput,
     ctx: { source: string; by: string },
   ): { candidate: Candidate; created: boolean };
-  updateCandidate(id: string, patch: CandidatePatch): UpdateCandidateResult;
+  /** `by` stamps updatedBy/updatedAt (omit for system writes such as parse bookkeeping). */
+  updateCandidate(id: string, patch: CandidatePatch, by?: string): UpdateCandidateResult;
   /** PRD AC-12: erases PII (contact, CV, files, emails), withdraws consents, logs an audit event. False if unknown or already done. */
   anonymizeCandidate(id: string, by: string): boolean;
   addToPipeline(

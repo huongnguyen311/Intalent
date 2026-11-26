@@ -9,7 +9,7 @@ function union(a: string[], b: string[] = []): string[] {
 
 export function candidateActions(set: Set, get: Get, env: Env): Pick<DemoActions, 'upsertCandidate' | 'updateCandidate' | 'anonymizeCandidate'> {
   return {
-    updateCandidate(id, patch) {
+    updateCandidate(id, patch, by) {
       const existing = get().candidates.find((c) => c.id === id);
       if (!existing) return { ok: false, reason: 'not_found' };
       const updated: Candidate = {
@@ -17,6 +17,7 @@ export function candidateActions(set: Set, get: Get, env: Env): Pick<DemoActions
         ...patch,
         ...(patch.email !== undefined ? { email: normalizeEmail(patch.email) } : {}),
         ...(patch.phone !== undefined ? { phone: patch.phone.trim() } : {}),
+        ...(by ? { updatedBy: by, updatedAt: env.now() } : {}),
       };
       // One Candidate per real person: an edit may not make this profile collide with another one.
       const conflict = findDuplicate(get().candidates.filter((c) => c.id !== id), updated);

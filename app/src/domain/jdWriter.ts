@@ -121,3 +121,42 @@ export function generateJdFromTitle(title: string, seniority?: string): JdInput 
     education: 'bachelor',
   };
 }
+
+const tidy = (xs: string[] | undefined): string[] => {
+  const seen = new Set<string>();
+  return (xs ?? [])
+    .map((l) => sentenceCase(l.replace(BULLET, '').replace(/\s+/g, ' ').trim().replace(/[.;,]+$/, '')))
+    .filter((l) => l && !seen.has(l.toLowerCase()) && seen.add(l.toLowerCase()));
+};
+const EDU_TEXT = { college: 'College diploma', bachelor: "Bachelor's degree", master: "Master's degree", phd: 'PhD' } as const;
+
+/**
+ * "Rewrite to standard": the JD laid out in the company's standard sections, as plain text the user
+ * can review and edit before anything goes into the form. `extractJd` reads this layout back as-is.
+ */
+export function rewriteJdStandard(x: JdInput): string {
+  const meta = [
+    x.seniority,
+    x.workingModel,
+    x.minYears !== undefined && `${x.minYears}+ years of experience`,
+    x.english && `${x.english} English`,
+  ].filter(Boolean).join(' · ');
+  const summary = x.summary?.trim().replace(/([^.!])$/, '$1.');
+  const duties = tidy([...(x.responsibilities ?? []), ...(x.dailyTasks ?? [])]);
+  const must = tidy(x.mustHave);
+  const nice = tidy(x.niceToHave);
+  const certs = tidy(x.certifications);
+  const edu = x.education && x.education !== 'any' && `${EDU_TEXT[x.education]}${x.major ? ` in ${x.major}` : ''}`;
+  const block = (head: string, items: string[]) => (items.length ? [`${head}:`, ...items.map((i) => `- ${i}`)].join('\n') : '');
+  return [
+    x.title.trim(),
+    meta,
+    summary,
+    block('Responsibilities', duties),
+    block('Requirements (must-have)', must),
+    block('Nice to have', nice),
+    [x.skills.length && `Tech stack: ${x.skills.join(', ')}`, x.domains.length && `Domain: ${x.domains.join(', ')}`, edu && `Education: ${edu}`].filter(Boolean).join('\n'),
+    block('Certifications', certs),
+    x.aboutTeam?.trim() ? `About the team:\n${x.aboutTeam.trim()}` : '',
+  ].filter(Boolean).join('\n\n');
+}

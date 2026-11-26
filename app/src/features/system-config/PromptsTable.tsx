@@ -34,7 +34,7 @@ export function PromptsTable({ items, title, desc, noun }: { items: Prompt[]; ti
         </div>
       </div>
       <div className="bg-white dark:bg-[#1e1e1e] rounded-xl border border-[#e6dddb] dark:border-[#2a2423] shadow-sm flex flex-col ">
-        <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-320px)] custom-scrollbar">
+        <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-274px)] custom-scrollbar">
           <table className="w-full text-left border-collapse">
             <thead className="bg-[#f8f6f6] dark:bg-[#251f1e] sticky top-0 z-10">
               <tr>

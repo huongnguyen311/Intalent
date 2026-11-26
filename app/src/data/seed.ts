@@ -10,6 +10,7 @@ import { STAGES } from '../domain/stages';
 import { normalizeEmail } from '../domain/normalize';
 import { withFlowDetail, withProfiles } from './seedDetail';
 import { buildShowcaseJd, buildShowcaseJob } from './showcaseJob';
+import { withDemoJobs } from './demoJobs';
 import { withJdDetails, withJobPosts } from './jobPosts';
 import {
   COMMENTS, DOMAINS, ENGLISH, FIRST_NAMES, GROUPS, LAST_NAMES, MIDDLE_NAMES, NOTE_TEXTS,
@@ -181,9 +182,15 @@ const USER_ROWS: Array<[id: string, name: string, email: string, role: string]> 
   ['u-chau', 'Dang Minh Chau', 'chau.dang@company.demo', 'Recruiter'],
 ];
 const STAFF = USER_ROWS.slice(1).map((u) => u[0]);
+/** The recruiters the Dashboard compares; kept out of STAFF so the rng-driven seed stays unchanged. */
+const DASHBOARD_RECRUITER_ROWS: Array<[id: string, name: string, email: string, role: string]> = [
+  ['u-hoa', 'Hòa Đặng', 'hoa.dang@company.demo', 'Recruiter'],
+  ['u-tien', 'Tiên Nguyễn', 'tien.nguyen@company.demo', 'Recruiter'],
+];
+export const DASHBOARD_RECRUITERS = DASHBOARD_RECRUITER_ROWS.map((u) => u[0]);
 
 function buildUsers(clock: Clock): User[] {
-  return USER_ROWS.map(([id, name, email, role], i) => ({
+  return [...USER_ROWS, ...DASHBOARD_RECRUITER_ROWS].map(([id, name, email, role], i) => ({
     id, name, email, role, status: 'Active', createdAt: clock.daysAgo(300 - i * 20).slice(0, 10),
   }));
 }
@@ -221,7 +228,7 @@ function urgency(i: number, clock: Clock): Partial<Job> {
   return [
     { hiringPriority: 'critical', targetHiringDate: due(25), urgencyReason: 'Client project starts next month and needs two more frontend devs.' },
     { hiringPriority: 'high', targetHiringDate: due(45) },
-    { hiringPriority: 'urgent', targetHiringDate: due(-5), urgencyReason: 'Mobile team is short after two resignations.', priorityNotes: 'Approved by CTO.' },
+    { hiringPriority: 'urgent', targetHiringDate: due(-5), urgencyReason: 'Mobile team is short after two resignations. Approved by CTO.' },
     { hiringPriority: 'normal', targetHiringDate: due(60) },
     { hiringPriority: 'normal', targetHiringDate: due(90) },
     { hiringPriority: 'normal', targetHiringDate: due(-20) },
@@ -231,20 +238,20 @@ function urgency(i: number, clock: Clock): Partial<Job> {
 const MIL = 1_000_000;
 /** Salary, collaborators and application questions per JOB_ROWS index (no rng draws, so the rest of the seed is unchanged). */
 const JOB_EXTRAS: Array<Partial<Job>> = [
-  { workplace: 'hybrid', headcount: 2, salaryMin: 40 * MIL, salaryMax: 60 * MIL, currency: 'VND', showSalary: true, collaborators: ['u-huy', 'u-linh'],
+  { workplace: 'hybrid', headcount: 2, salaryMin: 40 * MIL, salaryMax: 60 * MIL, currency: 'VND', showSalary: true, collaborators: ['u-huy', 'u-linh', 'u-hoa'],
     questions: [
       { id: 'q-notice', label: 'What is your notice period?', type: 'text', required: false },
       { id: 'q-onsite', label: 'Can you work onsite 3 days a week?', type: 'yesno', required: false },
     ] },
-  { workplace: 'remote', headcount: 1, salaryMin: 3000, salaryMax: 4500, currency: 'USD', showSalary: false, collaborators: ['u-huy'],
+  { workplace: 'remote', headcount: 1, salaryMin: 3000, salaryMax: 4500, currency: 'USD', showSalary: false, collaborators: ['u-huy', 'u-tien'],
     questions: [
       { id: 'q-lead', label: 'How many engineers have you led?', type: 'text', required: true },
       { id: 'q-english', label: 'Are you comfortable working in English daily?', type: 'yesno', required: true },
     ] },
-  { workplace: 'onsite', headcount: 3, salaryMin: 35 * MIL, salaryMax: 50 * MIL, currency: 'VND', showSalary: true, collaborators: ['u-linh'], questions: [] },
-  { workplace: 'hybrid', headcount: 1, salaryMin: 30 * MIL, salaryMax: 45 * MIL, currency: 'VND', showSalary: true, collaborators: ['u-chau'], questions: [] },
-  { workplace: 'onsite', headcount: 2, collaborators: ['u-huy'], education: 'college', approval: { requestedBy: 'u-huy', requestedAt: '' } },
-  { workplace: 'onsite', headcount: 1, collaborators: ['u-chau'] },
+  { workplace: 'onsite', headcount: 3, salaryMin: 35 * MIL, salaryMax: 50 * MIL, currency: 'VND', showSalary: true, collaborators: ['u-linh', 'u-hoa'], questions: [] },
+  { workplace: 'hybrid', headcount: 1, salaryMin: 30 * MIL, salaryMax: 45 * MIL, currency: 'VND', showSalary: true, collaborators: ['u-chau', 'u-tien'], questions: [] },
+  { workplace: 'onsite', headcount: 2, collaborators: ['u-huy', 'u-hoa'], education: 'college', approval: { requestedBy: 'u-huy', requestedAt: '' } },
+  { workplace: 'onsite', headcount: 1, collaborators: ['u-chau', 'u-tien'] },
 ];
 
 /**
@@ -392,7 +399,7 @@ function buildCampaigns(clock: Clock): Campaign[] {
 
 /** Unique-contact generator shared by candidates and notes. */
 function contactFactory(rng: Rng) {
-  const emails = new Set<string>(USER_ROWS.map((u) => normalizeEmail(u[2])));
+  const emails = new Set<string>([...USER_ROWS, ...DASHBOARD_RECRUITER_ROWS].map((u) => normalizeEmail(u[2])));
   const phones = new Set<string>();
   return {
     email(first: string, last: string): string {
@@ -622,7 +629,7 @@ export function buildSeed(rng: Rng = mulberry32(20261116), base: number = SEED_B
   const taxonomy = buildTaxonomy(candidates);
   const applications = withAiEvaluations(withHiringRecords(apps, clock), candidates, jobs, jds, taxonomy);
   const portal = withCandidateAccounts(candidates, applications, clock);
-  return withFlowDetail({
+  return withFlowDetail(withDemoJobs({
     candidates: portal.candidates,
     applications,
     // Full job posts and JD details go on after the AI evaluations, so the seeded applicants and scores stay the same.
@@ -638,5 +645,5 @@ export function buildSeed(rng: Rng = mulberry32(20261116), base: number = SEED_B
     chats: [],
     emails: [],
     ui: { lang: 'en', careersLang: 'vi', piiUnlocked: false },
-  }, base);
+  }, base, (a) => withHiringRecords(a, clock)), base);
 }

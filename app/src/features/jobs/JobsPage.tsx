@@ -3,7 +3,7 @@ import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { AppLayout } from '../../components/AppLayout';
 import { Pagination, usePaginationLabels } from '../../components/Pagination';
 import { MenuItem, Popover } from '../../components/Popover';
-import { HIGH_MATCH, JOB_SORTS, jobStats, jobTag, sortJobs, type JobSort, type JobStats } from '../../domain/jobInsights';
+import { JOB_SORTS, jobStats, sortJobs, type JobSort, type JobStats } from '../../domain/jobInsights';
 import { PriorityBadge } from '../../components/PriorityBadge';
 import { isOverdue, priorityOf, todayIso } from '../../domain/jobUrgency';
 import { HIRING_PRIORITIES, type HiringPriority, type Job } from '../../domain/types';
@@ -12,7 +12,7 @@ import { stageCounts } from '../../store/selectors';
 import { can, jobsInScope } from '../../domain/permissions';
 import { useMe } from '../../store/session';
 import { useStore } from '../../store/store';
-import { JobStatusBadge, JobTagChip, StageBar } from './JobBits';
+import { JobStatusBadge, StageBar } from './JobBits';
 import { ago, editorPath } from './jobForm';
 import { useJobActions } from './useJobActions';
 
@@ -56,7 +56,6 @@ export function JobsPage() {
     (params.get('priority') ?? '').split(',').filter((p): p is HiringPriority => (HIRING_PRIORITIES as readonly string[]).includes(p)));
   const [overdueOnly, setOverdueOnly] = useState(() => params.get('overdue') === '1');
   const [department, setDepartment] = useState('');
-  const [location, setLocation] = useState('');
   const [sort, setSort] = useState<JobSort>('newest');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(PAGE_SIZES[0]);
@@ -77,7 +76,6 @@ export function JobsPage() {
 
   const today = todayIso();
   const departments = useMemo(() => [...new Set(jobs.map((j) => j.department))].sort(), [jobs]);
-  const locations = useMemo(() => [...new Set(jobs.map((j) => j.location))].sort(), [jobs]);
   const filtered = useMemo(
     () =>
       sortJobs(
@@ -86,14 +84,13 @@ export function JobsPage() {
             (!q.trim() || has(j.title, q) || has(j.department, q) || has(j.location, q)) &&
             (!status || j.status === status) &&
             (!department || j.department === department) &&
-            (!location || j.location === location) &&
             (priorities.length === 0 || priorities.includes(priorityOf(j))) &&
             (!overdueOnly || isOverdue(j, applications, today)),
         ),
         sort,
         stats,
       ),
-    [jobs, q, status, department, location, priorities, overdueOnly, applications, today, sort, stats],
+    [jobs, q, status, department, priorities, overdueOnly, applications, today, sort, stats],
   );
   const rows = filtered.slice((page - 1) * pageSize, page * pageSize);
 
@@ -105,7 +102,7 @@ export function JobsPage() {
     </>
   );
   const all: [string, string] = ['', t('jobs.filter.all')];
-  const label = (key: 'jobs.filter.status' | 'jobs.filter.department' | 'jobs.filter.location' | 'jobs.filter.sort') => t(key, { value: '' }).replace(/\s*$/, '');
+  const label = (key: 'jobs.filter.status' | 'jobs.filter.department' | 'jobs.filter.sort') => t(key, { value: '' }).replace(/\s*$/, '');
   const statuses: Job['status'][] = ['open', 'pending_approval', 'on_hold', 'draft', 'closed'];
 
   // Old links (`?new=1` from the end of sign-up, `?fromJd=` from a JD) now live at /jobs/new.
@@ -115,12 +112,13 @@ export function JobsPage() {
   return (
     <AppLayout title={t('nav.jobs')} subtitle={t('jobs.subtitle')}>
       <div className="p-8 max-w-[1400px] mx-auto space-y-5 min-h-full">
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-start gap-2">
+          <div className="flex items-center gap-2 flex-wrap flex-1 min-w-0">
           <div className="relative">
             <span className="material-symbols-outlined text-[18px] absolute left-3 top-1/2 -translate-y-1/2 text-[#896a61]">search</span>
             <input
               aria-label={t('jobs.searchToggle')}
-              className="h-9 w-72 pl-9 pr-3 rounded-full bg-white dark:bg-[#251f1e] border border-[#e6dddb] dark:border-[#3a3433] focus:border-primary focus:ring-0 text-sm text-[#181211] dark:text-white placeholder-[#896a61]"
+              className="h-9 w-[346px] pl-9 pr-3 rounded-full bg-white dark:bg-[#251f1e] border border-[#e6dddb] dark:border-[#3a3433] focus:border-primary focus:ring-0 text-sm text-[#181211] dark:text-white placeholder-[#896a61]"
               placeholder={t('jobs.search')}
               value={q}
               onChange={(e) => reset(setQ)(e.target.value)}
@@ -131,9 +129,6 @@ export function JobsPage() {
           </Popover>
           <Popover trigger={({ toggle }) => <FilterButton label={label('jobs.filter.department')} value={department || all[1]} onClick={toggle} />}>
             {optionMenu(department, reset(setDepartment), [all, ...departments.map((d): [string, string] => [d, d])])}
-          </Popover>
-          <Popover trigger={({ toggle }) => <FilterButton label={label('jobs.filter.location')} value={location || all[1]} onClick={toggle} />}>
-            {optionMenu(location, reset(setLocation), [all, ...locations.map((l): [string, string] => [l, l])])}
           </Popover>
           <Popover trigger={({ toggle }) => <FilterButton label={t('jobs.filter.priority')} value={priorities.length ? priorities.map((p) => t(`priority.${p}`)).join(', ') : all[1]} onClick={toggle} />}>
             {() => (
@@ -153,20 +148,22 @@ export function JobsPage() {
           <Popover trigger={({ toggle }) => <FilterButton label={label('jobs.filter.sort')} value={t(`jobs.sort.${sort}`)} onClick={toggle} />}>
             {optionMenu(sort, (v) => reset(setSort)(v as JobSort), JOB_SORTS.map((s): [string, string] => [s, t(`jobs.sort.${s}`)]))}
           </Popover>
+          </div>
 
           {canEdit && (
-            <button onClick={() => openEditor('create')} className="ml-auto h-9 px-4 bg-brand-accent hover:bg-brand-strong text-white rounded-full font-semibold flex items-center gap-1.5 transition-colors text-sm shrink-0">
+            <button onClick={() => openEditor('create')} className="h-9 px-4 bg-brand-accent hover:bg-brand-strong text-white rounded-full font-semibold flex items-center gap-1.5 transition-colors text-sm shrink-0">
               <span className="material-symbols-outlined text-[18px]">add</span> {t('jobs.new')}
             </button>
           )}
         </div>
 
+        {/* No height cap: the box grows to show every row on the page (Rows per page) and the page scrolls. */}
         <div className="bg-white dark:bg-surface-dark rounded-2xl border border-[#e6dddb] dark:border-white/10 overflow-hidden">
-          <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-300px)] custom-scrollbar">
+          <div className="overflow-x-auto custom-scrollbar">
             <table className="w-full text-left border-collapse">
               <thead className="bg-white dark:bg-[#251f1e] sticky top-0 z-10">
                 <tr>
-                  {(['jobs.col.title', 'jobs.col.applicants', 'jobs.col.aiMatch', 'jobs.col.status', 'jobs.col.campaign', 'jobs.col.updated'] as const).map((k) => (
+                  {(['jobs.col.title', 'jobs.col.applicants', 'jobs.col.status', 'jobs.col.campaign', 'jobs.col.updated'] as const).map((k) => (
                     <th key={k} className={TH}>{t(k)}</th>
                   ))}
                   <th className={`${TH} w-24`}>{t('jobs.col.actions')}</th>
@@ -175,7 +172,6 @@ export function JobsPage() {
               <tbody className="divide-y divide-[#f4f1f0] dark:divide-[#2a2423]">
                 {rows.map((job) => {
                   const s = stats.get(job.id)!;
-                  const tag = jobTag(job, s, now);
                   const when = ago(s.updatedAt, now);
                   const menu = actionsFor(job);
                   return (
@@ -183,19 +179,11 @@ export function JobsPage() {
                       <td className="px-4 py-3 min-w-[300px]">
                         <div className="flex items-center gap-2">
                           <Link to={`/jobs/${job.id}`} className="font-semibold text-sm text-[#181211] dark:text-gray-100 group-hover:text-primary transition-colors">{job.title}</Link>
-                          <PriorityBadge priority={priorityOf(job)} />
-                          {tag && <JobTagChip tag={tag} />}
+                          <PriorityBadge priority={priorityOf(job)} reason={job.urgencyReason} />
                         </div>
                         <div className="text-xs text-[#896a61] mt-0.5">{[job.department, job.location, job.level].filter(Boolean).join(' · ')}</div>
                       </td>
-                      <td className={TD}><StageBar compact job={job} counts={stageCounts(applications, job.id)} /></td>
-                      <td className={TD}>
-                        {s.aiAvg === undefined ? (
-                          <span className="text-gray-300">—</span>
-                        ) : (
-                          <span className={s.aiAvg >= HIGH_MATCH ? 'font-semibold text-emerald-600' : 'font-medium'}>{s.aiAvg}%</span>
-                        )}
-                      </td>
+                      <td className={`${TD} group/cell`}><StageBar compact job={job} counts={stageCounts(applications, job.id)} /></td>
                       <td className={TD}><JobStatusBadge status={job.status} /></td>
                       <td className={TD}>
                         {(() => {

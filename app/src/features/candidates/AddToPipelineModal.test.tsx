@@ -22,16 +22,15 @@ const pickJob = (id: string) => fireEvent.change(screen.getByLabelText('Job'), {
 const confirm = () => fireEvent.click(screen.getByRole('button', { name: 'Add to pipeline' }));
 
 describe('AddToPipelineModal', () => {
-  it('labels the people being added and explains the source field', () => {
+  it('labels the people being added and has no source field', () => {
     render(<AddToPipelineModal open onClose={() => {}} candidateIds={ids} />);
     const list = screen.getByRole('list', { name: 'Candidates' });
     expect(within(list).getAllByRole('listitem')).toHaveLength(2);
-    expect(screen.getByText('Shown on the pipeline card as where this application came from.')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Source')).not.toBeInTheDocument();
   });
 
   it('adds selected candidates with via talent_pool', () => {
     render(<AddToPipelineModal open onClose={() => {}} candidateIds={ids} />);
-    expect(screen.getByLabelText('Source')).toHaveValue('Talent Pool');
     pickJob(jobId);
     confirm();
     const apps = useStore.getState().applications;
@@ -87,10 +86,8 @@ describe('AddToPipelineModal', () => {
       fireEvent.change(search, { target: { value: c.name } });
       fireEvent.click(screen.getByRole('checkbox', { name: new RegExp(c.name) }));
     }
-    expect(screen.getByText('2 selected')).toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText('Source'), { target: { value: 'Referral' } });
     confirm();
-    const added = useStore.getState().applications.filter((a) => a.source === 'Referral');
+    const added = useStore.getState().applications.filter((a) => a.source === 'Talent Pool');
     expect(added.map((a) => a.candidateId).sort()).toEqual([candidates[0].id, candidates[1].id].sort());
     for (const a of added) expect(a).toMatchObject({ jobId, stage: 'new', via: 'talent_pool' });
   });

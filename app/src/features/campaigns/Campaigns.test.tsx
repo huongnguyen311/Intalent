@@ -96,7 +96,7 @@ describe('CampaignsPage', () => {
     renderAt('/campaigns');
     expect(screen.queryByRole('button', { name: /Type:/ })).toBeNull();
     const row = screen.getByRole('link', { name: 'Graduate Program 2027' }).closest('tr')!;
-    expect(within(row).getByText('Mobile Engineer (Flutter)')).toBeInTheDocument();
+    expect(within(row).getByText(/Mobile Engineer \(Flutter\)/)).toBeInTheDocument();
   });
 
   it('New Campaign opens the create page', () => {
