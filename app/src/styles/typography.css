@@ -38,3 +38,7 @@ html:not([data-fixture]) :is(.font-extrabold, .font-black) { font-weight: 700; }
 html:not([data-fixture]) .font-semibold { font-weight: 500; }
 /* A cell's own weight class never beats the table scale (cells are 400; emphasis lives on inner elements). */
 html:not([data-fixture]) main table td:is(.font-bold, .font-semibold, .font-medium) { font-weight: 400; }
+
+/* One table header look in the app: muted ink on the light canvas, whatever colour/bg each table declared. */
+html:not([data-fixture]) main table thead { background-color: #f8f6f6; }
+html:not([data-fixture]) main table thead th { color: rgb(var(--c-ink-muted)); }

@@ -4,7 +4,6 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { buildSeed } from '../../data/seed';
 import { AppRoutes } from '../../routes';
 import { signInAs } from '../../store/session';
-import { jobStageLabel, jobStages } from '../../domain/pipelineConfig';
 import { useStore } from '../../store/store';
 
 const renderAt = (url: string) =>
@@ -21,20 +20,14 @@ beforeEach(() => {
 });
 
 describe('UX fixes per role', () => {
-  it('"Move to…" in a drawer opened from My interviews really moves the card', () => {
+  it('a drawer opened from My interviews leaves stage moves to the Pipeline and links the CV', () => {
     signInAs('u-nam');
     const app = useStore.getState().applications.find((a) => a.stage === 'interview' && a.interviews?.some((i) => i.interviewers.includes('u-nam') && i.status === 'scheduled'))!;
     renderAt('/my-interviews');
     const name = useStore.getState().candidates.find((c) => c.id === app.candidateId)!.name;
     fireEvent.click(screen.getAllByText(name)[0]);
-    fireEvent.click(screen.getByRole('button', { name: /Move to/ }));
-    // A Hiring Manager moves one step forward to the job's own next column (the default pipeline has no Assessment).
-    const job = useStore.getState().jobs.find((j) => j.id === app.jobId)!;
-    const cols = jobStages(job);
-    const next = cols[cols.indexOf('interview') + 1];
-    fireEvent.click(screen.getByRole('menuitem', { name: jobStageLabel(job, next, 'en') }));
-    fireEvent.click(screen.getByRole('button', { name: 'Move' }));
-    expect(useStore.getState().applications.find((a) => a.id === app.id)!.stage).toBe(next);
+    expect(screen.queryByRole('button', { name: /Move to/ })).toBeNull();
+    expect(screen.getByRole('link', { name: /View CV & profile/ })).toHaveAttribute('href', `/candidates/${app.candidateId}`);
   });
 
   it('an Interviewer sees neither the team ratings nor other scorecards before sending their own', () => {

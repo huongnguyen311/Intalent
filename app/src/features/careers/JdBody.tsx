@@ -36,9 +36,9 @@ export function JdBody({ body, title, skip = [], headingClass }: { body: string;
         return (
           <section key={`${s.heading ?? ''}-${i}`}>
             {s.heading && <h2 className={headingClass}>{sentence(s.heading)}</h2>}
-            {text.map((l) => <p key={l} className="text-[15px] leading-relaxed text-[#3d312e] mb-2">{l}</p>)}
+            {text.map((l) => <p key={l} className="text-[15px] leading-relaxed text-gray-700 mb-2">{l}</p>)}
             {bullets.length > 0 && (
-              <ul className="list-disc pl-5 space-y-1 text-[15px] leading-relaxed text-[#3d312e]">
+              <ul className="list-disc pl-5 space-y-1 text-[15px] leading-relaxed text-gray-700">
                 {bullets.map((b) => <li key={b}>{b.slice(2)}</li>)}
               </ul>
             )}

@@ -79,8 +79,9 @@ describe('AI evaluation UI', () => {
     const e = evaluateApplication(c, { stack: ['React', 'Vue'] }, at, 'ai-vi');
     useStore.setState({ applications: useStore.getState().applications.map((a) => (a.id === 'a1' ? { ...a, aiEvaluations: [e] } : a)), ui: { ...useStore.getState().ui, lang: 'vi' } });
     renderDrawer('a1');
-    expect(screen.getByText('Có React')).toBeInTheDocument();
-    expect(screen.getByText('Không thấy Vue')).toBeInTheDocument();
+    expect(screen.getByText('Kỹ năng còn thiếu:')).toBeInTheDocument();
+    expect(screen.getByText('Có 1')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /câu hỏi cần xác minh/ }));
     expect(screen.getByText('Xác minh kinh nghiệm thực tế với Vue.')).toBeInTheDocument();
   });
 
@@ -95,11 +96,14 @@ describe('AI evaluation UI', () => {
     expect(find('a2').aiEvaluations).toHaveLength(1);
   });
 
-  it('drawer shows breakdown, findings, disclaimer and a link to the CV', () => {
+  it('drawer shows the JD-CV match by requirement, disclaimer and a link to the CV', () => {
     renderDrawer('a1');
-    const section = screen.getByRole('region', { name: 'AI evaluation' });
+    const section = screen.getByRole('region', { name: 'Fit with the JD' });
     expect(within(section).getByText('55')).toBeInTheDocument();
-    for (const label of ['Stack', 'Experience', 'Domain', 'English']) expect(within(section).getByText(label)).toBeInTheDocument();
+    for (const label of ['Skills', 'Experience', 'Domain', 'English']) expect(within(section).getByRole('rowheader', { name: label })).toBeInTheDocument();
+    // The points column shows each part of the breakdown (in real evaluations those parts add up to the score).
+    const points = within(section).getAllByRole('row').slice(1).map((r) => Number(r.lastElementChild!.textContent!.split('/')[0]));
+    expect(points).toEqual(find('a1').aiEvaluations![0].breakdown.map((x) => x.points));
     expect(within(section).getByText('AI suggests only. HR makes the decision.')).toBeInTheDocument();
     expect(within(section).getByRole('link', { name: /Open original CV/ })).toHaveAttribute('href', `/candidates/${cands[0].id}`);
   });
@@ -111,6 +115,7 @@ describe('AI evaluation UI', () => {
     useStore.setState({ applications: useStore.getState().applications.map((a) => (a.id === 'a1' ? { ...a, aiEvaluations: [e] } : a)) });
     renderDrawer('a1');
     expect(e.strengths).toHaveLength(3);
+    fireEvent.click(screen.getByRole('button', { name: /Show CV quotes/ }));
     expect(screen.getAllByText('Listed in profile skills')).toHaveLength(1);
   });
 
@@ -135,6 +140,6 @@ describe('AI evaluation UI', () => {
     });
     signInAs('u-quang');
     renderDrawer('a1');
-    expect(screen.queryByRole('region', { name: 'AI evaluation' })).toBeNull();
+    expect(screen.queryByRole('region', { name: 'Fit with the JD' })).toBeNull();
   });
 });

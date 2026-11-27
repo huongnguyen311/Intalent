@@ -54,6 +54,20 @@ export function MyInterviewsPage() {
     const iv = mine.find((x) => !x.scorecards.some((c) => c.by === user.id)) ?? mine[0];
     return app && job ? { appId: app.id, job, ivId: iv?.id } : null;
   });
+  // `?app=` only seeds the first open: once the user closes it or picks another interview, drop it from the URL,
+  // otherwise a reload, Back or remount pops the same drawer open again.
+  const show = (next: { appId: string; job: Job; ivId?: string } | null) => {
+    setOpen(next);
+    if (params.has('app'))
+      setParams(
+        (p) => {
+          const n = new URLSearchParams(p);
+          n.delete('app');
+          return n;
+        },
+        { replace: true },
+      );
+  };
   // Same move flow as the pipeline (note dialog, permission check, toast), so "Move to…" here really moves.
   const { move, dialog } = useStageMove();
 
@@ -77,17 +91,17 @@ export function MyInterviewsPage() {
     iv.scorecards.some((c) => c.by === user.id) ? 'green' : iv.status !== 'scheduled' || iv.at < now ? 'amber' : 'violet';
 
   const table = (title: string, list: Row[], empty: string, extra?: ReactNode) => (
-    <section className="bg-white dark:bg-surface-dark rounded-2xl border border-[#e6dddb] dark:border-white/10 overflow-hidden">
-      <div className="px-4 py-3 min-h-[57px] flex items-center gap-2 border-b border-[#f4f1f0] dark:border-[#2a2423]">
+    <section className="bg-white dark:bg-dark-surface rounded-2xl border border-line dark:border-white/10 overflow-hidden">
+      <div className="px-4 py-3 min-h-[57px] flex items-center gap-2 border-b border-hairline dark:border-dark-raised">
         <h2 className="ty-section text-sm font-bold text-slate-800 dark:text-white">
-          {title} <span className="text-[#896a61] font-medium">({list.length})</span>
+          {title} <span className="text-ink-muted font-medium">({list.length})</span>
         </h2>
         {extra && <div className="ml-auto">{extra}</div>}
       </div>
       {list.length === 0 ? (
-        <p className="px-4 py-8 text-sm text-[#896a61] text-center">{empty}</p>
+        <p className="px-4 py-8 text-sm text-ink-muted text-center">{empty}</p>
       ) : (
-        <ul className="divide-y divide-[#f4f1f0] dark:divide-[#2a2423]">
+        <ul className="divide-y divide-hairline dark:divide-dark-raised">
           {list.map(({ iv, app, job, name }) => {
             const scored = iv.scorecards.some((c) => c.by === user.id);
             const due = iv.status !== 'scheduled' || iv.at < now;
@@ -96,15 +110,15 @@ export function MyInterviewsPage() {
             return (
               <li key={iv.id}>
                 <button
-                  onClick={() => job && setOpen({ appId: app.id, job, ivId: iv.id })}
+                  onClick={() => job && show({ appId: app.id, job, ivId: iv.id })}
                   className="w-full text-left px-4 py-4 flex items-center gap-4 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
                 >
                   <div className="w-48 shrink-0 whitespace-nowrap text-sm font-semibold tabular-nums text-slate-800 dark:text-white">{interviewTime(iv.at)}</div>
                   <div className="flex-1 min-w-0">
                     <div className="font-bold text-sm text-slate-800 dark:text-white truncate">{name}</div>
-                    <div className="text-xs text-[#896a61] truncate">{job?.title} · {iv.round}</div>
+                    <div className="text-xs text-ink-muted truncate">{job?.title} · {iv.round}</div>
                   </div>
-                  <div className="hidden lg:flex items-center gap-1 text-xs text-[#896a61] w-40 shrink-0 min-w-0">
+                  <div className="hidden lg:flex items-center gap-1 text-xs text-ink-muted w-40 shrink-0 min-w-0">
                     <span aria-hidden="true" className="material-symbols-outlined text-[16px]">{MODE_ICON[iv.mode]}</span>
                     <span className="truncate" title={iv.place || undefined}>{t(`interview.mode.${iv.mode}`)}{place}</span>
                   </div>
@@ -135,14 +149,14 @@ export function MyInterviewsPage() {
             cursor={cursor}
             onCursor={(d) => setView(view, d)}
             onMode={(m, d) => setView(m, d)}
-            onOpen={(r) => r.job && setOpen({ appId: r.app.id, job: r.job, ivId: r.iv.id })}
+            onOpen={(r) => r.job && show({ appId: r.app.id, job: r.job, ivId: r.iv.id })}
           />
         )}
       </div>
       {open && (
         // The job's own columns and names, so "Move to" never offers stages this job does not run.
         <JobStageProvider job={open.job}>
-          <ApplicationDrawer appId={open.appId} job={open.job} onClose={() => setOpen(null)} onMove={move} focusInterviewId={open.ivId} />
+          <ApplicationDrawer appId={open.appId} job={open.job} onClose={() => show(null)} onMove={move} focusInterviewId={open.ivId} />
         </JobStageProvider>
       )}
       {dialog}

@@ -7,7 +7,7 @@ export function AiButton({ search = '' }: { search?: string }) {
   const showNew = useShowNew();
   const surface = showNew
     ? 'bg-sidebar-dark hover:bg-[#2a2423] ring-1 ring-white/10'
-    : 'bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500';
+    : 'bg-gradient-to-r from-indigo-500 via-violet-500 to-pink-500';
   const sparkle = showNew ? 'text-brand-light fill-brand-light' : 'text-yellow-300 fill-yellow-300';
   return (
     <Link

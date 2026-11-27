@@ -22,11 +22,38 @@ const rate = (name: string, n: number) => fireEvent.click(within(screen.getByRol
 describe('ScorecardDialog', () => {
   it('scores a technical round on the JD skills and the engineering competencies', () => {
     setup('Technical interview');
-    expect(screen.getByText('Technical round: go deep on the skills this job needs.')).toBeInTheDocument();
+    expect(screen.queryByText(/Technical round/)).toBeNull();
     for (const s of ['React', 'TypeScript', 'Vue']) expect(screen.getByRole('group', { name: s })).toBeInTheDocument();
     expect(screen.getByRole('group', { name: 'Code quality & system design' })).toBeInTheDocument();
-    // Skills are optional: only the competencies and the recommendation are asked for.
-    expect(screen.getByText('Still needed: Problem solving, Code quality & system design, Communication, Culture & team fit, Recommendation')).toBeInTheDocument();
+    expect(screen.queryByText(/Still needed/)).toBeNull();
+  });
+
+  it('submitting with gaps marks each missing one and saves nothing', () => {
+    const { appId, ivId } = setup('Technical interview');
+    rate('Problem solving', 4);
+    fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
+    // Skills are optional: only the unscored competencies and the recommendation are flagged.
+    expect(screen.getAllByText('Missing')).toHaveLength(4);
+    expect(useStore.getState().applications.find((a) => a.id === appId)!.interviews!.find((i) => i.id === ivId)!.scorecards).toHaveLength(0);
+    signInAs(undefined);
+  });
+
+  it('the interviewer removes and adds criteria, and the card keeps them', () => {
+    const { appId, ivId } = setup('Technical interview');
+    fireEvent.click(screen.getByRole('button', { name: 'Remove Vue' }));
+    expect(screen.queryByRole('group', { name: 'Vue' })).toBeNull();
+    fireEvent.change(screen.getByRole('combobox', { name: 'Add skill' }), { target: { value: 'GraphQL' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Add skill' }));
+    fireEvent.change(screen.getByRole('combobox', { name: 'Add competency' }), { target: { value: 'Leadership & mentoring' } });
+    fireEvent.keyDown(screen.getByRole('combobox', { name: 'Add competency' }), { key: 'Enter' });
+    for (const c of ['Problem solving', 'Code quality & system design', 'Communication', 'Culture & team fit', 'Leadership & mentoring']) rate(c, 3);
+    rate('GraphQL', 5);
+    fireEvent.click(screen.getByLabelText('Yes'));
+    fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
+    const card = useStore.getState().applications.find((a) => a.id === appId)!.interviews!.find((i) => i.id === ivId)!.scorecards[0];
+    expect(card.criteria?.map((c) => c.key)).toEqual(['skill:React', 'skill:TypeScript', 'skill:GraphQL', 'problem', 'design', 'communication', 'culture', 'leadership']);
+    expect(card.scores['skill:GraphQL']).toBe(5);
+    signInAs(undefined);
   });
 
   it('a final round asks about motivation too, and saves the criteria with the scores', () => {

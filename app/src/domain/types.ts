@@ -31,6 +31,8 @@ export interface Candidate {
   location?: string;
   /** Expected pay in USD per month; absent means "Contact for rate". Used by JD Matching's Max Rate filter. */
   expectedRate?: number;
+  /** Date the candidate can start (YYYY-MM-DD); absent means not stated. */
+  availableFrom?: string;
   /** Shown as "Primary Skills" on the profile; falls back to `skills`. */
   primarySkills?: string[];
   secondarySkills?: string[];
@@ -58,6 +60,26 @@ export interface Candidate {
   /** Last staff or candidate edit of the profile (user id + ISO time). */
   updatedBy?: string;
   updatedAt?: string;
+  /** Code and portfolio links (IT candidates often have them instead of, or next to, LinkedIn). */
+  github?: string;
+  portfolio?: string;
+  /** Work preferences used when proposing the candidate for a job. */
+  workModes?: WorkMode[];
+  employmentTypes?: EmploymentType[];
+  willingToRelocate?: boolean;
+  /** HR flag: warn before the candidate is put into a pipeline again. */
+  doNotHire?: DoNotHire;
+}
+
+export const WORK_MODES = ['remote', 'hybrid', 'onsite'] as const;
+export type WorkMode = (typeof WORK_MODES)[number];
+export const EMPLOYMENT_TYPES = ['fulltime', 'parttime', 'contract', 'freelance'] as const;
+export type EmploymentType = (typeof EMPLOYMENT_TYPES)[number];
+
+export interface DoNotHire {
+  reason: string;
+  by: string;
+  at: string;
 }
 
 export interface Consent {
@@ -483,6 +505,8 @@ export type ActivityType =
   // Audit-only events (PRD 3.1 "Audit events").
   | 'consent_captured'
   | 'candidate_anonymized'
+  | 'pii_revealed'
+  | 'pii_exported'
   | 'job_created'
   | 'job_status_changed'
   | 'job_approval_requested'
@@ -561,6 +585,8 @@ export interface Jd {
   otherRequirements?: string;
   /** Tech-stack skills HR marked critical; they weigh double in matching. */
   criticalSkills?: string[];
+  /** User id of the author; absent on older JDs (then only Super Admin / Lead and recruiters of jobs using it edit). */
+  createdBy?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -605,6 +631,8 @@ export interface UiState {
   piiUnlocked: boolean;
   /** Signed-in user id (demo role switcher / candidate login); absent = the demo Super Admin. */
   actingAs?: string;
+  /** Passed the login page (only checked when the hosted build requires login). */
+  signedIn?: boolean;
   /** Per user: when they last opened the notification bell (ISO). */
   notifSeen?: Record<string, string>;
 }
@@ -668,8 +696,23 @@ export interface MatchRow {
   location?: string;
   /** USD per month (see Candidate.expectedRate). */
   rate?: number;
+  /** YYYY-MM-DD (see Candidate.availableFrom). */
+  availableFrom?: string;
   /** Points per criterion; shown in the score's "why" popover. */
   breakdown?: { stack: number; experience: number; domain: number; english: number };
+  /** JD skills that count double; their chips are marked. */
+  critical?: string[];
+  domainHave?: string[];
+  domainMiss?: string[];
+  openToWork?: boolean;
+  workModes?: WorkMode[];
+  willingToRelocate?: boolean;
+  /** Last profile update (ISO); rate and start date may be stale. */
+  updatedAt?: string;
+  /** Reason, when the candidate is flagged Do-not-hire. */
+  doNotHire?: string;
+  /** Latest open application on a job built from this JD. */
+  pipeline?: { jobTitle: string; stage: Stage };
 }
 
 export interface DemoMeta {

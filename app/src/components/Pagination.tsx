@@ -16,11 +16,11 @@ type Props = {
   pageSizes?: number[]; onPageSize?: (size: number) => void; rowsLabel?: string;
 };
 
-const NAV = 'size-8 flex items-center justify-center rounded-lg border border-[#e6dddb] dark:border-[#3a3433] text-[#896a61] disabled:opacity-50 disabled:cursor-not-allowed';
-const NEXT = `${NAV} bg-white dark:bg-[#251f1e] text-[#181211] dark:text-white hover:border-primary transition-colors`;
+const NAV = 'size-8 flex items-center justify-center rounded-lg border border-line dark:border-dark-line text-ink-muted disabled:opacity-50 disabled:cursor-not-allowed';
+const NEXT = `${NAV} bg-white dark:bg-dark-surface text-ink dark:text-white hover:border-primary transition-colors`;
 const NUM = 'size-8 flex items-center justify-center rounded-lg text-xs font-medium transition-colors border';
-const NUM_ON = `${NUM} border-[#e6dddb] dark:border-[#3a3433] bg-white dark:bg-[#251f1e] text-[#181211] dark:text-white hover:border-primary`;
-const NUM_OFF = `${NUM} border-transparent text-[#896a61] hover:text-[#181211] dark:hover:text-white`;
+const NUM_ON = `${NUM} border-line dark:border-dark-line bg-white dark:bg-dark-surface text-ink dark:text-white hover:border-primary`;
+const NUM_OFF = `${NUM} border-transparent text-ink-muted hover:text-ink dark:hover:text-white`;
 
 /** Page numbers: first, current±1, last, with "..." gaps. */
 export function pageItems(page: number, pages: number): (number | '...')[] {
@@ -39,10 +39,10 @@ export function Pagination({ page, pageSize, total, noun = 'results', labels = E
   const pages = Math.max(1, Math.ceil(total / pageSize));
   const from = total === 0 ? 0 : (page - 1) * pageSize + 1;
   const to = Math.min(page * pageSize, total);
-  const strong = 'font-medium text-[#181211] dark:text-white';
+  const strong = 'font-medium text-ink dark:text-white';
   return (
-    <div className="px-6 py-4 border-t border-[#f4f1f0] dark:border-[#2a2423] flex items-center justify-between">
-      <span className="text-xs text-[#896a61]">
+    <div className="px-6 py-4 border-t border-hairline dark:border-dark-raised flex items-center justify-between">
+      <span className="text-xs text-ink-muted">
         {labels.showing} <span className={strong}>{from}-{to}</span> {labels.of} <span className={strong}>{total}</span> {noun}
       </span>
       <div className="flex items-center gap-2">
@@ -51,7 +51,7 @@ export function Pagination({ page, pageSize, total, noun = 'results', labels = E
         </button>
         {pageItems(page, pages).map((p, i) =>
           p === '...' ? (
-            <span key={`gap${i}`} className="text-[#896a61] text-xs">...</span>
+            <span key={`gap${i}`} className="text-ink-muted text-xs">...</span>
           ) : (
             <button key={p} onClick={() => onPage(p)} className={p === page ? NUM_ON : NUM_OFF}>{p}</button>
           ),
@@ -61,12 +61,12 @@ export function Pagination({ page, pageSize, total, noun = 'results', labels = E
         </button>
       </div>
       {pageSizes && onPageSize && (
-        <label className="flex items-center gap-2 text-xs text-[#896a61]">
+        <label className="flex items-center gap-2 text-xs text-ink-muted">
           {rowsLabel}
           <select
             value={pageSize}
             onChange={(e) => onPageSize(Number(e.target.value))}
-            className="h-8 pl-2 pr-7 rounded-lg border border-[#e6dddb] dark:border-[#3a3433] bg-white dark:bg-[#251f1e] text-xs font-medium text-[#181211] dark:text-white"
+            className="h-8 pl-2 pr-7 rounded-lg border border-line dark:border-dark-line bg-white dark:bg-dark-surface text-xs font-medium text-ink dark:text-white"
           >
             {pageSizes.map((n) => <option key={n} value={n}>{n}</option>)}
           </select>

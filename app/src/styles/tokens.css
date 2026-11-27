@@ -110,6 +110,17 @@
   /* Warm page canvas / hairline instead of the cool #f9fafb / #f0f0f0. */
   --c-canvas: 248 246 246;
   --c-hairline: 240 235 234;
+
+  /* Semantic text/line tokens: replace the raw #181211 / #896a61 / #e6dddb hexes used across screens. */
+  --c-ink: 24 18 17;
+  /* Secondary text: 5.4:1 on white (the old #896a61 was 4.9:1, 4.5:1 on the canvas). */
+  --c-ink-muted: 125 101 94;
+  --c-line: 230 221 219;
+  /* Dark mode: one warm surface ladder instead of #1e1e1e / #251f1e / #221410 / #121212 mixed per screen. */
+  --c-dark-canvas: 24 19 18;
+  --c-dark-surface: 37 31 30;
+  --c-dark-raised: 42 36 35;
+  --c-dark-line: 58 52 51;
 }
 
 html[data-fixture] {
@@ -202,4 +213,8 @@ html[data-fixture] {
   --c-amber-950: 69 26 3;
   --c-canvas: 249 250 251;
   --c-hairline: 240 240 240;
+  /* Production values for the pixel diff. */
+  --c-ink: 24 18 17;
+  --c-ink-muted: 137 106 97;
+  --c-line: 230 221 219;
 }

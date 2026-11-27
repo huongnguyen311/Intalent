@@ -1,27 +1,29 @@
 import { useMemo, useState } from 'react';
 import { AppLayout } from '../../components/AppLayout';
+import { BTN_GHOST } from '../../components/ui';
 import { downloadCsv } from '../../components/download';
 import { toast } from '../../components/Toast';
 import { toCsv } from '../../domain/csv';
-import { taContribution, UNATTRIBUTED, type Period, type TaRow } from '../../domain/taContribution';
+import { taContribution, UNATTRIBUTED, type Period, type Preset, type TaRow } from '../../domain/taContribution';
+import { localStamp } from '../../domain/hiring';
 import { useT, type TKey } from '../../i18n/i18n';
 import { useStore } from '../../store/store';
 import { TransfersTab } from './TransfersTab';
 
 type Tab = 'contribution' | 'transfers';
 
-const RANGES: Array<{ id: Period; testId: string; label: TKey }> = [
-  { id: 'day', testId: 'day', label: 'ta.range.day' },
-  { id: 'week', testId: 'week', label: 'ta.range.week' },
-  { id: '3m', testId: '3m', label: 'ta.range.3m' },
-  { id: '6m', testId: '6m', label: 'ta.range.6m' },
-  { id: 'all', testId: 'all', label: 'ta.range.all' },
+const RANGES: Array<{ id: Preset | 'custom'; label: TKey }> = [
+  { id: 'day', label: 'ta.range.day' },
+  { id: 'week', label: 'ta.range.week' },
+  { id: '3m', label: 'ta.range.3m' },
+  { id: '6m', label: 'ta.range.6m' },
+  { id: 'all', label: 'ta.range.all' },
+  { id: 'custom', label: 'ta.range.custom' },
 ];
-const RANGE_ON = 'px-3 py-1.5 text-sm transition-colors bg-blue-600 text-white';
-const RANGE_OFF = 'px-3 py-1.5 text-sm transition-colors bg-white text-gray-600 hover:bg-gray-50';
-const TAB_ON = 'px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors border-blue-600 text-blue-600';
-const TAB_OFF = 'px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors border-transparent text-gray-500 hover:text-gray-700';
-const TH = 'px-4 py-3 text-right font-medium text-gray-600';
+const RANGE_SELECT = 'h-9 rounded-lg border border-gray-200 dark:border-dark-line bg-white dark:bg-dark-surface pl-3 pr-9 text-sm text-gray-700 dark:text-gray-300';
+const TAB_ON = 'ui-tab px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors border-primary text-primary';
+const TAB_OFF = 'ui-tab px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200';
+const TH = 'px-4 py-3 text-right font-medium text-gray-600 dark:text-gray-300';
 
 const plus = (n: number) => (n > 0 ? `+${n}` : '0');
 const minus = (n: number) => (n > 0 ? `−${n}` : '0');
@@ -64,79 +66,90 @@ export function TaContributionPage() {
   };
 
   return (
-    <AppLayout title="">
-      <div className="p-6 space-y-6">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <h1 className="ty-title text-2xl font-semibold text-gray-900">{t('nav.cvByTa')}</h1>
-            <p className="text-sm text-gray-500 mt-1">{t('ta.subtitle')}</p>
-          </div>
+    <AppLayout title={t('nav.cvByTa')} subtitle={t('ta.subtitle')}>
+      <div className="p-8 max-w-[1400px] mx-auto space-y-6">
+        <div className="flex flex-wrap items-center justify-end gap-4">
           <div className="flex items-center gap-3">
-            <div className="flex rounded-lg border border-gray-200 overflow-hidden">
-              {RANGES.map((r) => (
-                <button key={r.id} data-testid={`ta-contribution-range-${r.testId}-button`} onClick={() => setPeriod(r.id)} className={r.id === period ? RANGE_ON : RANGE_OFF}>
-                  {t(r.label)}
-                </button>
-              ))}
-            </div>
-            <button data-testid="ta-contribution-export-button" disabled={rows.length === 0} onClick={exportCsv} className="px-4 py-1.5 text-sm rounded-lg bg-gray-900 text-white disabled:opacity-40">
+            <select
+              aria-label={t('ta.period')}
+              data-testid="ta-contribution-range"
+              className={RANGE_SELECT}
+              value={typeof period === 'object' ? 'custom' : period}
+              onChange={(e) => {
+                const v = e.target.value as Preset | 'custom';
+                const today = localStamp(new Date()).slice(0, 10);
+                setPeriod(v === 'custom' ? { from: today, to: today } : v);
+              }}
+            >
+              {RANGES.map((r) => <option key={r.id} value={r.id}>{t(r.label)}</option>)}
+            </select>
+            {typeof period === 'object' && (
+              <div className="flex items-center gap-2">
+                <input type="date" data-testid="ta-contribution-range-from" aria-label={t('ta.range.from')} className={RANGE_SELECT} value={period.from} max={period.to || undefined}
+                  onChange={(e) => setPeriod({ ...period, from: e.target.value })} />
+                <span aria-hidden="true" className="text-sm text-gray-400 dark:text-gray-500">–</span>
+                <input type="date" data-testid="ta-contribution-range-to" aria-label={t('ta.range.to')} className={RANGE_SELECT} value={period.to} min={period.from || undefined}
+                  onChange={(e) => setPeriod({ ...period, to: e.target.value })} />
+              </div>
+            )}
+            <button data-testid="ta-contribution-export-button" disabled={rows.length === 0} onClick={exportCsv} className={`${BTN_GHOST} inline-flex items-center gap-1.5`}>
               {t('ta.export')}
             </button>
           </div>
         </div>
-        <div className="flex gap-1 border-b border-gray-200">
-          <button data-testid="ta-contribution-tab-contribution" onClick={() => setTab('contribution')} className={tab === 'contribution' ? TAB_ON : TAB_OFF}>{t('ta.tab.contribution')}</button>
-          <button data-testid="ta-contribution-tab-transfers" onClick={() => setTab('transfers')} className={tab === 'transfers' ? TAB_ON : TAB_OFF}>{t('ta.tab.transfers')}</button>
+        <div role="tablist" className="ui-tabs flex gap-1 border-b border-gray-200 dark:border-dark-line">
+          <button data-testid="ta-contribution-tab-contribution" role="tab" aria-selected={tab === 'contribution'} onClick={() => setTab('contribution')} className={tab === 'contribution' ? TAB_ON : TAB_OFF}><span aria-hidden="true" className="material-symbols-outlined">leaderboard</span>{t('ta.tab.contribution')}</button>
+          <button data-testid="ta-contribution-tab-transfers" role="tab" aria-selected={tab === 'transfers'} onClick={() => setTab('transfers')} className={tab === 'transfers' ? TAB_ON : TAB_OFF}><span aria-hidden="true" className="material-symbols-outlined">swap_horiz</span>{t('ta.tab.transfers')}</button>
         </div>
         {tab === 'transfers' ? (
           <TransfersTab period={period} />
         ) : (
-          <div className="overflow-x-auto rounded-lg border border-gray-200">
-            <table data-testid="ta-contribution-table" className="min-w-full divide-y divide-gray-200 text-sm">
-              <thead className="bg-gray-50">
+          <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-dark-line">
+            <table data-testid="ta-contribution-table" className="min-w-full divide-y divide-gray-200 dark:divide-dark-line text-sm">
+              <thead className="bg-gray-50 dark:bg-white/5">
                 <tr>
-                  <th className="px-4 py-3 text-left font-medium text-gray-600">{t('ta.col.ta')}</th>
+                  <th className="px-4 py-3 text-left font-medium text-gray-600 dark:text-gray-300">{t('ta.col.ta')}</th>
                   <th className={TH}>{t('ta.col.newCv')}</th>
                   <th className={TH}>{t('ta.col.duplicate')}</th>
                   <th className={TH}>{t('ta.col.parseError')}</th>
                   <th className={TH}>{t('ta.col.processing')}</th>
                   <th className={TH} title={t('ta.tip.transferIn')}>{t('ta.col.transferIn')}</th>
                   <th className={TH} title={t('ta.tip.transferOut')}>{t('ta.col.transferOut')}</th>
-                  <th className="px-4 py-3 text-right font-medium text-gray-900" title={t('ta.tip.total')}>{t('ta.col.total')}</th>
+                  <th className="px-4 py-3 text-right font-medium text-gray-900 dark:text-white" title={t('ta.tip.total')}>{t('ta.col.total')}</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100 bg-white">
+              <tbody className="divide-y divide-gray-100 dark:divide-dark-line bg-white dark:bg-dark-surface">
                 {rows.map((r) => {
                   const unattributed = r.ta === UNATTRIBUTED;
                   return (
-                    <tr key={r.ta} data-testid={`ta-contribution-row-${unattributed ? 'unattributed' : slug(r.ta)}`} className={unattributed ? 'bg-gray-50' : ''}>
-                      <td className="px-4 py-3 text-gray-900">
-                        {unattributed ? <span className="text-gray-500 italic">{r.ta}</span> : r.ta}
+                    <tr key={r.ta} data-testid={`ta-contribution-row-${unattributed ? 'unattributed' : slug(r.ta)}`} className={unattributed ? 'bg-gray-50 dark:bg-white/5' : ''}>
+                      <td className="px-4 py-3 text-gray-900 dark:text-white">
+                        {unattributed ? <span className="text-gray-500 dark:text-gray-400 italic">{r.ta}</span> : r.ta}
                       </td>
-                      <td className="px-4 py-3 text-right font-medium text-gray-900">{r.newCv}</td>
-                      <td className="px-4 py-3 text-right text-gray-600">{r.duplicate}</td>
-                      <td className="px-4 py-3 text-right text-gray-600">{r.parseError}</td>
-                      <td className="px-4 py-3 text-right text-gray-600">{r.processing}</td>
-                      <td className="px-4 py-3 text-right text-emerald-700">{plus(r.transferIn)}</td>
-                      <td className="px-4 py-3 text-right text-amber-700">{minus(r.transferOut)}</td>
-                      <td className="px-4 py-3 text-right font-semibold text-gray-900">{r.total}</td>
+                      <td className="px-4 py-3 text-right font-medium text-gray-900 dark:text-white">{r.newCv}</td>
+                      <td className="px-4 py-3 text-right text-gray-600 dark:text-gray-300">{r.duplicate}</td>
+                      <td className="px-4 py-3 text-right text-gray-600 dark:text-gray-300">{r.parseError}</td>
+                      <td className="px-4 py-3 text-right text-gray-600 dark:text-gray-300">{r.processing}</td>
+                      <td className="px-4 py-3 text-right text-emerald-700 dark:text-emerald-400">{plus(r.transferIn)}</td>
+                      <td className="px-4 py-3 text-right text-amber-700 dark:text-amber-400">{minus(r.transferOut)}</td>
+                      <td className="px-4 py-3 text-right font-semibold text-gray-900 dark:text-white">{r.total}</td>
                     </tr>
                   );
                 })}
                 {rows.length === 0 && (
-                  <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-500">{t('ta.empty')}</td></tr>
+                  <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">{t('ta.empty')}</td></tr>
                 )}
               </tbody>
-              <tfoot className="bg-gray-50 font-medium">
+              <tfoot className="bg-gray-50 dark:bg-white/5 font-medium">
                 <tr>
-                  <td className="px-4 py-3 text-gray-700">{t('ta.col.total')}</td>
-                  <td className="px-4 py-3 text-right text-gray-900">{totals.newCv}</td>
-                  <td className="px-4 py-3 text-right text-gray-700">{totals.duplicate}</td>
-                  <td className="px-4 py-3 text-right text-gray-700">{totals.parseError}</td>
-                  <td className="px-4 py-3 text-right text-gray-700">{totals.processing}</td>
-                  <td className="px-4 py-3 text-right text-emerald-700">{plus(totals.transferIn)}</td>
-                  <td className="px-4 py-3 text-right text-amber-700">{minus(totals.transferOut)}</td>
-                  <td className="px-4 py-3 text-right font-semibold text-gray-900">{totals.total}</td>
+                  <td className="px-4 py-3 text-gray-700 dark:text-gray-300">{t('ta.col.total')}</td>
+                  <td className="px-4 py-3 text-right text-gray-900 dark:text-white">{totals.newCv}</td>
+                  <td className="px-4 py-3 text-right text-gray-700 dark:text-gray-300">{totals.duplicate}</td>
+                  <td className="px-4 py-3 text-right text-gray-700 dark:text-gray-300">{totals.parseError}</td>
+                  <td className="px-4 py-3 text-right text-gray-700 dark:text-gray-300">{totals.processing}</td>
+                  <td className="px-4 py-3 text-right text-emerald-700 dark:text-emerald-400">{plus(totals.transferIn)}</td>
+                  <td className="px-4 py-3 text-right text-amber-700 dark:text-amber-400">{minus(totals.transferOut)}</td>
+                  <td className="px-4 py-3 text-right font-semibold text-gray-900 dark:text-white">{totals.total}</td>
                 </tr>
               </tfoot>
             </table>

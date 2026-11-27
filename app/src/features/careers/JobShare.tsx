@@ -40,7 +40,7 @@ export function ShareButton({ job }: { job: Job }) {
 }
 
 function Circle({ label, href, onClick, children }: { label: string; href?: string; onClick?: () => void; children: ReactNode }) {
-  const cls = 'size-10 grid place-items-center rounded-full bg-[#f4efee] text-[#3d312e] hover:bg-sidebar-dark hover:text-white transition-colors';
+  const cls = 'size-10 grid place-items-center rounded-full bg-gray-100 text-gray-700 hover:bg-sidebar-dark hover:text-white transition-colors';
   return href ? (
     <a href={href} target="_blank" rel="noopener noreferrer" aria-label={label} title={label} className={cls}>{children}</a>
   ) : (
@@ -55,7 +55,7 @@ export function SharePanel({ job }: { job: Job }) {
   const url = encodeURIComponent(shareUrl(job));
   const subject = encodeURIComponent(t('careers.share.emailSubject', { job: job.title }));
   return (
-    <div className="mt-6 pt-6 border-t border-[#efe8e6]">
+    <div className="mt-6 pt-6 border-t border-hairline">
       <p className="text-sm font-bold">{t('careers.share.title')}</p>
       <div className="mt-3 flex items-center gap-2">
         <Circle label={t('careers.share.copy')} onClick={copy}>

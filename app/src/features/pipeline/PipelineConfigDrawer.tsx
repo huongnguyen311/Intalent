@@ -12,9 +12,9 @@ import { STAGE_COLOR } from '../jobs/JobBits';
 type Props = { job: Job; open: boolean; onClose: () => void };
 
 const FIELD =
-  'h-9 py-0 pl-2 bg-white dark:bg-[#251f1e] border border-[#e6dddb] dark:border-[#3a3433] rounded-lg text-sm text-[#181211] dark:text-white focus:ring-1 focus:ring-primary focus:border-primary focus:outline-none';
+  'h-9 py-0 pl-2 bg-white dark:bg-dark-surface border border-line dark:border-dark-line rounded-lg text-sm text-ink dark:text-white focus:ring-1 focus:ring-primary focus:border-primary focus:outline-none';
 const ICON_BTN =
-  'size-7 rounded-full flex items-center justify-center text-[#896a61] hover:text-primary hover:bg-[#f8f6f6] dark:hover:bg-white/5 disabled:opacity-30 disabled:pointer-events-none';
+  'size-7 rounded-full flex items-center justify-center text-ink-muted hover:text-primary hover:bg-background-light dark:hover:bg-white/5 disabled:opacity-30 disabled:pointer-events-none';
 
 let seq = 0;
 const newId = () => `r-${Date.now().toString(36)}-${++seq}`;
@@ -116,7 +116,7 @@ export function PipelineConfigDrawer({ job, open, onClose }: Props) {
               <Popover
                 align="right"
                 trigger={({ toggle }) => (
-                  <button onClick={toggle} className="h-8 px-3 rounded-full border border-[#e6dddb] dark:border-[#3a3433] text-xs font-bold flex items-center gap-1 hover:border-primary/50">
+                  <button onClick={toggle} className="h-8 px-3 rounded-full border border-line dark:border-dark-line text-xs font-bold flex items-center gap-1 hover:border-primary/50">
                     <span aria-hidden="true" className="material-symbols-outlined text-[16px]">add</span>
                     {t('pipeline.config.addColumn')}
                   </button>
@@ -132,8 +132,8 @@ export function PipelineConfigDrawer({ job, open, onClose }: Props) {
               </Popover>
             )}
           </div>
-          <p className="text-xs text-[#896a61]">{t('pipeline.config.stagesHint')}</p>
-          <ul className="flex flex-col divide-y divide-[#f4f1f0] dark:divide-[#2a2423] rounded-xl border border-[#e6dddb] dark:border-[#3a3433]">
+          <p className="text-xs text-ink-muted">{t('pipeline.config.stagesHint')}</p>
+          <ul className="flex flex-col divide-y divide-hairline dark:divide-dark-raised rounded-xl border border-line dark:border-dark-line">
             {columns.map((s) => {
               const i = mid.indexOf(s);
               const movable = i >= 0;
@@ -150,7 +150,7 @@ export function PipelineConfigDrawer({ job, open, onClose }: Props) {
                     className={`${FIELD} flex-1 min-w-0 pr-2 font-semibold placeholder:font-normal placeholder:text-slate-500`}
                   />
                   {!END_STAGES.includes(s) ? (
-                    <label className="flex items-center gap-1 text-xs text-[#896a61] shrink-0">
+                    <label className="flex items-center gap-1 text-xs text-ink-muted shrink-0">
                       {t('pipeline.config.sla')}
                       <input
                         type="number"
@@ -211,24 +211,24 @@ export function PipelineConfigDrawer({ job, open, onClose }: Props) {
               )}
               <button
                 onClick={() => setRules((rs) => [...rs, { id: newId(), enabled: true, from: columns[0], when: 'score_gte', score: 70, to: columns[1] ?? columns[0] }])}
-                className="h-8 px-3 rounded-full border border-[#e6dddb] dark:border-[#3a3433] text-xs font-bold flex items-center gap-1 hover:border-primary/50"
+                className="h-8 px-3 rounded-full border border-line dark:border-dark-line text-xs font-bold flex items-center gap-1 hover:border-primary/50"
               >
                 <span aria-hidden="true" className="material-symbols-outlined text-[16px]">add</span>
                 {t('pipeline.config.addRule')}
               </button>
             </div>
           </div>
-          <p className="text-xs text-[#896a61]">{t('pipeline.config.rulesHint')}</p>
-          {rules.length === 0 && <p className="text-xs text-gray-400 italic">{t('pipeline.config.noRules')}</p>}
+          <p className="text-xs text-ink-muted">{t('pipeline.config.rulesHint')}</p>
+          {rules.length === 0 && <p className="text-xs text-muted dark:text-gray-400 italic">{t('pipeline.config.noRules')}</p>}
           <ul className="flex flex-col gap-2">
             {rules.map((r, i) => (
-              <li key={r.id} data-testid={`rule-${i}`} className={`rounded-xl border px-3 py-2 flex flex-col gap-2 ${ruleBroken(r) ? 'border-amber-400' : 'border-[#e6dddb] dark:border-[#3a3433]'}`}>
+              <li key={r.id} data-testid={`rule-${i}`} className={`rounded-xl border px-3 py-2 flex flex-col gap-2 ${ruleBroken(r) ? 'border-amber-400' : 'border-line dark:border-dark-line'}`}>
                 <div className="flex items-center gap-2 flex-wrap">
                   <label className="flex items-center gap-1.5 text-xs font-semibold">
                     <input type="checkbox" checked={r.enabled} onChange={(e) => patchRule(r.id, { enabled: e.target.checked })} className="rounded border-gray-300 text-primary focus:ring-primary" />
                     {t('pipeline.config.ruleOn')}
                   </label>
-                  <span className="text-xs text-[#896a61]">{t('pipeline.config.when')}</span>
+                  <span className="text-xs text-ink-muted">{t('pipeline.config.when')}</span>
                   <select aria-label={t('pipeline.config.from')} className={FIELD} value={r.from} onChange={(e) => patchRule(r.id, { from: e.target.value as Stage })}>
                     {columns.filter((s) => !END_STAGES.includes(s)).map((s) => <option key={s} value={s}>{nameOf(s)}</option>)}
                   </select>
@@ -250,8 +250,8 @@ export function PipelineConfigDrawer({ job, open, onClose }: Props) {
                   )}
                 </div>
                 <div className="flex items-center gap-2 flex-wrap pl-6">
-                  <span aria-hidden="true" className="material-symbols-outlined text-[16px] text-[#896a61]">subdirectory_arrow_right</span>
-                  <span className="text-xs text-[#896a61]">{t('pipeline.config.to')}</span>
+                  <span aria-hidden="true" className="material-symbols-outlined text-[16px] text-ink-muted">subdirectory_arrow_right</span>
+                  <span className="text-xs text-ink-muted">{t('pipeline.config.to')}</span>
                   <select aria-label={t('pipeline.config.to')} className={FIELD} value={r.to} onChange={(e) => patchRule(r.id, { to: e.target.value as Stage })}>
                     {columns.map((s) => <option key={s} value={s}>{nameOf(s)}</option>)}
                   </select>
@@ -260,7 +260,7 @@ export function PipelineConfigDrawer({ job, open, onClose }: Props) {
                       {REJECT_CODES.map((c) => <option key={c} value={c}>{t(`reject.${c}`)}</option>)}
                     </select>
                   )}
-                  <button aria-label={t('pipeline.config.removeRule')} title={t('pipeline.config.removeRule')} onClick={() => setRules((rs) => rs.filter((x) => x.id !== r.id))} className="ml-auto size-7 rounded-full flex items-center justify-center text-[#896a61] hover:text-red-600">
+                  <button aria-label={t('pipeline.config.removeRule')} title={t('pipeline.config.removeRule')} onClick={() => setRules((rs) => rs.filter((x) => x.id !== r.id))} className="ml-auto size-7 rounded-full flex items-center justify-center text-ink-muted hover:text-red-600">
                     <span aria-hidden="true" className="material-symbols-outlined text-[18px]">delete</span>
                   </button>
                 </div>
@@ -276,8 +276,8 @@ export function PipelineConfigDrawer({ job, open, onClose }: Props) {
           )}
         </section>
 
-        <div className="flex justify-end gap-2 pt-2 border-t border-[#e6dddb] dark:border-[#2a2423]">
-          <button onClick={onClose} className="px-4 py-2 text-sm font-medium border border-[#e6dddb] dark:border-[#3a3433] rounded-lg hover:border-primary/50">{t('common.cancel')}</button>
+        <div className="flex justify-end gap-2 pt-2 border-t border-line dark:border-dark-raised">
+          <button onClick={onClose} className="px-4 py-2 text-sm font-medium border border-line dark:border-dark-line rounded-lg hover:border-primary/50">{t('common.cancel')}</button>
           <button onClick={save} className="px-4 py-2 text-sm font-medium text-white bg-primary hover:bg-primary-hover rounded-lg shadow-sm">{t('pipeline.config.save')}</button>
         </div>
       </div>

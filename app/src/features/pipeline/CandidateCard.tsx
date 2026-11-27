@@ -35,7 +35,7 @@ export function MoveToMenu({ current, onMove, button }: MoveProps) {
 /** `showJob` ("All jobs" board): the second line names the job instead of the candidate's title. */
 type BodyProps = { app: Application; candidate?: Candidate; job: Job; menu?: ReactNode; showJob?: boolean };
 
-const CARD = 'relative group bg-white dark:bg-[#232323] rounded-lg border border-gray-200/80 dark:border-white/10 shadow-[0_1px_3px_rgba(15,23,42,0.08)] px-3 pt-2.5 pb-1.5 space-y-1';
+const CARD = 'relative group bg-white dark:bg-dark-surface rounded-lg border border-gray-200/80 dark:border-white/10 shadow-[0_1px_3px_rgba(15,23,42,0.08)] px-3 pt-2.5 pb-1.5 space-y-1';
 
 
 /** An over-SLA card gets this accent; the text stays neutral. */
@@ -53,13 +53,13 @@ export function CardBody({ app, candidate, job, menu, showJob }: BodyProps) {
       <div className="font-bold text-[13px] text-slate-800 dark:text-white leading-tight line-clamp-2 break-words" title={`${name} · ${app.source} · ${t('pipeline.card.added', { date: fullDate(app.addedAt) })}`}>{name}</div>
       {showJob ? (
         <div className="text-xs text-gray-500 dark:text-gray-400 truncate flex items-center gap-1" title={job.title}>
-          <span aria-hidden="true" className="material-symbols-outlined text-[13px] shrink-0">work</span>
+          <span aria-hidden="true" className="material-symbols-outlined text-[14px] shrink-0">work</span>
           <span className="truncate">{job.title}</span>
         </div>
       ) : (
         candidate?.title && <div className="text-xs text-gray-500 dark:text-gray-400 truncate" title={candidate.title}>{candidate.title}</div>
       )}
-      <div className="flex items-center gap-1.5 text-[11px] min-w-0 min-h-6">
+      <div className="flex items-center gap-1.5 text-2xs min-w-0 min-h-6">
         <AiBadge app={app} />
         <SlaChip days={daysInStage(app)} sla={job.stageSla[app.stage]} late={late} />
         {menu && <span className="ml-auto -mr-1.5">{menu}</span>}
@@ -73,7 +73,7 @@ export function CardBody({ app, candidate, job, menu, showJob }: BodyProps) {
 export const AI_PILL = 'text-yellow-600 dark:text-yellow-400';
 
 /** Shared pill shape for the AI score. */
-const PILL = 'shrink-0 h-5 px-1.5 rounded-md flex items-center gap-0.5 text-[11px] font-bold tabular-nums';
+const PILL = 'shrink-0 h-5 px-1.5 rounded-md flex items-center gap-0.5 text-2xs font-bold tabular-nums';
 
 /** AI match pill, first chip on the bottom row: sparkle + "54%". Hidden from an interviewer until their scorecard is in. */
 function AiBadge({ app }: { app: Application }) {
@@ -85,7 +85,7 @@ function AiBadge({ app }: { app: Application }) {
   );
   if (app.aiPending) {
     return (
-      <span title={t('ai.badge.pending')} aria-label={t('ai.badge.pending')} className={`${PILL} bg-slate-100 dark:bg-white/10 text-slate-400 animate-pulse`}>
+      <span title={t('ai.badge.pending')} aria-label={t('ai.badge.pending')} className={`${PILL} bg-slate-100 dark:bg-white/10 text-muted dark:text-gray-400 animate-pulse`}>
         {spark()}<span>…</span>
       </span>
     );
@@ -94,14 +94,14 @@ function AiBadge({ app }: { app: Application }) {
   if (!e) return null;
   if (e.noCriteria) {
     return (
-      <span title={t('ai.badge.noCriteria')} aria-label={t('ai.badge.noCriteria')} className={`${PILL} bg-slate-100 dark:bg-white/10 text-slate-400`}>
+      <span title={t('ai.badge.noCriteria')} aria-label={t('ai.badge.noCriteria')} className={`${PILL} bg-slate-100 dark:bg-white/10 text-muted dark:text-gray-400`}>
         {spark()}<span>—</span>
       </span>
     );
   }
   // One soft yellow for every score so the pill never reads as the red/amber SLA warning; the number carries the band.
   return (
-    <span data-testid="ai-pill" title={t('ai.badge.score', { n: e.score })} aria-label={t('ai.badge.score', { n: e.score })} className={`shrink-0 h-5 flex items-center gap-0.5 text-[11px] font-bold tabular-nums ${AI_PILL}`}>
+    <span data-testid="ai-pill" title={t('ai.badge.score', { n: e.score })} aria-label={t('ai.badge.score', { n: e.score })} className={`shrink-0 h-5 flex items-center gap-0.5 text-2xs font-bold tabular-nums ${AI_PILL}`}>
       {spark()}<span>{`${e.score}%`}</span>
     </span>
   );
@@ -116,7 +116,7 @@ function SlaChip({ days, sla, late }: { days: number; sla?: number; late: boolea
       data-testid="sla-card"
       title={over ? t('pipeline.overSla', { n: sla }) : sla !== undefined ? t('pipeline.col.onTime', { days: sla }) : undefined}
       className={`shrink-0 h-5 px-1.5 rounded-md flex items-center gap-0.5 font-semibold tabular-nums ${
-        late ? 'bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-400' : 'text-slate-400 dark:text-gray-500'
+        late ? 'bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-400' : 'text-muted dark:text-gray-500'
       }`}
     >
       <span>{t('pipeline.daysShort', { n: days })}</span>
@@ -134,8 +134,8 @@ function HiringLine({ app }: { app: Application }) {
       : [null, '', ''];
   if (!icon) return null;
   return (
-    <div className={`flex items-center gap-1 text-[11px] font-semibold min-w-0 ${cls}`}>
-      <span className="material-symbols-outlined text-[13px]">{icon}</span>
+    <div className={`flex items-center gap-1 text-2xs font-semibold min-w-0 ${cls}`}>
+      <span className="material-symbols-outlined text-[14px]">{icon}</span>
       <span className="truncate">{app.offer && app.stage === 'offer' && !app.handoff ? `${t('offer.title')}: ${text}` : text}</span>
     </div>
   );
@@ -202,7 +202,7 @@ export function CandidateCard({ app, candidate, job, showJob, onOpen, onMove, se
           onClick={stop}
           onPointerDown={stop}
           onKeyDown={stop}
-          className={`absolute -top-1.5 -left-1.5 size-5 rounded-full bg-white dark:bg-[#1e1e1e] shadow-sm flex items-center justify-center transition-opacity ${selected || selecting ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 focus-within:opacity-100'}`}
+          className={`absolute -top-1.5 -left-1.5 size-5 rounded-full bg-white dark:bg-dark-surface shadow-sm flex items-center justify-center transition-opacity ${selected || selecting ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 focus-within:opacity-100'}`}
         >
           <input
             type="checkbox"

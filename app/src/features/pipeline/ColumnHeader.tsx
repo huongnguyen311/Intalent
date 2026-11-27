@@ -20,7 +20,7 @@ export function ColumnHeader({ stage, count }: Props) {
         <span className="min-w-0 text-[15px] font-bold text-slate-700 dark:text-white leading-tight truncate" title={name}>{name}</span>
         <span
           data-testid="column-count"
-          className="shrink-0 min-w-[22px] h-[22px] px-1.5 rounded-full text-[12px] font-bold tabular-nums text-slate-600 dark:text-slate-200 flex items-center justify-center"
+          className="shrink-0 min-w-[22px] h-[22px] px-1.5 rounded-full text-xs font-bold tabular-nums text-slate-600 dark:text-slate-200 flex items-center justify-center"
           style={{ background: `${color}1f` }}
         >
           {count}

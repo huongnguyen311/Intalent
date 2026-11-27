@@ -43,23 +43,23 @@ export function InboxPage() {
         <span className="text-xs text-white/60 hidden sm:inline">{t('inbox.subtitle')}</span>
       </header>
       <div className="flex-1 grid grid-cols-1 md:grid-cols-[360px_1fr] min-h-0">
-        <aside className="border-r border-[#e6dddb] bg-white flex flex-col min-h-0">
-          <div className="p-3 flex gap-2 border-b border-[#e6dddb]">
+        <aside className="border-r border-line bg-white flex flex-col min-h-0">
+          <div className="p-3 flex gap-2 border-b border-line">
             <input
               type="search" aria-label={t('inbox.filter')} placeholder={t('inbox.filter')} value={to}
               onChange={(e) => { setTo(e.target.value); setParams(e.target.value ? { to: e.target.value } : {}, { replace: true }); }}
-              className="flex-1 h-9 rounded-lg bg-[#f8f6f6] ring-1 ring-gray-200 px-3 text-sm outline-none focus:ring-primary"
+              className="flex-1 h-9 rounded-lg bg-background-light ring-1 ring-gray-200 px-3 text-sm outline-none focus:ring-primary"
             />
-            <button onClick={() => { clearMailbox(); setMail([]); }} className="px-3 h-9 rounded-lg text-xs font-bold text-[#896a61] hover:text-red-600">{t('inbox.clear')}</button>
+            <button onClick={() => { clearMailbox(); setMail([]); }} className="px-3 h-9 rounded-lg text-xs font-bold text-ink-muted hover:text-red-600">{t('inbox.clear')}</button>
           </div>
           <ul className="overflow-y-auto custom-scrollbar flex-1">
-            {shown.length === 0 && <li className="p-6 text-sm text-[#896a61] text-center">{t('inbox.empty')}</li>}
+            {shown.length === 0 && <li className="p-6 text-sm text-ink-muted text-center">{t('inbox.empty')}</li>}
             {shown.map((m) => (
               <li key={m.id}>
-                <button onClick={() => setOpenId(m.id)} className={`w-full text-left px-4 py-3 border-b border-[#f1ecea] hover:bg-[#f8f6f6] ${open?.id === m.id ? 'bg-primary/5' : ''}`}>
-                  <span className="block text-xs text-[#896a61] truncate">{m.to} · {fmt(m.at)}</span>
-                  <span className="block text-sm font-bold text-[#181211] truncate">{m.subject}</span>
-                  {m.workspace && <span className="block text-xs text-[#896a61] truncate">{m.workspace}</span>}
+                <button onClick={() => setOpenId(m.id)} className={`w-full text-left px-4 py-3 border-b border-hairline hover:bg-background-light ${open?.id === m.id ? 'bg-primary/5' : ''}`}>
+                  <span className="block text-xs text-ink-muted truncate">{m.to} · {fmt(m.at)}</span>
+                  <span className="block text-sm font-bold text-ink truncate">{m.subject}</span>
+                  {m.workspace && <span className="block text-xs text-ink-muted truncate">{m.workspace}</span>}
                 </button>
               </li>
             ))}
@@ -67,10 +67,10 @@ export function InboxPage() {
         </aside>
         <main className="p-6 md:p-10 min-w-0">
           {open ? (
-            <article className="max-w-2xl bg-white rounded-2xl border border-[#e6dddb] p-6 space-y-4">
+            <article className="max-w-2xl bg-white rounded-2xl border border-line p-6 space-y-4">
               <div>
-                <h1 className="text-xl font-bold text-[#181211]">{open.subject}</h1>
-                <p className="text-xs text-[#896a61] mt-1">{t('inbox.to', { to: open.to })} · {fmt(open.at)}</p>
+                <h1 className="text-xl font-bold text-ink">{open.subject}</h1>
+                <p className="text-xs text-ink-muted mt-1">{t('inbox.to', { to: open.to })} · {fmt(open.at)}</p>
               </div>
               <p className="text-sm whitespace-pre-wrap text-slate-700">{open.body}</p>
               {open.action && (
@@ -78,7 +78,7 @@ export function InboxPage() {
               )}
             </article>
           ) : (
-            <p className="text-sm text-[#896a61]">{t('inbox.pick')}</p>
+            <p className="text-sm text-ink-muted">{t('inbox.pick')}</p>
           )}
         </main>
       </div>

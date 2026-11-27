@@ -2,7 +2,9 @@ import type { Activity, DemoState } from './types';
 import { CAREERS_ACTOR } from './sources';
 import { userName } from './users';
 
-export type Period = 'day' | 'week' | '3m' | '6m' | 'all';
+export type Preset = 'day' | 'week' | '3m' | '6m' | 'all';
+/** A preset window, or a custom pair of local dates (YYYY-MM-DD, inclusive). */
+export type Period = Preset | { from: string; to: string };
 
 export const UNATTRIBUTED = 'Unattributed (before CV Owner tracking)';
 
@@ -19,12 +21,36 @@ export interface TaRow {
 }
 
 const DAY = 86_400_000;
-const WINDOW: Record<Period, number> = { day: DAY, week: 7 * DAY, '3m': 90 * DAY, '6m': 180 * DAY, all: Infinity };
+
+/** Epoch-ms bounds of a period: "day" starts at local midnight, "week" on Monday, 3M/6M are rolling windows. */
+export function periodBounds(period: Period, now: number): { from: number; until: number } {
+  if (typeof period === 'object') {
+    const [lo, hi] = period.from <= period.to ? [period.from, period.to] : [period.to, period.from];
+    return {
+      from: lo ? new Date(`${lo}T00:00:00`).getTime() : -Infinity,
+      until: hi ? new Date(`${hi}T23:59:59.999`).getTime() : Infinity,
+    };
+  }
+  const start = new Date(now);
+  start.setHours(0, 0, 0, 0);
+  switch (period) {
+    case 'all': return { from: -Infinity, until: Infinity };
+    case 'day': return { from: start.getTime(), until: Infinity };
+    case 'week':
+      start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
+      return { from: start.getTime(), until: Infinity };
+    case '3m': return { from: now - 90 * DAY, until: Infinity };
+    case '6m': return { from: now - 180 * DAY, until: Infinity };
+  }
+}
 
 const empty = (ta: string): TaRow => ({ ta, newCv: 0, duplicate: 0, parseError: 0, processing: 0, transferIn: 0, transferOut: 0, total: 0 });
 
 export function inPeriod(a: Activity, period: Period, now: number): boolean {
-  return period === 'all' || Date.parse(a.at) >= now - WINDOW[period];
+  if (period === 'all') return true;
+  const { from, until } = periodBounds(period, now);
+  const at = Date.parse(a.at);
+  return at >= from && at <= until;
 }
 
 /**

@@ -40,11 +40,11 @@ export function ApprovalsRow({ jobs, className, onClick }: { jobs: Job[]; classN
   const t = useT();
   if (jobs.length === 0) return null;
   return (
-    <Link to={APPROVALS_HREF} onClick={onClick} className={className ?? 'flex items-start gap-2 px-3 py-2 hover:bg-[#f8f6f6] dark:hover:bg-white/5'}>
+    <Link to={APPROVALS_HREF} onClick={onClick} className={className ?? 'flex items-start gap-2 px-3 py-2 hover:bg-background-light dark:hover:bg-white/5'}>
       <span aria-hidden="true" className="material-symbols-outlined text-[18px] mt-0.5 text-amber-600">approval</span>
       <span className="min-w-0 flex-1">
         <span className="block text-sm font-bold text-slate-800 dark:text-white truncate">{t('todo.approvals', { n: jobs.length })}</span>
-        <span className="block text-xs text-[#896a61] truncate">{jobs.map((j) => j.title).join(', ')}</span>
+        <span className="block text-xs text-ink-muted truncate">{jobs.map((j) => j.title).join(', ')}</span>
       </span>
     </Link>
   );
@@ -117,60 +117,60 @@ export function TodoBell() {
           onClick={() => { toggle(); notes.markSeen(); }}
           aria-label={name}
           title={name}
-          className="relative size-10 rounded-full flex items-center justify-center text-[#896a61] hover:bg-[#f8f6f6] dark:hover:bg-white/5"
+          className="relative size-10 rounded-full flex items-center justify-center text-ink-muted hover:bg-background-light dark:hover:bg-white/5"
         >
           <span aria-hidden="true" className="material-symbols-outlined">notifications</span>
           {count > 0 && (
-            <span aria-hidden="true" className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-primary text-white text-[11px] font-bold flex items-center justify-center">
+            <span aria-hidden="true" className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-primary text-white text-2xs font-bold flex items-center justify-center">
               {count > 99 ? '99+' : count}
             </span>
           )}
           {notes.unread > 0 && (
-            <span data-testid="notif-dot" aria-label={t('notif.unread', { n: notes.unread })} className="absolute bottom-0.5 right-0.5 size-2.5 rounded-full bg-blue-500 ring-2 ring-white dark:ring-[#1e1e1e]" />
+            <span data-testid="notif-dot" aria-label={t('notif.unread', { n: notes.unread })} className="absolute bottom-0.5 right-0.5 size-2.5 rounded-full bg-blue-500 ring-2 ring-white dark:ring-dark-surface" />
           )}
         </button>
       )}
     >
       {(close) => (
         <div className="w-80 max-h-[70vh] overflow-y-auto custom-scrollbar">
-          <div className="px-3 py-2 text-xs font-bold text-[#896a61] uppercase tracking-wider">{t('notif.title')}</div>
+          <div className="px-3 py-2 text-xs font-bold text-ink-muted uppercase tracking-wider">{t('notif.title')}</div>
           {notes.list.length === 0 ? (
-            <p className="px-3 pb-3 text-sm text-[#896a61]">{t('notif.empty')}</p>
+            <p className="px-3 pb-3 text-sm text-ink-muted">{t('notif.empty')}</p>
           ) : (
             notes.list.slice(0, 8).map((n) => {
               const who = candidates.find((c) => c.id === n.candidateId)?.name ?? '';
               const job = jobs.find((j) => j.id === n.jobId)?.title ?? '';
               return (
-                <Link key={n.id} to={href({ kind: 'new', appId: n.appId, jobId: n.jobId, candidateId: n.candidateId })} onClick={close} role="menuitem" className="flex items-start gap-2 px-3 py-2 hover:bg-[#f8f6f6] dark:hover:bg-white/5">
+                <Link key={n.id} to={href({ kind: 'new', appId: n.appId, jobId: n.jobId, candidateId: n.candidateId })} onClick={close} role="menuitem" className="flex items-start gap-2 px-3 py-2 hover:bg-background-light dark:hover:bg-white/5">
                   <span aria-hidden="true" className={`material-symbols-outlined text-[18px] mt-0.5 ${NOTIF_ICON[n.kind][1]}`}>{NOTIF_ICON[n.kind][0]}</span>
                   <span className="min-w-0">
                     <span className="block text-sm text-slate-800 dark:text-white">{t(`notif.kind.${n.kind}`, { name: who, job })}</span>
-                    <span className="block text-xs text-[#896a61]">{new Date(n.at).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })}</span>
+                    <span className="block text-xs text-ink-muted">{new Date(n.at).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })}</span>
                   </span>
                 </Link>
               );
             })
           )}
           <div className="border-t border-gray-100 dark:border-white/10 mt-1" />
-          <div className="px-3 py-2 text-xs font-bold text-[#896a61] uppercase tracking-wider">{t('todo.title')}</div>
+          <div className="px-3 py-2 text-xs font-bold text-ink-muted uppercase tracking-wider">{t('todo.title')}</div>
           <ApprovalsRow jobs={approvals} onClick={close} />
           {items.length === 0 ? (
-            approvals.length === 0 && <p className="px-3 pb-3 text-sm text-[#896a61]">{t('todo.empty')}</p>
+            approvals.length === 0 && <p className="px-3 pb-3 text-sm text-ink-muted">{t('todo.empty')}</p>
           ) : (
             items.slice(0, 20).map((i) => {
               const l = label(i);
               return (
-                <Link key={i.appId} to={href(i)} onClick={close} role="menuitem" className="flex items-start gap-2 px-3 py-2 hover:bg-[#f8f6f6] dark:hover:bg-white/5">
+                <Link key={i.appId} to={href(i)} onClick={close} role="menuitem" className="flex items-start gap-2 px-3 py-2 hover:bg-background-light dark:hover:bg-white/5">
                   <span aria-hidden="true" className={`material-symbols-outlined text-[18px] mt-0.5 ${TODO_ICON[i.kind][1]}`}>{TODO_ICON[i.kind][0]}</span>
                   <span className="min-w-0">
                     <span className="block text-sm font-bold text-slate-800 dark:text-white truncate">{l.name}</span>
-                    <span className="block text-xs text-[#896a61] truncate">{l.reason} · {l.job}</span>
+                    <span className="block text-xs text-ink-muted truncate">{l.reason} · {l.job}</span>
                   </span>
                 </Link>
               );
             })
           )}
-          {items.length > 20 && <p className="px-3 py-2 text-xs text-[#896a61]">{t('todo.more', { n: items.length - 20 })}</p>}
+          {items.length > 20 && <p className="px-3 py-2 text-xs text-ink-muted">{t('todo.more', { n: items.length - 20 })}</p>}
         </div>
       )}
     </Popover>

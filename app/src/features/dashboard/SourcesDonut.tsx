@@ -25,7 +25,7 @@ export function SourcesDonut({ sources }: { sources: DashboardMetrics['recruitme
 
   return (
     <div className="flex flex-col items-center gap-5">
-      <div className="relative size-40 text-white dark:text-[#1e1e1e]">
+      <div className="relative size-40 text-white dark:text-dark-surface">
         <Donut data={slices} onHover={setHover} />
         <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center" aria-live="polite">
           <span className="text-2xl font-bold tabular-nums text-slate-900 dark:text-white">{active ? `${share(active.count)}%` : total}</span>

@@ -1,4 +1,5 @@
 import { jobStages } from '../domain/pipelineConfig';
+import { MATCH_SHOWCASE_COUNT } from './matchShowcase';
 import { jobPostFromJd } from '../domain/jobPost';
 import { buildSeed, mulberry32, SEED_BASE_TIME } from './seed';
 import { isOverSla } from '../domain/pipeline';
@@ -35,7 +36,8 @@ describe('seed', () => {
 
   it('seed volumes match spec', () => {
     const s = buildSeed();
-    expect(s.candidates).toHaveLength(150);
+    // 150 random candidates + the JD Matching showcase written to fit the seeded JDs.
+    expect(s.candidates).toHaveLength(150 + MATCH_SHOWCASE_COUNT);
     // 8 staff (one demo account per internal role at least) + 2 candidate logins.
     expect(s.users.filter((u) => u.role !== 'Candidate')).toHaveLength(10);
     expect(s.users.filter((u) => u.role === 'Candidate' && u.candidateId)).toHaveLength(2);

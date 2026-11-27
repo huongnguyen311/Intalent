@@ -1,9 +1,12 @@
 import { useState } from 'react';
+import { canEditCampaign } from '../../domain/permissions';
+import { useMe } from '../../store/session';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { AppLayout } from '../../components/AppLayout';
 import { BackButton } from '../../components/BackButton';
 import { Chip } from '../../components/Chip';
 import { Modal } from '../../components/Modal';
+import { StatCard } from '../../components/StatCard';
 import { PriorityBadge } from '../../components/PriorityBadge';
 import { toast } from '../../components/Toast';
 import { campaignJobRows, campaignPerformance, campaignStats, effectiveStatus, pastEnd } from '../../domain/campaigns';
@@ -18,20 +21,10 @@ import { JobStatusBadge } from '../jobs/JobBits';
 import { CampaignStatusBadge, PRIMARY_BTN, SECONDARY_BTN } from './CampaignBits';
 import { CampaignFunnel } from './CampaignFunnel';
 
-const CARD = 'bg-white dark:bg-surface-dark p-8 rounded-[2rem] border border-gray-100 dark:border-white/10 shadow-sm';
+const CARD = 'bg-white dark:bg-dark-surface p-8 rounded-[2rem] border border-gray-100 dark:border-white/10 shadow-sm';
 const LABEL = 'text-2xs font-bold text-muted uppercase tracking-widest';
-const TH = 'px-6 py-4 text-xs font-bold text-[#896a61] uppercase tracking-wider border-b border-[#e6dddb] dark:border-[#2a2423]';
+const TH = 'px-6 py-4 text-xs font-bold text-ink-muted uppercase tracking-wider border-b border-line dark:border-dark-raised';
 const TD = 'px-6 py-4 whitespace-nowrap text-sm text-slate-600 dark:text-gray-400';
-
-function Kpi({ id, label, value, hint }: { id: string; label: string; value: string; hint?: string }) {
-  return (
-    <div className={CARD}>
-      <div className={LABEL}>{label}</div>
-      <div data-testid={`kpi-${id}`} className="text-4xl font-bold text-slate-800 dark:text-white mt-3">{value}</div>
-      {hint && <div className="text-xs font-semibold text-gray-400 mt-2">{hint}</div>}
-    </div>
-  );
-}
 
 const money = (n: number, currency = 'VND') =>
   new Intl.NumberFormat('en-US', { style: 'currency', currency, maximumFractionDigits: 0 }).format(n);
@@ -55,11 +48,12 @@ export function CampaignDetailPage() {
   const { applications, candidates, jobs, users } = state;
   const campaign = state.campaigns.find((c) => c.id === id);
   const [confirmCancel, setConfirmCancel] = useState(false);
+  const user = useMe();
 
   if (!campaign) {
     return (
       <AppLayout title={t('nav.campaigns')}>
-        <div className="p-8 text-[#896a61]">
+        <div className="p-8 text-ink-muted">
           <p>{t('campaigns.detail.notFound')}</p>
           <Link to="/campaigns" className="text-primary font-bold hover:underline">{t('campaigns.detail.back')}</Link>
         </div>
@@ -92,7 +86,8 @@ export function CampaignDetailPage() {
     complete: <button key="complete" onClick={() => move('completed')} className={SECONDARY_BTN}>{t('campaigns.detail.complete')}</button>,
     cancel: <button key="cancel" onClick={() => setConfirmCancel(true)} className={`${SECONDARY_BTN} !text-red-600 whitespace-nowrap`}>{t('campaigns.detail.cancel')}</button>,
   };
-  const offered = ACTIONS[status];
+  // Other people's campaigns are read-only for Recruiters (their jobs still join from the job form).
+  const offered = canEditCampaign(user, campaign) ? ACTIONS[status] : [];
   const actions = <div className="flex items-center gap-3">{offered.map((a) => buttons[a])}</div>;
 
   return (
@@ -100,7 +95,7 @@ export function CampaignDetailPage() {
       <div className="p-8 max-w-[1400px] mx-auto space-y-8">
         <div data-testid="campaign-header" className="flex items-center gap-4 flex-wrap">
           <BackButton label={t('campaigns.detail.back')} onClick={() => navigate('/campaigns')} />
-          <span className="text-sm font-bold text-[#896a61]">{campaign.code}</span>
+          <span className="text-sm font-bold text-ink-muted">{campaign.code}</span>
           <CampaignStatusBadge status={status} />
           {campaign.priority && <PriorityBadge priority={campaign.priority} />}
           <span className="text-sm text-slate-600 dark:text-gray-300">{t('campaigns.detail.owner', { name: campaign.owner ? userName(users, campaign.owner) : '—' })}</span>
@@ -110,7 +105,8 @@ export function CampaignDetailPage() {
         </div>
         {campaign.description && <p className="text-sm text-slate-600 dark:text-gray-300 -mt-4">{campaign.description}</p>}
 
-        {pastEnd(campaign, today) && (
+        {/* The "mark completed" prompt is an edit, so only people who may change the campaign see it. */}
+        {pastEnd(campaign, today) && canEditCampaign(user, campaign) && (
           <div data-testid="past-end" role="status" className="flex items-center gap-3 px-5 py-3 rounded-xl bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 text-sm">
             <span aria-hidden="true" className="material-symbols-outlined text-amber-600">event_busy</span>
             <span className="flex-1 font-semibold text-amber-900 dark:text-amber-100">{t('campaigns.detail.pastEnd', { date: fullDate(campaign.end) })}</span>
@@ -118,12 +114,12 @@ export function CampaignDetailPage() {
           </div>
         )}
 
-        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-6">
-          <Kpi id="views" label={t('campaigns.kpi.views')} value={stats.views.toLocaleString('en-US')} />
-          <Kpi id="applicants" label={t('campaigns.kpi.applicants')} value={String(stats.applicants)} hint={goals.targetApplicants ? t('campaigns.kpi.target', { n: goals.targetApplicants }) : undefined} />
-          <Kpi id="conversion" label={t('campaigns.kpi.conversion')} value={`${(stats.conversion * 100).toFixed(1)}%`} />
-          <Kpi id="hires" label={t('campaigns.kpi.hires')} value={String(stats.hires)} hint={t('campaigns.kpi.of', { n: totals.target })} />
-          <Kpi id="cph" label={t('campaigns.kpi.cph')} value={perf.costPerHire === undefined ? '—' : money(perf.costPerHire, goals.currency)} />
+        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3">
+          <StatCard accent="left" valueTestId="kpi-views" icon="visibility" tone="slate" label={t('campaigns.kpi.views')} value={stats.views.toLocaleString('en-US')} />
+          <StatCard accent="left" valueTestId="kpi-applicants" icon="person_add" tone="blue" label={t('campaigns.kpi.applicants')} value={String(stats.applicants)} hint={goals.targetApplicants ? t('campaigns.kpi.target', { n: goals.targetApplicants }) : undefined} />
+          <StatCard accent="left" valueTestId="kpi-conversion" icon="conversion_path" tone="violet" label={t('campaigns.kpi.conversion')} value={`${(stats.conversion * 100).toFixed(1)}%`} />
+          <StatCard accent="left" valueTestId="kpi-hires" icon="how_to_reg" tone="emerald" label={t('campaigns.kpi.hires')} value={String(stats.hires)} hint={t('campaigns.kpi.of', { n: totals.target })} />
+          <StatCard accent="left" valueTestId="kpi-cph" icon="payments" tone="amber" label={t('campaigns.kpi.cph')} value={perf.costPerHire === undefined ? '—' : money(perf.costPerHire, goals.currency)} />
         </div>
 
         <div className={CARD}>
@@ -133,25 +129,25 @@ export function CampaignDetailPage() {
 
         <JobsTable rows={jobRows} totals={totals} today={today} />
 
-        <div className="bg-white dark:bg-surface-dark rounded-[1.5rem] shadow-sm border border-gray-100 dark:border-white/10 overflow-hidden">
+        <div className="bg-white dark:bg-dark-surface rounded-[1.5rem] shadow-sm border border-gray-100 dark:border-white/10 overflow-hidden">
           <div className={`${LABEL} px-6 pt-6 pb-4`}>{t('campaigns.applicants')}</div>
           {rows.length === 0 ? (
             <div className="px-6 pb-10 text-center">
               <span className="material-symbols-outlined text-[40px] text-gray-300">group_off</span>
               <p className="text-sm font-bold text-slate-700 dark:text-gray-200 mt-2">{t('campaigns.applicants.empty')}</p>
-              <p className="text-sm text-[#896a61] mt-1">{t('campaigns.applicants.emptyHint')}</p>
+              <p className="text-sm text-ink-muted mt-1">{t('campaigns.applicants.emptyHint')}</p>
             </div>
           ) : (
             <div className="overflow-x-auto custom-scrollbar">
               <table className="w-full text-left border-collapse">
-                <thead className="bg-[#f8f6f6] dark:bg-[#251f1e]">
+                <thead className="bg-background-light dark:bg-dark-surface">
                   <tr>
                     {(['campaigns.applicants.col.name', 'campaigns.applicants.col.job', 'campaigns.applicants.col.stage', 'campaigns.applicants.col.applied'] as const).map((k) => (
                       <th key={k} className={TH}>{t(k)}</th>
                     ))}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#f4f1f0] dark:divide-[#2a2423]">
+                <tbody className="divide-y divide-hairline dark:divide-dark-raised">
                   {rows.map((a) => (
                     <tr key={a.id} className="hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
                       <td className={TD}>
@@ -195,17 +191,17 @@ function JobsTable({ rows, totals, today }: {
   const applications = useStore((s) => s.applications);
   const cols = ['job', 'priority', 'date', 'status', 'target', 'hired', 'remaining'] as const;
   return (
-    <div className="bg-white dark:bg-surface-dark rounded-[1.5rem] shadow-sm border border-gray-100 dark:border-white/10 overflow-hidden">
+    <div className="bg-white dark:bg-dark-surface rounded-[1.5rem] shadow-sm border border-gray-100 dark:border-white/10 overflow-hidden">
       <div className={`${LABEL} px-6 pt-6 pb-4`}>{t('campaigns.jobs.title')}</div>
       {rows.length === 0 ? (
-        <p className="px-6 pb-8 text-sm text-[#896a61]">{t('campaigns.jobs.empty')}</p>
+        <p className="px-6 pb-8 text-sm text-ink-muted">{t('campaigns.jobs.empty')}</p>
       ) : (
       <div className="overflow-x-auto custom-scrollbar">
         <table data-testid="campaign-jobs" className="w-full text-left border-collapse">
-          <thead className="bg-[#f8f6f6] dark:bg-[#251f1e]">
+          <thead className="bg-background-light dark:bg-dark-surface">
             <tr>{cols.map((k) => <th key={k} className={TH}>{t(`campaigns.jobs.col.${k}`)}</th>)}</tr>
           </thead>
-          <tbody className="divide-y divide-[#f4f1f0] dark:divide-[#2a2423]">
+          <tbody className="divide-y divide-hairline dark:divide-dark-raised">
             {rows.map((r) => {
               const job = jobs.find((j) => j.id === r.jobId);
               const overdue = !!job && isOverdue(job, applications, today);
@@ -217,7 +213,7 @@ function JobsTable({ rows, totals, today }: {
                     ) : (
                       <span className="font-bold text-slate-500">{r.title}</span>
                     )}
-                    {job && !r.attached && <div className="text-xs text-[#896a61] mt-0.5">{t('campaigns.jobs.moved')}</div>}
+                    {job && !r.attached && <div className="text-xs text-ink-muted mt-0.5">{t('campaigns.jobs.moved')}</div>}
                   </td>
                   <td className={TD}><PriorityBadge priority={r.priority} />{r.priority === 'normal' && <span className="text-gray-300">—</span>}</td>
                   <td className={`${TD} ${overdue ? 'text-red-600 font-semibold' : ''}`}>{r.targetHiringDate ? fullDate(r.targetHiringDate) : '—'}</td>
@@ -228,7 +224,7 @@ function JobsTable({ rows, totals, today }: {
                 </tr>
               );
             })}
-            <tr data-testid="jobs-total" className="bg-[#fbf9f8] dark:bg-white/5 font-bold">
+            <tr data-testid="jobs-total" className="bg-gray-50 dark:bg-white/5 font-bold">
               <td className={`${TD} font-bold text-slate-800 dark:text-white`} colSpan={4}>{t('campaigns.jobs.total')}</td>
               <td className={`${TD} font-bold`} data-testid="cell-target">{totals.target}</td>
               <td className={`${TD} font-bold`} data-testid="cell-hired">{totals.hired}</td>

@@ -7,7 +7,7 @@ import type { CandidateInput } from '../../domain/types';
 import { useStore } from '../../store/store';
 import { JobUnavailable } from './JobBits';
 
-const INPUT = 'w-full h-12 px-4 rounded-lg bg-[#f8f6f6] ring-1 ring-gray-200 focus:ring-2 focus:ring-primary outline-none text-sm';
+const INPUT = 'w-full h-12 px-4 rounded-lg bg-background-light ring-1 ring-gray-200 focus:ring-2 focus:ring-primary outline-none text-sm';
 const CV_LIMITS = { ...UPLOAD_LIMITS, extensions: ['pdf', 'docx'] };
 const LINKEDIN = /^(https?:\/\/|(www\.)?linkedin\.com\/)/i;
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -129,9 +129,9 @@ export function ApplyForm() {
   const err = (k: keyof Errors) => (errors[k] ? t(errors[k]) : undefined);
 
   return (
-    <div className="max-w-xl mx-auto bg-white rounded-3xl border border-[#e6dddb] p-6 sm:p-10">
+    <div className="max-w-xl mx-auto bg-white rounded-3xl border border-line p-6 sm:p-10">
       <h1 className="text-2xl font-bold tracking-tight">{t('careers.apply.title', { job: job.title })}</h1>
-      <p className="text-sm text-[#896a61] mt-1">{t('careers.apply.subtitle')}</p>
+      <p className="text-sm text-ink-muted mt-1">{t('careers.apply.subtitle')}</p>
       <form noValidate onSubmit={submit} className="mt-6 space-y-5">
         <Field id="ap-name" label={t('careers.apply.name')} error={err('name')}>
           <input id="ap-name" className={INPUT} value={form.name} onChange={set('name')} autoComplete="name" />
@@ -152,16 +152,16 @@ export function ApplyForm() {
             onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
             onDragLeave={() => setDragOver(false)}
             onDrop={(e) => { e.preventDefault(); setDragOver(false); pickCv(e.dataTransfer.files?.[0]); }}
-            className={`flex items-center gap-3 rounded-xl border-2 border-dashed px-4 py-4 cursor-pointer transition-colors ${dragOver ? 'border-primary bg-primary/5' : 'border-[#e6dddb] hover:border-primary/50'}`}
+            className={`flex items-center gap-3 rounded-xl border-2 border-dashed px-4 py-4 cursor-pointer transition-colors ${dragOver ? 'border-primary bg-primary/5' : 'border-line hover:border-primary/50'}`}
           >
             <span className="material-symbols-outlined text-[28px] text-primary">{cv ? 'description' : 'upload_file'}</span>
             <div className="min-w-0 flex-1 text-sm">
               {cv ? (
                 <p className="font-semibold truncate">{cv.name}</p>
               ) : (
-                <p><span className="font-bold text-primary">{t('careers.apply.cvChoose')}</span> <span className="text-[#896a61]">{t('careers.apply.cvDrop')}</span></p>
+                <p><span className="font-bold text-primary">{t('careers.apply.cvChoose')}</span> <span className="text-ink-muted">{t('careers.apply.cvDrop')}</span></p>
               )}
-              <p className="text-xs text-[#896a61]">{cv ? t('careers.apply.cvReplace') : 'PDF, DOCX · 5 MB'}</p>
+              <p className="text-xs text-ink-muted">{cv ? t('careers.apply.cvReplace') : 'PDF, DOCX · 5 MB'}</p>
             </div>
           </div>
           <input id="ap-cv" type="file" accept=".pdf,.docx" onChange={(e) => pickCv(e.target.files?.[0])} className="sr-only" />
@@ -175,7 +175,7 @@ export function ApplyForm() {
               <legend className="block text-xs font-bold uppercase tracking-wide">{label}</legend>
               <div className="flex gap-3">
                 {(['yes', 'no'] as const).map((v) => (
-                  <label key={v} className={`h-11 px-5 rounded-lg ring-1 flex items-center gap-2 text-sm cursor-pointer ${answers[q.id] === v ? 'ring-2 ring-primary bg-primary/5' : 'ring-gray-200 bg-[#f8f6f6]'}`}>
+                  <label key={v} className={`h-11 px-5 rounded-lg ring-1 flex items-center gap-2 text-sm cursor-pointer ${answers[q.id] === v ? 'ring-2 ring-primary bg-primary/5' : 'ring-gray-200 bg-background-light'}`}>
                     <input type="radio" name={id} checked={answers[q.id] === v} onChange={() => answer(q.id, v)} className="accent-primary" />
                     {t(v === 'yes' ? 'careers.apply.yes' : 'careers.apply.no')}
                   </label>
@@ -197,7 +197,7 @@ export function ApplyForm() {
           {errors.consent && <p role="alert" className="text-xs text-red-500 mt-1.5">{t(errors.consent)}</p>}
         </div>
         <div className="flex flex-col-reverse sm:flex-row gap-3 pt-2">
-          <Link to={`/careers/${job.id}`} className="h-12 px-6 rounded-full border border-[#e6dddb] font-bold text-sm flex items-center justify-center">
+          <Link to={`/careers/${job.id}`} className="h-12 px-6 rounded-full border border-line font-bold text-sm flex items-center justify-center">
             {t('careers.apply.cancel')}
           </Link>
           <button type="submit" className="h-12 px-8 rounded-full bg-primary text-white font-bold text-sm sm:flex-1">

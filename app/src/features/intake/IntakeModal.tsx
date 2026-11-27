@@ -9,6 +9,7 @@ import { stageLabel } from '../../domain/stages';
 import { useLang, useT, type TKey } from '../../i18n/i18n';
 import { me } from '../../store/session';
 import { useStore } from '../../store/store';
+import { BTN_GHOST, BTN_PRIMARY, FIELD } from '../../components/ui';
 
 type Mode = 'choose' | 'pool' | 'note';
 
@@ -19,16 +20,11 @@ type Props = {
   initialMode?: 'pool' | 'note';
 };
 
-const FIELD =
-  'w-full px-3 py-2 bg-white dark:bg-[#251f1e] border border-[#e6dddb] dark:border-[#3a3433] rounded-lg text-sm text-[#181211] dark:text-white focus:ring-1 focus:ring-primary focus:border-primary focus:outline-none';
-const BTN_PRIMARY = 'px-4 py-2 text-sm font-medium bg-primary hover:bg-primary-hover text-white rounded-lg shadow-sm transition-colors';
-const BTN_GHOST =
-  'px-4 py-2 text-sm font-medium border border-[#e6dddb] dark:border-[#3a3433] text-[#181211] dark:text-white rounded-lg hover:border-primary/50 transition-colors';
 
 function Field({ id, label, error, children }: { id: string; label: string; error?: string; children: ReactNode }) {
   return (
     <div className="flex flex-col gap-1">
-      <label htmlFor={id} className="text-xs font-semibold text-[#896a61]">{label}</label>
+      <label htmlFor={id} className="text-xs font-semibold text-ink-muted">{label}</label>
       {children}
       {error && <p className="text-xs text-red-600">{error}</p>}
     </div>
@@ -39,12 +35,12 @@ function Choice({ icon, title, desc, onClick }: { icon: string; title: string; d
   return (
     <button
       onClick={onClick}
-      className="flex items-start gap-3 p-4 text-left rounded-xl border border-[#e6dddb] dark:border-[#3a3433] hover:border-primary transition-colors"
+      className="flex items-start gap-3 p-4 text-left rounded-xl border border-line dark:border-dark-line hover:border-primary transition-colors"
     >
       <span className="material-symbols-outlined text-primary">{icon}</span>
       <span className="flex flex-col gap-0.5">
-        <span className="font-bold text-[#181211] dark:text-white">{title}</span>
-        <span className="text-xs text-[#896a61]">{desc}</span>
+        <span className="font-bold text-ink dark:text-white">{title}</span>
+        <span className="text-xs text-ink-muted">{desc}</span>
       </span>
     </button>
   );
@@ -232,7 +228,7 @@ export function IntakeModal({ open, onClose, initialMode }: Props) {
           </Field>
           <Field id="ip-cv" label={t('intake.field.cv')} error={err('cv')}>
             <input id="ip-cv" type="file" accept=".pdf,.docx,.txt" onChange={(e) => pickCv(e.target.files?.[0])} className="text-sm" />
-            {pool.cv && <span className="text-xs text-[#896a61]">{pool.cv}</span>}
+            {pool.cv && <span className="text-xs text-ink-muted">{pool.cv}</span>}
           </Field>
           <Field id="ip-job" label={t('intake.field.job')}>
             <select id="ip-job" className={FIELD} value={pool.jobId} onChange={setP('jobId')}>

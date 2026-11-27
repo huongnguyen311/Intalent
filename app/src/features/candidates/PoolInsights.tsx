@@ -2,13 +2,14 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useShallow } from 'zustand/react/shallow';
 import { AppLayout } from '../../components/AppLayout';
+import { StatCard } from '../../components/StatCard';
 import { dashboardMetrics, inPeriod, type Period } from '../../domain/metrics';
 import { poolQuality, type Gap } from '../../domain/poolQuality';
 import { useT, type TKey } from '../../i18n/i18n';
 import { useStore } from '../../store/store';
 import { EnglishDonut, SeniorityBars, StackPie } from '../dashboard/charts';
 import { seniorityRows } from '../dashboard/DashboardPage';
-import { CAPTION, Panel, PANEL, PeriodControl, TRACK } from '../dashboard/DashboardWidgets';
+import { CAPTION, Panel, PeriodControl, TRACK } from '../dashboard/DashboardWidgets';
 
 /** Brand primary and its tints: the overview stays in one hue, like the app Dashboard. */
 const RAMP = ['#ef5125', '#f47c5a', '#f8a68e', '#fbc9ba', '#94a3b8', '#cbd5e1'];
@@ -34,19 +35,6 @@ function Ranked({ rows, unit = '' }: { rows: { name: string; value: number }[]; 
         </li>
       ))}
     </ol>
-  );
-}
-
-function Kpi({ icon, label, value, hint }: { icon: string; label: string; value: string; hint: string }) {
-  return (
-    <div className={`${PANEL} p-5 flex items-start gap-4`}>
-      <span aria-hidden="true" className="material-symbols-outlined grid size-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">{icon}</span>
-      <div className="min-w-0">
-        <p className={CAPTION}>{label}</p>
-        <p className="ty-kpi text-3xl font-bold text-slate-900 dark:text-white leading-tight tabular-nums">{value}</p>
-        <p className="text-xs font-semibold text-slate-500 dark:text-gray-400">{hint}</p>
-      </div>
-    </div>
   );
 }
 
@@ -77,7 +65,7 @@ function GapRow({ gap, label, name = label, count, total, period }: { gap?: Gap;
       <span className="truncate" title={name}>{label}</span>
       <span className="flex items-center gap-2 tabular-nums">
         <span className="text-slate-900 dark:text-white font-bold">{count}</span>
-        <span className="w-10 text-right text-xs text-slate-400">{pct(count, total)}%</span>
+        <span className="w-10 text-right text-xs text-muted dark:text-gray-400">{pct(count, total)}%</span>
         {gap && count > 0 && <span aria-hidden="true" className="material-symbols-outlined text-[16px] text-slate-400 group-hover:text-primary">chevron_right</span>}
       </span>
     </>
@@ -117,22 +105,24 @@ export function PoolInsightsPage() {
 
   return (
     <AppLayout title={t('pool.insights.title')}>
-      <section data-testid="pool-insights" className="h-full overflow-y-auto custom-scrollbar bg-background-light dark:bg-background-dark p-4 md:p-6 space-y-8">
+      <section data-testid="pool-insights" className="h-full overflow-y-auto custom-scrollbar bg-background-light dark:bg-dark-canvas p-4 md:p-6 space-y-8">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className={CAPTION}>{t('pool.insights.subtitle')}</p>
           <PeriodControl value={period} onChange={setPeriod} testId="pool-period" />
         </div>
 
-        <div data-testid="pool-kpis" className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-          <Kpi icon="groups" label={t('pool.insights.kpi.total')} value={String(m.total)} hint={t('pool.insights.kpi.totalHint', { n: q.missing.email })} />
-          <Kpi icon="work_history" label={t('pool.insights.kpi.open')} value={String(m.available)} hint={t('pool.insights.kpi.openHint', { pct: pct(m.available, m.total) })} />
-          <Kpi
+        <div data-testid="pool-kpis" className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
+          <StatCard icon="groups" tone="primary" label={t('pool.insights.kpi.total')} value={String(m.total)} hint={t('pool.insights.kpi.totalHint', { n: q.missing.email })} />
+          <StatCard icon="work_history" tone="blue" bar={pct(m.available, m.total)} label={t('pool.insights.kpi.open')} value={String(m.available)} hint={t('pool.insights.kpi.openHint', { pct: pct(m.available, m.total) })} />
+          <StatCard
             icon="auto_awesome"
+            tone="violet"
+            bar={pct(m.parsingSuccess.ok, m.parsingSuccess.total)}
             label={t('pool.insights.kpi.parsed')}
             value={`${pct(m.parsingSuccess.ok, m.parsingSuccess.total)}%`}
             hint={t('pool.insights.kpi.parsedHint', { ok: m.parsingSuccess.ok, total: m.parsingSuccess.total })}
           />
-          <Kpi icon="verified" label={t('pool.insights.kpi.complete')} value={`${pct(q.complete, q.total)}%`} hint={t('pool.insights.kpi.completeHint', { n: q.complete, total: q.total })} />
+          <StatCard icon="verified" tone="emerald" bar={pct(q.complete, q.total)} label={t('pool.insights.kpi.complete')} value={`${pct(q.complete, q.total)}%`} hint={<span title={t('pool.insights.kpi.completeFields')}>{t('pool.insights.kpi.completeHint', { n: q.complete, total: q.total })}</span>} />
         </div>
 
         <div data-testid="pool-composition" className="space-y-4">
@@ -158,7 +148,7 @@ export function PoolInsightsPage() {
                     <EnglishDonut data={english} inner={52} outer={68} />
                     <div className="absolute inset-0 flex flex-col items-center justify-center">
                       <span className="text-2xl font-bold text-slate-900 dark:text-white tabular-nums">{pct(english[0].value, englishTotal)}%</span>
-                      <span className="text-2xs font-bold uppercase text-slate-400">{english[0].name}</span>
+                      <span className="text-2xs font-bold uppercase text-muted dark:text-gray-400">{english[0].name}</span>
                     </div>
                   </div>
                   <Legend rows={english.map((e) => ({ ...e, value: String(e.value) }))} />

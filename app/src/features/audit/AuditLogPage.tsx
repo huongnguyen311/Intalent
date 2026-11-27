@@ -8,9 +8,9 @@ import { useT, type TKey } from '../../i18n/i18n';
 import { useStore } from '../../store/store';
 
 const PAGE_SIZE = 25;
-const FIELD = 'h-9 rounded-xl border border-[#e6dddb] dark:border-[#3a3433] bg-white dark:bg-[#2a2423] px-3 text-sm text-slate-700 dark:text-white';
-const TH = 'px-4 py-3 text-left text-xs font-bold text-[#896a61] uppercase tracking-wider border-b border-[#e6dddb] dark:border-[#2a2423]';
-const TD = 'px-4 py-3 text-sm border-b border-[#f1ecea] dark:border-[#2a2423] align-top';
+const FIELD = 'h-9 rounded-xl border border-line dark:border-dark-line bg-white dark:bg-dark-raised px-3 text-sm text-slate-700 dark:text-white';
+const TH = 'px-4 py-3 text-left text-xs font-bold text-ink-muted uppercase tracking-wider border-b border-line dark:border-dark-raised';
+const TD = 'px-4 py-3 text-sm border-b border-hairline dark:border-dark-raised align-top';
 
 /** Groups shown in the action filter; every ActivityType belongs to one. */
 const GROUPS: Record<string, ActivityType[]> = {
@@ -18,7 +18,7 @@ const GROUPS: Record<string, ActivityType[]> = {
   application: ['added_to_pipeline', 'stage_changed', 'email_sent', 'ai_evaluated', 'interview_scheduled', 'interview_cancelled', 'scorecard_submitted', 'offer_updated', 'handed_off'],
   job: ['job_created', 'job_status_changed', 'job_approval_requested', 'job_approved', 'job_rejected'],
   user: ['user_invited', 'user_joined', 'user_role_changed', 'user_status_changed', 'settings_updated'],
-  privacy: ['consent_captured', 'candidate_anonymized'],
+  privacy: ['consent_captured', 'candidate_anonymized', 'pii_revealed', 'pii_exported'],
 };
 const groupOf = (type: ActivityType) => Object.keys(GROUPS).find((g) => GROUPS[g].includes(type)) ?? 'candidate';
 
@@ -78,9 +78,9 @@ export function AuditLogPage() {
             <option value="">{t('audit.filter.allActors')}</option>
             {actors.map((id) => <option key={id} value={id}>{userName(users, id)}</option>)}
           </select>
-          <span className="ml-auto text-sm text-[#896a61]">{t('audit.count', { n: rows.length })}</span>
+          <span className="ml-auto text-sm text-ink-muted">{t('audit.count', { n: rows.length })}</span>
         </div>
-        <div className="bg-white dark:bg-[#1e1e1e] rounded-2xl border border-[#e6dddb] dark:border-[#2a2423] overflow-x-auto">
+        <div className="bg-white dark:bg-dark-surface rounded-2xl border border-line dark:border-dark-raised overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr>
@@ -94,17 +94,17 @@ export function AuditLogPage() {
             <tbody>
               {shown.map((a, i) => (
                 <tr key={`${a.at}-${i}`} data-testid="audit-row">
-                  <td className={`${TD} whitespace-nowrap text-[#896a61]`}>{fmt(a.at)}</td>
+                  <td className={`${TD} whitespace-nowrap text-ink-muted`}>{fmt(a.at)}</td>
                   <td className={`${TD} whitespace-nowrap`}>{userName(users, a.by) || a.by}</td>
                   <td className={TD}>
-                    <span className="px-2 py-0.5 rounded-full bg-[#f8f6f6] dark:bg-white/5 text-xs font-bold whitespace-nowrap">{a.type.replace(/_/g, ' ')}</span>
+                    <span className="px-2 py-0.5 rounded-full bg-background-light dark:bg-white/5 text-xs font-bold whitespace-nowrap">{a.type.replace(/_/g, ' ')}</span>
                   </td>
                   <td className={TD}>{target(a)}</td>
                   <td className={`${TD} text-slate-600 dark:text-gray-300`}>{a.detail}</td>
                 </tr>
               ))}
               {shown.length === 0 && (
-                <tr><td colSpan={5} className={`${TD} text-center text-[#896a61] py-10`}>{t('audit.empty')}</td></tr>
+                <tr><td colSpan={5} className={`${TD} text-center text-ink-muted py-10`}>{t('audit.empty')}</td></tr>
               )}
             </tbody>
           </table>

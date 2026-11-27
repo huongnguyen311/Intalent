@@ -65,7 +65,7 @@ export function PublishStep({ form }: { form: JobForm }) {
               <option value="text">{t('jobs.drawer.qtype.text')}</option>
               <option value="yesno">{t('jobs.drawer.qtype.yesno')}</option>
             </select>
-            <label className="flex items-center gap-1 text-xs text-[#896a61] whitespace-nowrap">
+            <label className="flex items-center gap-1 text-xs text-ink-muted whitespace-nowrap">
               <input type="checkbox" checked={q.required} onChange={(e) => editQuestion(q.id, { required: e.target.checked })} className={CHECKBOX} />
               {t('jobs.drawer.required')}
             </label>
@@ -73,7 +73,7 @@ export function PublishStep({ form }: { form: JobForm }) {
               type="button"
               aria-label={t('jobs.drawer.removeQuestion')}
               onClick={() => set.questions(questions.filter((x) => x.id !== q.id))}
-              className="text-[#896a61] hover:text-red-500"
+              className="text-ink-muted hover:text-red-500"
             >
               <span className="material-symbols-outlined text-[18px]">delete</span>
             </button>

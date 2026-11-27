@@ -29,7 +29,7 @@ export function AppLayout({ title, subtitle, actions, back, bare, footer, childr
   const canPool = useCan()('pool');
   const showAi = canPool && (!fixture || pathname.startsWith('/candidates'));
   return (
-    <div className="flex h-screen overflow-hidden bg-background-light dark:bg-background-dark">
+    <div className="flex h-screen overflow-hidden bg-background-light dark:bg-dark-canvas">
       <Sidebar />
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
         {!bare && <Header title={title} subtitle={subtitle} actions={actions} back={back} />}

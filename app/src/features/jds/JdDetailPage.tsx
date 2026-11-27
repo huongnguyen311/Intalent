@@ -3,7 +3,7 @@ import { AppLayout } from '../../components/AppLayout';
 import { BackButton } from '../../components/BackButton';
 import { NotFoundState } from '../../components/NotFoundState';
 import { toast } from '../../components/Toast';
-import { jobsInScope } from '../../domain/permissions';
+import { canEditJd, jobsInScope } from '../../domain/permissions';
 import { userName } from '../../domain/users';
 import { useMe } from '../../store/session';
 import { isFixtureMode } from '../../data/fixtureMockup';
@@ -16,26 +16,26 @@ import { fullDate } from './format';
 
 // Compact buttons for the pinned action bar.
 const BTN = 'h-8 px-3.5 rounded-full text-[13px] font-semibold inline-flex items-center gap-1.5 whitespace-nowrap transition-colors';
-const BTN_GHOST = `${BTN} border border-[#e6dddb] dark:border-[#3a3433] text-[#181211] dark:text-white hover:bg-gray-50 dark:hover:bg-[#332d2c]`;
-const BTN_PRIMARY = `${BTN} font-bold text-white bg-brand-vivid hover:bg-[#e65e00] shadow-sm`;
+const BTN_GHOST = `${BTN} border border-line dark:border-dark-line text-ink dark:text-white hover:bg-gray-50 dark:hover:bg-dark-raised`;
+const BTN_PRIMARY = `${BTN} font-bold text-white bg-brand-vivid hover:bg-brand-strong shadow-sm`;
 const ICON = 'material-symbols-outlined text-[16px]';
-const LABEL = 'text-2xs text-[#896a61] uppercase font-bold mb-0.5';
-const VALUE = 'text-sm font-semibold text-[#181211] dark:text-white';
+const LABEL = 'text-2xs text-ink-muted uppercase font-bold mb-0.5';
+const VALUE = 'text-sm font-semibold text-ink dark:text-white';
 
-const CARD = 'bg-white dark:bg-[#1e1e1e] rounded-2xl shadow-card border border-hairline dark:border-[#2a2423]';
-const SUB ='text-xs font-medium text-[#896a61]';
-const CHIP = 'px-2.5 py-1 rounded bg-gray-100 dark:bg-white/10 text-[11px] font-bold text-slate-600 dark:text-gray-300';
+const CARD = 'bg-white dark:bg-dark-surface rounded-2xl shadow-card border border-hairline dark:border-dark-raised';
+const SUB ='text-xs font-medium text-ink-muted';
+const CHIP = 'px-2.5 py-1 rounded bg-gray-100 dark:bg-white/10 text-2xs font-bold text-slate-600 dark:text-gray-300';
 
 /** A titled block in the overview card: a paragraph or a bullet list. */
 function Block({ title, text, items }: { title: string; text?: string; items?: string[] }) {
   if (!text?.trim() && !items?.length) return null;
   return (
     <section>
-      <h3 className="text-xs font-bold text-[#896a61] uppercase tracking-wider mb-2">{title}</h3>
+      <h3 className="text-xs font-bold text-ink-muted uppercase tracking-wider mb-2">{title}</h3>
       {items?.length ? (
-        <ul className="text-sm text-[#332d2c] dark:text-gray-300 list-disc pl-5 space-y-1">{items.map((x) => <li key={x}>{x}</li>)}</ul>
+        <ul className="text-sm text-gray-700 dark:text-gray-300 list-disc pl-5 space-y-1">{items.map((x) => <li key={x}>{x}</li>)}</ul>
       ) : (
-        <p className="text-sm text-[#332d2c] dark:text-gray-300 leading-relaxed whitespace-pre-wrap">{text}</p>
+        <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap">{text}</p>
       )}
     </section>
   );
@@ -86,13 +86,22 @@ export function JdDetailPage() {
 
   // Actions sit in a bar pinned under the content, so they stay in reach while reading a long JD.
   const footer = (
-    <div className="bg-white dark:bg-[#1e1e1e] border-t border-[#e6dddb] dark:border-[#2a2423] shadow-[0_-2px_8px_rgba(0,0,0,0.04)]">
+    <div className="bg-white dark:bg-dark-surface border-t border-line dark:border-dark-raised shadow-[0_-2px_8px_rgba(0,0,0,0.04)]">
       {/* Right padding keeps the buttons clear of the floating AI button. */}
       <div className="max-w-[1400px] mx-auto pl-8 pr-20 py-2 flex items-center gap-2 flex-wrap">
+        {/* Read-only for this user: say so (and why) where the Edit button would be. */}
+        {!canEditJd(user, jd, allJobs) && (
+          <span title={t('jds.page.readOnly')} className="inline-flex items-center gap-1.5 text-xs font-medium text-ink-muted">
+            <span aria-hidden="true" className="material-symbols-outlined text-[16px]">lock</span>{t('jd.readOnlyBadge')}
+          </span>
+        )}
         <div className="ml-auto flex items-center gap-2 flex-wrap">
-          <button onClick={() => navigate(`/jds/${jd.id}/edit`)} className={BTN_GHOST}>
-            <span aria-hidden="true" className={ICON}>edit</span>{t('jds.menu.edit')}
-          </button>
+          {/* Other people's JDs are read-only (they may run jobs on them); creating a job from one is always fine. */}
+          {canEditJd(user, jd, allJobs) && (
+            <button onClick={() => navigate(`/jds/${jd.id}/edit`)} className={BTN_GHOST}>
+              <span aria-hidden="true" className={ICON}>edit</span>{t('jds.menu.edit')}
+            </button>
+          )}
           {showNew && (
             <button onClick={() => navigate(`/jobs/new?fromJd=${jd.id}`, { state: { from: `/jds/${jd.id}` } })} className={BTN_GHOST}>
               <span aria-hidden="true" className={ICON}>work</span>{t('jd.createJob')}
@@ -107,8 +116,8 @@ export function JdDetailPage() {
   );
 
   return (
-    <AppLayout title="" footer={footer}>
-      <div className="min-h-full bg-[#fbf9f8] dark:bg-background-dark">
+    <AppLayout title={isFixtureMode() ? '' : t('nav.jdManagement')} footer={footer}>
+      <div className="min-h-full bg-gray-50 dark:bg-dark-canvas">
         <div className="px-8 pb-8 pt-8">
           <div className="max-w-[1400px] mx-auto">
             <div className="flex flex-wrap items-end justify-between gap-4 mb-8">
@@ -116,11 +125,11 @@ export function JdDetailPage() {
                 <BackButton label={t('jd.backToList')} onClick={() => navigate({ pathname: '/jds', search })} />
                 <div>
                   <div className="flex items-baseline gap-3 mb-1">
-                    <h1 className="ty-title text-[22px] font-bold tracking-tight text-[#181211] dark:text-white">{jd.title}</h1>
+                    <h1 className="ty-title text-[22px] font-bold tracking-tight text-ink dark:text-white">{jd.title}</h1>
                   </div>
-                  <p className="text-[#896a61] text-sm">
+                  <p className="text-ink-muted text-sm">
                     {jd.client && (
-                      <span className="font-semibold text-[#5b4a45] dark:text-gray-300">
+                      <span className="font-semibold text-gray-600 dark:text-gray-300">
                         <span aria-hidden="true" className="material-symbols-outlined text-[16px] align-[-3px] mr-1">corporate_fare</span>{jd.client} •{' '}
                       </span>
                     )}
@@ -137,8 +146,8 @@ export function JdDetailPage() {
               {/* Side column: the at-a-glance facts, then where the JD is used. */}
               <div className="lg:col-span-4 flex flex-col gap-6">
                 <div className={`${CARD} p-6 h-fit`}>
-                  <h2 className="ty-section text-lg font-bold text-[#181211] dark:text-white mb-6 flex items-center gap-2">
-                    <span className="material-symbols-outlined text-brand-vivid text-[22px]">fact_check</span>{t('jd.breakdown')}
+                  <h2 className="ty-section text-lg font-bold text-ink dark:text-white mb-6 flex items-center gap-2">
+                    <span className="material-symbols-outlined text-brand-vivid text-[24px]">fact_check</span>{t('jd.breakdown')}
                   </h2>
                   <div className="space-y-6">
                     <div className="grid grid-cols-2 gap-y-4 gap-x-2">
@@ -151,40 +160,40 @@ export function JdDetailPage() {
                       <Fact label={t('jd.domain')} value={jd.domains.join(', ') || '—'} />
                       <Fact label={t('jd.availability')} value={fullDate(jd.availableFrom ?? jd.createdAt)} />
                     </div>
-                    <div className="pt-6 border-t border-hairline dark:border-[#2a2423] flex flex-col gap-1.5">
-                      <h3 className="text-xs font-bold text-[#896a61] uppercase tracking-wider mb-1.5">{t('jd.techStack')}</h3>
+                    <div className="pt-6 border-t border-hairline dark:border-dark-raised flex flex-col gap-1.5">
+                      <h3 className="text-xs font-bold text-ink-muted uppercase tracking-wider mb-1.5">{t('jd.techStack')}</h3>
                       <div className="flex flex-wrap gap-2">
                         {jd.skills.map((s) => (
-                          <span key={s} className={`px-2.5 py-1 rounded bg-orange-50 text-brand-vivid dark:bg-orange-900/20 text-[11px] font-bold border inline-flex items-center gap-1 ${critical.has(s) ? 'border-orange-400' : 'border-orange-100 dark:border-orange-800'}`}>
-                            {critical.has(s) && <span className="material-symbols-outlined text-[13px]" style={{ fontVariationSettings: "'FILL' 1" }} aria-label={t('jd.critical')}>star</span>}
+                          <span key={s} className={`px-2.5 py-1 rounded bg-orange-50 text-brand-vivid dark:bg-orange-900/20 text-2xs font-bold border inline-flex items-center gap-1 ${critical.has(s) ? 'border-orange-400' : 'border-orange-100 dark:border-orange-800'}`}>
+                            {critical.has(s) && <span className="material-symbols-outlined text-[14px]" style={{ fontVariationSettings: "'FILL' 1" }} aria-label={t('jd.critical')}>star</span>}
                             {s}
                           </span>
                         ))}
                       </div>
-                      {critical.size > 0 && <span className="text-2xs text-[#896a61]">{t('jd.criticalLegend')}</span>}
+                      {critical.size > 0 && <span className="text-2xs text-ink-muted">{t('jd.criticalLegend')}</span>}
                     </div>
                   </div>
                 </div>
                 {showNew && (
                   <div className={`${CARD} p-6 h-fit`}>
-                    <h2 className="ty-section text-lg font-bold text-[#181211] dark:text-white mb-4 flex items-center gap-2">
-                      <span className="material-symbols-outlined text-brand-vivid text-[22px]">work</span>{t('jd.jobs')}
+                    <h2 className="ty-section text-lg font-bold text-ink dark:text-white mb-4 flex items-center gap-2">
+                      <span className="material-symbols-outlined text-brand-vivid text-[24px]">work</span>{t('jd.jobs')}
                     </h2>
                     {jobs.length === 0 ? (
-                      <p className="text-sm text-[#896a61]">{t('jd.jobsEmpty')}</p>
+                      <p className="text-sm text-ink-muted">{t('jd.jobsEmpty')}</p>
                     ) : (
-                      <ul className="divide-y divide-hairline dark:divide-[#2a2423]">
+                      <ul className="divide-y divide-hairline dark:divide-dark-raised">
                         {jobs.map((j) => (
                           <li key={j.id}>
                             {mine.has(j.id) ? (
                               <Link to={`/jobs/${j.id}`} className="flex items-center justify-between gap-3 py-2.5 group">
-                                <span className="text-sm font-semibold text-[#181211] dark:text-white group-hover:text-primary truncate">{j.title}</span>
+                                <span className="text-sm font-semibold text-ink dark:text-white group-hover:text-primary truncate">{j.title}</span>
                                 <JobStatusBadge status={j.status} />
                               </Link>
                             ) : (
                               // Someone else's job: listed so the JD's use is visible, but not a link into "no access".
                               <div className="flex items-center justify-between gap-3 py-2.5" title={t('jd.jobNotYours', { name: userName(users, j.hiringManager) })}>
-                                <span className="text-sm text-[#896a61] truncate flex items-center gap-1">
+                                <span className="text-sm text-ink-muted truncate flex items-center gap-1">
                                   <span aria-hidden="true" className="material-symbols-outlined text-[14px]">lock</span>{j.title}
                                 </span>
                                 <JobStatusBadge status={j.status} />
@@ -202,8 +211,8 @@ export function JdDetailPage() {
               <div className="lg:col-span-8 flex flex-col gap-6">
                 {hasOverview && (
                   <div className={`${CARD} p-8`}>
-                    <h2 className="ty-section text-lg font-bold text-[#181211] dark:text-white flex items-center gap-2 mb-6">
-                      <span className="material-symbols-outlined text-brand-vivid text-[22px]">article</span>{t('jd.overview')}
+                    <h2 className="ty-section text-lg font-bold text-ink dark:text-white flex items-center gap-2 mb-6">
+                      <span className="material-symbols-outlined text-brand-vivid text-[24px]">article</span>{t('jd.overview')}
                     </h2>
                     <div className="space-y-6">
                       <Block title={t('jds.page.summary')} text={jd.summary} />
@@ -213,15 +222,15 @@ export function JdDetailPage() {
                   </div>
                 )}
                 <div className={`${CARD} p-8`}>
-                  <h2 className="ty-section text-lg font-bold text-[#181211] dark:text-white flex items-center gap-2 mb-6">
-                    <span className="material-symbols-outlined text-brand-vivid text-[22px]">psychology</span>{t('jd.requirements')}
+                  <h2 className="ty-section text-lg font-bold text-ink dark:text-white flex items-center gap-2 mb-6">
+                    <span className="material-symbols-outlined text-brand-vivid text-[24px]">psychology</span>{t('jd.requirements')}
                   </h2>
                   <div className="space-y-6">
                     <Block title={t('jd.mustHave')} items={jdMustHave(jd)} />
                     <Block title={t('jds.page.nice')} items={jd.niceToHave} />
                     {hasQualifications && (
                       <section className="space-y-4">
-                        <h3 className="text-xs font-bold text-[#896a61] uppercase tracking-wider">{t('jds.page.qualifications')}</h3>
+                        <h3 className="text-xs font-bold text-ink-muted uppercase tracking-wider">{t('jds.page.qualifications')}</h3>
                         <div className="grid grid-cols-2 gap-y-4 gap-x-4">
                           {jd.education && <Fact label={t('jds.page.education')} value={t(`education.${jd.education}`)} />}
                           {jd.major && <Fact label={t('jds.page.major')} value={jd.major} />}
@@ -241,7 +250,7 @@ export function JdDetailPage() {
                         {jd.otherRequirements && (
                           <div className="flex flex-col gap-1.5">
                             <span className={SUB}>{t('jds.page.other')}</span>
-                            <p className="text-sm text-[#181211] dark:text-gray-200 whitespace-pre-wrap">{jd.otherRequirements}</p>
+                            <p className="text-sm text-ink dark:text-gray-200 whitespace-pre-wrap">{jd.otherRequirements}</p>
                           </div>
                         )}
                       </section>
@@ -252,14 +261,14 @@ export function JdDetailPage() {
                 {!hasOverview && jd.body.trim() && (
                   <div className={`${CARD} p-8`}>
                     <div className="flex items-center justify-between gap-3 mb-6">
-                      <h2 className="ty-section text-lg font-bold text-[#181211] dark:text-white flex items-center gap-2">
-                        <span className="material-symbols-outlined text-brand-vivid text-[22px]">subject</span>{t('jd.original')}
+                      <h2 className="ty-section text-lg font-bold text-ink dark:text-white flex items-center gap-2">
+                        <span className="material-symbols-outlined text-brand-vivid text-[24px]">subject</span>{t('jd.original')}
                       </h2>
-                      <button onClick={copy} className="text-[#896a61] hover:text-[#181211] dark:hover:text-white transition-colors" title={t('jd.copy')}>
+                      <button onClick={copy} className="text-ink-muted hover:text-ink dark:hover:text-white transition-colors" title={t('jd.copy')}>
                         <span className="material-symbols-outlined text-[20px]">content_copy</span>
                       </button>
                     </div>
-                    <div className="prose prose-sm max-w-none text-[#332d2c] dark:text-gray-300 leading-relaxed">
+                    <div className="prose prose-sm max-w-none text-gray-700 dark:text-gray-300 leading-relaxed">
                       <p className="whitespace-pre-wrap">{jd.body}</p>
                     </div>
                   </div>

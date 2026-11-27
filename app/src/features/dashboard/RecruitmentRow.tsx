@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { StatCard, type StatTone } from '../../components/StatCard';
 import { AI_MATCH_THRESHOLD, type DashboardMetrics } from '../../domain/metrics';
 import type { User } from '../../domain/types';
 import { useLang, useT } from '../../i18n/i18n';
@@ -6,16 +6,16 @@ import { useMe } from '../../store/session';
 import { useApprovals, useTodo } from '../todo/TodoList';
 import { Funnel } from './Funnel';
 import { SourcesDonut } from './SourcesDonut';
-import { CAPTION, OpenJobs, PANEL, Panel, TodayPanel, ActivityPanel, TRACK } from './DashboardWidgets';
+import { CAPTION, OpenJobs, Panel, TodayPanel, ActivityPanel, TRACK } from './DashboardWidgets';
 
 /*
  * Visual system for the app Dashboard (recruitment only):
  * - one surface style: white, 16px radius, hairline border, no drop shadow; inner marks use 4px radius;
  * - sentence-case titles and muted captions, no uppercase eyebrow labels;
  * - data colour is the brand primary only (each chart is a single series); red is kept for the funnel's weakest step;
- * - the KPIs read as one band split by hairlines rather than five separate cards.
+ * - the KPIs use the app-wide StatCard (compact card, soft shadow, tinted icon), like Users and the pool overview.
  */
-const SELECT = 'h-9 rounded-lg border border-hairline bg-white dark:bg-[#1e1e1e] dark:border-white/10 pl-3 pr-9 text-xs font-semibold text-slate-700 dark:text-gray-200';
+const SELECT = 'h-9 rounded-lg border border-hairline bg-white dark:bg-dark-surface dark:border-white/10 pl-3 pr-9 text-xs font-semibold text-slate-700 dark:text-gray-200';
 
 const pct = (n: number, of: number) => (of ? Math.round((100 * n) / of) : undefined);
 
@@ -64,24 +64,26 @@ export function RecruitmentRow({ metrics, recruiters, recruiterFilter, onRecruit
   const maxReason = Math.max(1, ...metrics.topRejectReasons.map((r) => r.count));
   const offerTotal = metrics.offers.accepted + metrics.offers.declined;
 
-  const kpis: { key: string; label: string; value: string | number; unit?: string; caption: React.ReactNode; icon: string; testId?: string; href?: string }[] = [
+  const kpis: { key: string; label: string; value: string | number; unit?: string; caption: React.ReactNode; icon: string; tone: StatTone; testId?: string; href?: string }[] = [
     {
       key: 'open',
       label: t('dashboard.openJobs'),
       value: metrics.openJobs,
       icon: 'work',
+      tone: 'primary',
       href: '/jobs?status=open',
       caption: <span className="font-semibold text-primary group-hover:underline">{t('dashboard.viewJobs')}</span>,
     },
-    { key: 'new', label: t('dashboard.newApplications'), value: metrics.newApplications, icon: 'person_add', caption: t('dashboard.cap.period') },
-    { key: 'progress', label: t('dashboard.inProgress'), value: metrics.inProgress, icon: 'pending_actions', caption: t('dashboard.cap.inProgress'), testId: 'kpi-in-progress' },
-    { key: 'hires', label: t('dashboard.hires'), value: metrics.hires, icon: 'how_to_reg', caption: t('dashboard.cap.period') },
+    { key: 'new', label: t('dashboard.newApplications'), value: metrics.newApplications, icon: 'person_add', tone: 'blue', caption: t('dashboard.cap.period') },
+    { key: 'progress', label: t('dashboard.inProgress'), value: metrics.inProgress, icon: 'pending_actions', tone: 'violet', caption: t('dashboard.cap.inProgress'), testId: 'kpi-in-progress' },
+    { key: 'hires', label: t('dashboard.hires'), value: metrics.hires, icon: 'how_to_reg', tone: 'emerald', caption: t('dashboard.cap.period') },
     {
       // Applications from this period that ended in Rejected, with their share of the period's intake.
       key: 'rejected',
       label: t('dashboard.rejected'),
       value: metrics.closedOut.rejected,
       icon: 'person_remove',
+      tone: 'red',
       caption: metrics.newApplications ? t('dashboard.cap.rejected', { pct: pct(metrics.closedOut.rejected, metrics.newApplications) ?? 0 }) : t('dashboard.cap.period'),
       testId: 'kpi-rejected',
     },
@@ -115,35 +117,23 @@ export function RecruitmentRow({ metrics, recruiters, recruiterFilter, onRecruit
         </div>
       </div>
 
-      {/* One band, hairline-separated: the gap-px grid on a hairline background draws the dividers even when it wraps. */}
-      <div className={`${PANEL} overflow-hidden`}>
-        <dl className="grid grid-cols-2 lg:grid-cols-5 gap-px bg-hairline dark:bg-white/10">
-          {kpis.map((k) => {
-            const body = (
-              <>
-                <dt className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 dark:text-gray-400">
-                  <span aria-hidden="true" className="material-symbols-outlined text-[16px] text-slate-400 dark:text-gray-500">{k.icon}</span>
-                  {k.label}
-                </dt>
-                <dd className="mt-3 flex items-baseline gap-1.5">
-                  <span className="text-[30px] sm:text-[34px] leading-none font-bold tracking-tight tabular-nums text-slate-900 dark:text-white">{k.value}</span>
-                  {k.unit && <span className="text-sm text-muted">{k.unit}</span>}
-                </dd>
-                <dd className={`mt-2 ${CAPTION}`}>{k.caption}</dd>
-              </>
-            );
-            // Two per row on small screens; the fifth (Rejected) takes the full last row there.
-            const cell = `block bg-white dark:bg-[#1e1e1e] px-4 py-4 sm:px-6 sm:py-5 ${k.key === 'rejected' ? 'col-span-2 lg:col-span-1' : ''}`;
-            // The whole Open-jobs cell is the link: a bigger target than the caption alone.
-            return k.href ? (
-              <Link key={k.key} to={k.href} className={`${cell} group hover:bg-slate-50 dark:hover:bg-white/5 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary`}>
-                {body}
-              </Link>
-            ) : (
-              <div key={k.key} data-testid={k.testId} className={cell}>{body}</div>
-            );
-          })}
-        </dl>
+      {/* The shared stat cards; two per row on small screens, the fifth (Rejected) takes the full last row there. */}
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+        {kpis.map((k) => (
+          <StatCard
+            key={k.key}
+            icon={k.icon}
+            tone={k.tone}
+            accent="top"
+            label={k.label}
+            value={k.unit ? <>{k.value} <span className="text-sm font-normal text-muted">{k.unit}</span></> : k.value}
+            hint={k.caption}
+            // The whole Open-jobs card is the link: a bigger target than the caption alone.
+            href={k.href}
+            testId={k.testId}
+            className={k.key === 'rejected' ? 'col-span-2 lg:col-span-1' : ''}
+          />
+        ))}
       </div>
 
       <TodayPanel week={metrics.week} />

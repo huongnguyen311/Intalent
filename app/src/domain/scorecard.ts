@@ -52,15 +52,40 @@ export function scorecardTemplate(job: Job | undefined, jd: Pick<Jd, 'skills'> |
 /** Core competencies must be scored; a skill the interviewer did not probe can stay unscored. */
 export const isRequired = (c: ScoreCriterionDef) => c.group === 'core';
 
+/** Every competency with built-in wording, offered when the interviewer adds one to a card. */
+export const COMPETENCY_KEYS = ['problem', 'design', 'communication', 'culture', 'strategy', 'analytics', 'execution', 'ownership', 'leadership', 'motivation'];
+
+/**
+ * The interviewer's own addition, placed at the end of its group. `knownKey` names a built-in competency;
+ * otherwise the text becomes the label. Blank text or a criterion already on the card changes nothing.
+ */
+export function addCriterion(list: ScoreCriterionDef[], group: ScoreCriterionDef['group'], text: string, knownKey?: string): ScoreCriterionDef[] {
+  const label = text.trim();
+  if (!label && !knownKey) return list;
+  const def: ScoreCriterionDef = knownKey ? { key: knownKey, group } : { key: `${group}:${label}`, group, label };
+  const same = (c: ScoreCriterionDef) => c.key.toLowerCase() === def.key.toLowerCase() || (!knownKey && c.label?.toLowerCase() === label.toLowerCase());
+  if (list.some(same)) return list;
+  let at = list.length;
+  for (let i = list.length - 1; i >= 0; i--) if (list[i].group === group) { at = i + 1; break; }
+  return [...list.slice(0, at), def, ...list.slice(at)];
+}
+
+/** Drops a criterion, except the last core competency: a card with none could not be compared with the others. */
+export function removeCriterion(list: ScoreCriterionDef[], key: string): ScoreCriterionDef[] {
+  const target = list.find((c) => c.key === key);
+  if (!target || (isRequired(target) && list.filter(isRequired).length === 1)) return list;
+  return list.filter((c) => c.key !== key);
+}
+
 /** Criteria a card was scored on: its own copy, or the four fixed ones of cards saved before templates. */
 export function criteriaOf(card: Pick<Scorecard, 'criteria'>): ScoreCriterionDef[] {
   return card.criteria ?? SCORE_CRITERIA.map((key) => ({ key, group: 'core' as const }));
 }
 
-/** Every required criterion scored 1–5, every optional one either unscored or 1–5. */
+/** At least one core competency, every required criterion scored 1–5, every optional one either unscored or 1–5. */
 export function validScores(scores: Record<string, number>, criteria: ScoreCriterionDef[]): boolean {
   const ok = (n: number) => Number.isInteger(n) && n >= 1 && n <= 5;
-  return criteria.every((c) => (isRequired(c) ? ok(scores[c.key]) : !scores[c.key] || ok(scores[c.key])));
+  return criteria.some(isRequired) && criteria.every((c) => (isRequired(c) ? ok(scores[c.key]) : !scores[c.key] || ok(scores[c.key])));
 }
 
 /** Average over the criteria actually scored, one decimal. */

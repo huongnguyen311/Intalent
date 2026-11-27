@@ -7,7 +7,7 @@ function union(a: string[], b: string[] = []): string[] {
   return [...new Set([...a, ...b])];
 }
 
-export function candidateActions(set: Set, get: Get, env: Env): Pick<DemoActions, 'upsertCandidate' | 'updateCandidate' | 'anonymizeCandidate'> {
+export function candidateActions(set: Set, get: Get, env: Env): Pick<DemoActions, 'upsertCandidate' | 'updateCandidate' | 'anonymizeCandidate' | 'revealContact' | 'logContactExport'> {
   return {
     updateCandidate(id, patch, by) {
       const existing = get().candidates.find((c) => c.id === id);
@@ -24,6 +24,20 @@ export function candidateActions(set: Set, get: Get, env: Env): Pick<DemoActions
       if (conflict) return { ok: false, reason: 'duplicate', conflictId: conflict.id };
       set((s) => ({ candidates: s.candidates.map((c) => (c.id === id ? updated : c)) }));
       return { ok: true, candidate: updated };
+    },
+
+    revealContact(id, by) {
+      const c = get().candidates.find((x) => x.id === id);
+      if (!c) return false;
+      // The audit entry is also what keeps the contact visible for this user afterwards (see contactAccess).
+      const activity: Activity = { type: 'pii_revealed', candidateId: id, by, at: env.now(), detail: 'Viewed email and phone' };
+      set((s) => ({ activities: [...s.activities, activity] }));
+      return true;
+    },
+
+    logContactExport(count, by) {
+      const activity: Activity = { type: 'pii_exported', by, at: env.now(), detail: `Exported ${count} candidates with email and phone (CSV)` };
+      set((s) => ({ activities: [...s.activities, activity] }));
     },
 
     anonymizeCandidate(id, by) {

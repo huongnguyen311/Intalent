@@ -29,7 +29,7 @@ export function DeleteJdModal({ jd, onClose, onDeleted }: Props) {
       onClose={onClose}
       footer={
         <>
-          <button onClick={onClose} className="px-4 py-2 text-sm font-medium border border-[#e6dddb] dark:border-[#3a3433] text-[#181211] dark:text-white rounded-lg hover:border-primary/50 transition-colors">
+          <button onClick={onClose} className="px-4 py-2 text-sm font-medium border border-line dark:border-dark-line text-ink dark:text-white rounded-lg hover:border-primary/50 transition-colors">
             {t('common.cancel')}
           </button>
           <button onClick={confirm} disabled={used > 0} className="px-4 py-2 text-sm font-medium bg-red-600 hover:bg-red-700 text-white rounded-lg shadow-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-red-600">

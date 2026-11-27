@@ -1,0 +1,157 @@
+/*
+ * App tab system. Two kinds, both scoped to html:not([data-fixture]) so `?fixture=mockup` keeps the mockup's tabs.
+ *
+ *   .ui-tabs > .ui-tab          page sections (Job detail, System config, Taxonomy, CV by TA)
+ *                               46px tabs, 15 / 500 muted; active = brand text 600, 3px brand bar, soft brand glow,
+ *                               brand icon and count badge (.ui-tab-count)
+ *   .ui-seg > .ui-seg-item      segmented switch for views, periods, modes and languages
+ *                               grey track, 28px items, 13 / 500; active = white raised chip with brand text + icon
+ *
+ * Active state comes from aria-selected (tabs), aria-pressed (toggles) or aria-current (links),
+ * so the markup only needs the class hooks and the right ARIA.
+ */
+
+/* --- Page tabs -------------------------------------------------------------------------------------------- */
+html:not([data-fixture]) .ui-tabs {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  margin-bottom: 0;
+  border-bottom: 1px solid rgb(var(--c-line));
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+html:not([data-fixture]) .ui-tabs::-webkit-scrollbar { display: none; }
+html:not([data-fixture]) .ui-tabs + * { margin-top: 24px; }
+
+html:not([data-fixture]) .ui-tab {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  height: 46px;
+  margin-bottom: -1px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 10px 10px 0 0;
+  background: transparent;
+  font-size: 15px;
+  line-height: 20px;
+  font-weight: 500;
+  white-space: nowrap;
+  color: rgb(var(--c-ink-muted));
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+/* The brand bar: 3px, rounded, grows in from the centre when a tab becomes active. */
+html:not([data-fixture]) .ui-tab::after {
+  content: "";
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 0;
+  height: 3px;
+  border-radius: 3px 3px 0 0;
+  background: rgb(var(--c-primary));
+  transform: scaleX(0);
+  transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+html:not([data-fixture]) .ui-tab:hover {
+  color: rgb(var(--c-ink));
+  background: rgb(var(--c-gray-100) / 0.7);
+}
+html:not([data-fixture]) .ui-tab[aria-selected="true"] {
+  color: rgb(var(--c-primary-ink));
+  font-weight: 600;
+  background: linear-gradient(to top, rgb(var(--c-primary) / 0.1), rgb(var(--c-primary) / 0) 85%);
+}
+html:not([data-fixture]) .ui-tab[aria-selected="true"]::after { transform: scaleX(1); }
+html:not([data-fixture]) .ui-tab:focus-visible { outline-offset: -2px; }
+
+html:not([data-fixture]) .ui-tab :is(svg, .material-symbols-outlined) {
+  width: 20px; height: 20px; font-size: 20px; opacity: 0.75;
+  transition: opacity 0.15s ease, color 0.15s ease;
+}
+html:not([data-fixture]) .ui-tab[aria-selected="true"] :is(svg, .material-symbols-outlined) { color: rgb(var(--c-primary)); opacity: 1; }
+
+/* Count badge next to a label: grey pill, brand pill on the active tab. */
+html:not([data-fixture]) .ui-tab-count {
+  min-width: 22px;
+  height: 20px;
+  padding: 0 7px;
+  border-radius: 9999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: rgb(var(--c-gray-600));
+  background: rgb(var(--c-gray-100));
+}
+html:not([data-fixture]) .ui-tab[aria-selected="true"] .ui-tab-count { color: #fff; background: rgb(var(--c-primary)); }
+
+html.dark:not([data-fixture]) .ui-tabs { border-bottom-color: rgb(var(--c-dark-line)); }
+html.dark:not([data-fixture]) .ui-tab { color: rgb(163 144 138); }
+html.dark:not([data-fixture]) .ui-tab:hover { color: #fff; background: rgb(255 255 255 / 0.05); }
+html.dark:not([data-fixture]) .ui-tab[aria-selected="true"] {
+  color: rgb(var(--c-brand-light));
+  background: linear-gradient(to top, rgb(var(--c-primary) / 0.22), rgb(var(--c-primary) / 0) 85%);
+}
+html.dark:not([data-fixture]) .ui-tab[aria-selected="true"] :is(svg, .material-symbols-outlined) { color: rgb(var(--c-brand-light)); }
+html.dark:not([data-fixture]) .ui-tab-count { color: rgb(210 198 195); background: rgb(255 255 255 / 0.08); }
+
+/* --- Segmented switch ------------------------------------------------------------------------------------- */
+html:not([data-fixture]) .ui-seg {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  height: auto;
+  padding: 2px;
+  border: 0;
+  border-radius: 8px;
+  background: rgb(var(--c-gray-100));
+  box-shadow: none;
+}
+html:not([data-fixture]) .ui-seg-item {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 28px;
+  min-width: 28px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  box-shadow: none;
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 500;
+  white-space: nowrap;
+  color: rgb(var(--c-ink-muted));
+  transition: color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+}
+/* Icon-only items (size-*) stay square. */
+html:not([data-fixture]) .ui-seg-item[class*="size-"] { width: 28px; padding: 0; }
+html:not([data-fixture]) .ui-seg-item:hover { color: rgb(var(--c-ink)); }
+html:not([data-fixture]) .ui-seg-item:is([aria-selected="true"], [aria-pressed="true"], [aria-current="page"]) {
+  background: #fff;
+  color: rgb(var(--c-primary-ink));
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgb(24 18 17 / 0.1), 0 0 0 1px rgb(var(--c-primary) / 0.18);
+}
+html:not([data-fixture]) .ui-seg-item:is([aria-selected="true"], [aria-pressed="true"], [aria-current="page"]) .material-symbols-outlined {
+  color: rgb(var(--c-primary));
+}
+html:not([data-fixture]) .ui-seg-item .material-symbols-outlined { font-size: 16px; }
+html:not([data-fixture]) .ui-seg-item[class*="size-"] .material-symbols-outlined { font-size: 18px; }
+
+html.dark:not([data-fixture]) .ui-seg { background: rgb(255 255 255 / 0.06); }
+html.dark:not([data-fixture]) .ui-seg-item { color: rgb(163 144 138); }
+html.dark:not([data-fixture]) .ui-seg-item:hover { color: #fff; }
+html.dark:not([data-fixture]) .ui-seg-item:is([aria-selected="true"], [aria-pressed="true"], [aria-current="page"]) {
+  background: rgb(var(--c-dark-raised));
+  color: rgb(var(--c-brand-light));
+  box-shadow: 0 0 0 1px rgb(255 255 255 / 0.06);
+}

@@ -58,17 +58,17 @@ export function HandoffDialog({ open, app, candidate, job, onClose }: Props) {
       }
     >
       <div className="flex flex-col gap-4">
-        <p className="text-[#896a61]">{t('handoff.desc', { target: HANDOFF_TARGET })}</p>
+        <p className="text-ink-muted">{t('handoff.desc', { target: HANDOFF_TARGET })}</p>
         {groups.map(([title, rows]) => (
           <section key={title}>
-            <h4 className="text-xs font-bold text-[#896a61] uppercase tracking-wider mb-2">{title}</h4>
+            <h4 className="text-xs font-bold text-ink-muted uppercase tracking-wider mb-2">{title}</h4>
             {rows.length === 0 ? (
               <p className="rounded-lg bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 px-3 py-2">{t('handoff.noOffer')}</p>
             ) : (
-              <dl className="grid grid-cols-2 gap-x-6 gap-y-2 rounded-xl bg-[#f8f6f6] dark:bg-[#251f1e] px-4 py-3">
+              <dl className="grid grid-cols-2 gap-x-6 gap-y-2 rounded-xl bg-background-light dark:bg-dark-surface px-4 py-3">
                 {rows.map(([k, v]) => (
                   <div key={k}>
-                    <dt className="text-xs text-[#896a61]">{k}</dt>
+                    <dt className="text-xs text-ink-muted">{k}</dt>
                     <dd className="font-medium break-words">{v}</dd>
                   </div>
                 ))}
@@ -76,7 +76,7 @@ export function HandoffDialog({ open, app, candidate, job, onClose }: Props) {
             )}
           </section>
         ))}
-        <p className="text-xs text-[#896a61]">{t('handoff.lockNote')}</p>
+        <p className="text-xs text-ink-muted">{t('handoff.lockNote')}</p>
       </div>
     </Modal>
   );

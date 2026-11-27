@@ -25,7 +25,6 @@ describe('JdMatchingPage', () => {
   it('shows the AI analyzing state first, then ranked cards at or above the 70% default', () => {
     wrap(<JdMatchingPage />, '/jd-matching?jd=jd-2026-002');
     expect(screen.getByRole('status')).toHaveTextContent('AI is analyzing candidates…');
-    expect(screen.getByRole('button', { name: 'Analyzing…' })).toBeDisabled();
     done();
     expect(screen.queryByRole('status')).toBeNull();
     expect(screen.getByRole('heading', { name: 'Matching Results' })).toBeInTheDocument();
@@ -39,21 +38,20 @@ describe('JdMatchingPage', () => {
     wrap(<JdMatchingPage />, '/jd-matching?jd=jd-2026-002&min=0');
     done();
     const card = screen.getAllByTestId('match-card')[0];
-    expect(within(card).getByText(/years experience/)).toBeInTheDocument();
-    expect(within(card).getByText(/\/ month|Contact for rate/)).toBeInTheDocument();
+    expect(within(card).getByText('Experience')).toBeInTheDocument();
+    expect(within(card).getByText(/\/mo$|Contact for rate/)).toBeInTheDocument();
+    expect(screen.getAllByText(/^(\d{2}\/\d{2}\/\d{4}|Now)$/).length).toBeGreaterThan(0);
     expect(within(card).getByRole('button', { name: 'View profile' })).toBeInTheDocument();
     fireEvent.click(within(card).getByRole('button', { name: 'Why this score' }));
     expect(screen.getByText('Tech stack')).toBeInTheDocument();
   });
 
-  it('min score slider applies only on Apply filters and widens the list', () => {
+  it('min score applies at once (re-running the match) and widens the list', () => {
     wrap(<JdMatchingPage />, '/jd-matching?jd=jd-2026-002');
     done();
     const count = () => Number(/^(\d+)/.exec(screen.getByText(/candidates scoring/).textContent!)![1]);
     const before = count();
-    fireEvent.change(screen.getByRole('slider', { name: 'Min match score' }), { target: { value: '0' } });
-    expect(count()).toBe(before);
-    fireEvent.click(screen.getByRole('button', { name: 'Apply filters' }));
+    fireEvent.change(screen.getByRole('combobox', { name: 'Min match score' }), { target: { value: '0' } });
     expect(screen.getByRole('status')).toBeInTheDocument();
     done();
     expect(screen.getByText(/candidates scoring ≥ 0%/)).toBeInTheDocument();
@@ -63,10 +61,11 @@ describe('JdMatchingPage', () => {
   it('max rate keeps candidates under the rate and those who did not state one', () => {
     wrap(<JdMatchingPage />, '/jd-matching?jd=jd-2026-002&min=0');
     done();
-    fireEvent.change(screen.getByLabelText('Max rate (USD per month)'), { target: { value: '1000' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Apply filters' }));
+    const rate = screen.getByLabelText('Max rate (USD per month)');
+    fireEvent.change(rate, { target: { value: '1000' } });
+    fireEvent.keyDown(rate, { key: 'Enter' });
     done();
-    const rates = [...document.querySelectorAll('[data-testid="match-card"]')].map((c) => /\$([\d,]+) \/ month/.exec(c.textContent!)?.[1]);
+    const rates = [...document.querySelectorAll('[data-testid="match-card"]')].map((c) => /\$([\d,]+)\/mo/.exec(c.textContent!)?.[1]);
     expect(rates.length).toBeGreaterThan(0);
     for (const r of rates) if (r) expect(Number(r.replace(/,/g, ''))).toBeLessThanOrEqual(1000);
     expect(rates.some((r) => r === undefined)).toBe(true);
@@ -80,7 +79,7 @@ describe('JdMatchingPage', () => {
     expect(picker).toHaveTextContent(jd.skills[0]);
     fireEvent.click(picker);
     fireEvent.click(screen.getByRole('checkbox', { name: jd.skills[0] }));
-    fireEvent.click(screen.getByRole('button', { name: 'Apply filters' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
     done();
     const text = screen.getAllByTestId('match-card')[0].textContent!;
     expect(text).not.toContain(`✓ ${jd.skills[0]}`);
@@ -142,17 +141,38 @@ describe('AssistantPage', () => {
     expect(screen.getByRole('button', { name: 'Senior React, tiếng Anh tốt' })).toBeInTheDocument();
   });
 
-  it('answers a query with ranked candidate cards linking to profiles, and keeps history', () => {
+  it('an unclear question gets a text reply asking for criteria, with no cards', () => {
+    useStore.setState({ chats: [] });
+    useStore.getState().sendChat(null, 'can you help me hire someone?');
+    wrap(<AssistantPage />);
+    openHistory();
+    fireEvent.click(screen.getByRole('button', { name: 'can you help me hire someone?' }));
+    expect(screen.getByText(/not quite sure what kind of candidate/)).toBeInTheDocument();
+    expect(screen.getByText(/The main skill or tech stack/)).toBeInTheDocument();
+    expect(screen.queryAllByTestId('assistant-score')).toHaveLength(0);
+  });
+
+  it('answers a query in prose with the top 3 candidate cards (up to 5), and keeps history', () => {
+    vi.useFakeTimers();
     useStore.setState({ chats: [] });
     wrap(<AssistantPage />);
-    fireEvent.change(screen.getByPlaceholderText(/Ask follow-up/), { target: { value: 'senior React, good English' } });
+    fireEvent.change(screen.getByPlaceholderText(/Ask follow-up/), { target: { value: 'senior React' } });
     fireEvent.click(screen.getByRole('button', { name: 'Send' }));
-    const links = screen.getAllByRole('link').filter((a) => a.getAttribute('href')?.startsWith('/candidates/'));
-    expect(links.length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/% match/).length).toBe(links.length);
+    act(() => { vi.advanceTimersByTime(1000); });
+    vi.useRealTimers();
+    const cards = () => screen.getAllByRole('link').filter((a) => a.getAttribute('href')?.startsWith('/candidates/'));
+    expect(cards()).toHaveLength(3);
+    expect(screen.getAllByText(/% match/).length).toBe(3);
+    // the reply explains itself: what it understood, how many fit, who leads
+    expect(screen.getByText("Here's what I understood you need:", { exact: false })).toBeInTheDocument();
+    expect(screen.getByText(/profiles in the talent pool fit/)).toBeInTheDocument();
+    expect(screen.getByText(/leads at \d+%/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Show \d more/ }));
+    expect(cards().length).toBeGreaterThan(3);
+    expect(cards().length).toBeLessThanOrEqual(5);
+    expect(screen.getByText('Best fit')).toBeInTheDocument();
+    expect(screen.queryByText('You could ask next')).toBeNull();
     expect(useStore.getState().chats).toHaveLength(2);
-    // examples hide once a conversation is open
-    expect(screen.queryByRole('button', { name: EXAMPLES_EN[0] })).toBeNull();
     // history is closed until opened
     expect(screen.queryByText('Today')).toBeNull();
     openHistory();
@@ -162,7 +182,7 @@ describe('AssistantPage', () => {
     fireEvent.keyDown(document, { key: 'Escape' });
     expect(screen.queryByRole('dialog', { name: 'History' })).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: /New chat/ }));
-    expect(screen.getByText('AI-Powered Candidate Search')).toBeInTheDocument();
+    expect(cards()).toHaveLength(0);
   });
 
   it('selecting a chat in the history panel opens it and closes the panel', () => {

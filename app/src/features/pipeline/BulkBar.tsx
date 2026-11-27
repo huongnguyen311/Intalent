@@ -20,7 +20,7 @@ export function BulkBar({ count, stages, onMove, onClear }: Props) {
     <div
       role="region"
       aria-label={t('pipeline.bulk.region')}
-      className="sticky top-0 z-10 mb-3 flex items-center gap-2 flex-wrap rounded-2xl border border-primary/30 bg-orange-50 dark:bg-[#2a2423] px-3 py-2 text-sm"
+      className="sticky top-0 z-10 mb-3 flex items-center gap-2 flex-wrap rounded-2xl border border-primary/30 bg-orange-50 dark:bg-dark-raised px-3 py-2 text-sm"
     >
       <span className="font-bold text-slate-800 dark:text-white">{t('pipeline.bulk.selected', { n: count })}</span>
       <Popover
@@ -40,7 +40,7 @@ export function BulkBar({ count, stages, onMove, onClear }: Props) {
         <span aria-hidden="true" className="material-symbols-outlined text-[16px]">block</span>
         {t('pipeline.bulk.reject')}
       </button>
-      <button onClick={onClear} className="ml-auto h-8 px-3 rounded-full text-xs font-bold text-[#896a61] hover:text-primary">
+      <button onClick={onClear} className="ml-auto h-8 px-3 rounded-full text-xs font-bold text-ink-muted hover:text-primary">
         {t('pipeline.bulk.clear')}
       </button>
     </div>

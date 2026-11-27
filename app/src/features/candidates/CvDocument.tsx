@@ -6,18 +6,18 @@ import { useT } from '../../i18n/i18n';
 /** A4 at 96 dpi: the page is laid out at this size, then scaled to the pane like a PDF viewer's "fit width". */
 export const PAGE_W = 794;
 export const PAGE_H = 1123;
-const PAD_X = 64;
-const PAD_Y = 60;
+const PAD_X = 44;
+const PAD_Y = 48;
 const CONTENT_H = PAGE_H - PAD_Y * 2;
 /** Grey margin around and between pages, in pane pixels at 100%. */
 const GUTTER = 8;
 
 const PAGE_STYLE = {
   width: PAGE_W, height: PAGE_H, boxSizing: 'border-box', padding: `${PAD_Y}px ${PAD_X}px`, background: '#fff',
-  boxShadow: '0 2px 10px rgba(0,0,0,.4)', fontFamily: 'Arial,Helvetica,sans-serif', fontSize: 12.5, lineHeight: 1.45,
+  border: '1px solid #e5e7eb', boxShadow: '0 1px 3px rgba(16,24,40,.06)', fontFamily: 'Arial,Helvetica,sans-serif', fontSize: 15, lineHeight: 1.45,
   color: '#111', overflow: 'hidden', position: 'relative',
 } as const;
-const SECTION_HEAD = { color: '#1f4e9c', fontWeight: 700, fontSize: 11.5, textTransform: 'uppercase', letterSpacing: 0.2, margin: 0 } as const;
+const SECTION_HEAD = { color: '#1f4e9c', fontWeight: 700, fontSize: 13.5, textTransform: 'uppercase', letterSpacing: 0.2, margin: 0 } as const;
 const P = { margin: 0 } as const;
 const UL = { margin: 0, paddingLeft: 22, listStyle: 'disc' } as const;
 const UL_SUB = { margin: '2px 0 0', paddingLeft: 26, listStyle: 'circle' } as const;
@@ -52,7 +52,7 @@ function useBlocks(c: Candidate, maskContact: boolean): Block[] {
     key: 'header', gap: 0,
     node: (
       <div style={{ textAlign: 'center' }}>
-        <h1 style={{ fontSize: 30, fontWeight: 700, margin: '0 0 6px', letterSpacing: 0.3 }}>{c.name}</h1>
+        <h1 style={{ fontSize: 32, fontWeight: 700, margin: '0 0 6px', letterSpacing: 0.3 }}>{c.name}</h1>
         <p style={{ ...P, fontWeight: 700 }}>{c.headline ?? c.title}</p>
         {(c.address ?? c.location) && <p style={P}>{c.address ?? c.location}</p>}
         {contact && <p style={P}>{contact}</p>}

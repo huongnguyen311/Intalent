@@ -26,7 +26,7 @@ type Props = {
   onConfigure?: () => void;
 };
 
-const FIELD = 'h-9 rounded-full bg-white dark:bg-[#2a2423] border border-[#e6dddb] dark:border-[#3a3433] text-sm text-slate-700 dark:text-white';
+const FIELD = 'h-9 rounded-full bg-white dark:bg-dark-raised border border-line dark:border-dark-line text-sm text-slate-700 dark:text-white';
 
 /** Bar over the board: search, then the "Job" filter (All jobs by default); on the right the icon view toggle, settings and "Add from Candidate Pool". */
 export function PipelineHeader({ job, switchable, onSwitch, query, onQuery, view, onView, empty, onConfigure }: Props) {
@@ -42,7 +42,7 @@ export function PipelineHeader({ job, switchable, onSwitch, query, onQuery, view
       aria-pressed={view === v}
       title={label}
       onClick={() => onView(v)}
-      className={`size-7 rounded-full flex items-center justify-center ${view === v ? 'bg-primary text-white' : 'text-[#896a61] hover:bg-[#f8f6f6] dark:hover:bg-white/5'}`}
+      className={`ui-seg-item size-7 rounded-full flex items-center justify-center ${view === v ? 'bg-primary text-white' : 'text-ink-muted hover:bg-background-light dark:hover:bg-white/5'}`}
     >
       <span aria-hidden="true" className="material-symbols-outlined text-[18px]">{icon}</span>
     </button>
@@ -51,7 +51,7 @@ export function PipelineHeader({ job, switchable, onSwitch, query, onQuery, view
     <div className="flex items-center gap-3 flex-wrap mb-3">
       {!empty && (
         <div className={`${FIELD} w-64 flex items-center gap-2 pl-3.5 pr-3 focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/10 transition-colors`}>
-          <span aria-hidden="true" className="material-symbols-outlined text-[18px] text-[#896a61] shrink-0">search</span>
+          <span aria-hidden="true" className="material-symbols-outlined text-[18px] text-ink-muted shrink-0">search</span>
           <input
             type="search"
             value={query.text}
@@ -64,7 +64,7 @@ export function PipelineHeader({ job, switchable, onSwitch, query, onQuery, view
       )}
       {switchable && onSwitch && (
         <label className="flex items-center gap-2 min-w-0">
-          <span className="text-sm font-semibold text-[#896a61] shrink-0">{t('pipeline.filter.job')}</span>
+          <span className="text-sm font-semibold text-ink-muted shrink-0">{t('pipeline.filter.job')}</span>
           <select
             aria-label={t('pipeline.filter.job')}
             value={job?.id ?? ''}
@@ -78,13 +78,13 @@ export function PipelineHeader({ job, switchable, onSwitch, query, onQuery, view
       )}
       <span className="ml-auto" />
       {!empty && (
-        <div className="flex items-center gap-0.5 p-1 rounded-full bg-white dark:bg-[#2a2423] border border-[#e6dddb] dark:border-[#3a3433]">
+        <div className="ui-seg flex items-center gap-0.5 p-1 rounded-full bg-white dark:bg-dark-raised border border-line dark:border-dark-line">
           {toggle('kanban', 'view_kanban', t('pipeline.viewKanban'))}
           {toggle('list', 'view_list', t('pipeline.viewList'))}
         </div>
       )}
       {onConfigure && (
-        <button onClick={onConfigure} aria-label={t('pipeline.config.open')} title={t('pipeline.config.open')} className={`${FIELD} w-9 flex items-center justify-center text-[#896a61] hover:border-primary/50 hover:text-primary`}>
+        <button onClick={onConfigure} aria-label={t('pipeline.config.open')} title={t('pipeline.config.open')} className={`${FIELD} w-9 flex items-center justify-center text-ink-muted hover:border-primary/50 hover:text-primary`}>
           <span aria-hidden="true" className="material-symbols-outlined text-[18px]">tune</span>
         </button>
       )}

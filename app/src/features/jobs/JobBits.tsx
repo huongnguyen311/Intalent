@@ -4,7 +4,7 @@ import type { Job, Stage } from '../../domain/types';
 import { useLang, useT } from '../../i18n/i18n';
 
 const STATUS_STYLE: Record<Job['status'], { pill: string; dot: string }> = {
-  open: { pill: 'bg-[#ECFDF5] text-[#10B981]', dot: 'bg-[#10B981]' },
+  open: { pill: 'bg-emerald-50 text-emerald-500', dot: 'bg-emerald-500' },
   draft: { pill: 'bg-gray-100 text-gray-500', dot: 'bg-gray-400' },
   pending_approval: { pill: 'bg-violet-50 text-violet-600', dot: 'bg-violet-500' },
   on_hold: { pill: 'bg-amber-50 text-amber-600', dot: 'bg-amber-500' },

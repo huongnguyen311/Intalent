@@ -17,10 +17,10 @@ import { signInAs } from '../../store/session';
 import { useStore } from '../../store/store';
 import { findAccounts, sendInvitation, sendPasswordReset, sendVerification } from './accounts';
 
-const FIELD = 'w-full h-11 px-4 rounded-lg bg-[#f8f6f6] ring-1 ring-gray-200 focus:ring-2 focus:ring-primary outline-none text-sm';
-const LABEL = 'text-sm font-semibold text-[#181211]';
+const FIELD = 'w-full h-11 px-4 rounded-lg bg-background-light ring-1 ring-gray-200 focus:ring-2 focus:ring-primary outline-none text-sm';
+const LABEL = 'text-sm font-semibold text-ink';
 const PRIMARY = 'h-11 px-6 rounded-lg bg-primary hover:bg-primary-hover text-white font-bold text-sm disabled:opacity-50';
-const GHOST = 'h-11 px-5 rounded-lg border border-[#e6dddb] text-sm font-bold text-[#896a61] hover:text-[#181211] inline-flex items-center';
+const GHOST = 'h-11 px-5 rounded-lg border border-line text-sm font-bold text-ink-muted hover:text-ink inline-flex items-center';
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const INVITE_ROLES = ROLES.filter((r) => r !== 'Super Admin' && r !== 'Candidate');
 const DRAFT_KEY = 'intalent-signup-draft';
@@ -31,11 +31,11 @@ export function AuthShell({ title, subtitle, children }: { title: string; subtit
       <div className="w-full max-w-lg bg-white rounded-3xl shadow-xl border border-gray-100 p-8 space-y-6">
         <div className="flex items-center gap-3">
           <BrandMark className="h-9" />
-          <span className="text-xl font-bold tracking-tight text-[#181211]">InTalent</span>
+          <span className="text-xl font-bold tracking-tight text-ink">InTalent</span>
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-[#181211]">{title}</h1>
-          {subtitle && <p className="text-sm text-[#896a61] mt-1">{subtitle}</p>}
+          <h1 className="text-2xl font-bold text-ink">{title}</h1>
+          {subtitle && <p className="text-sm text-ink-muted mt-1">{subtitle}</p>}
         </div>
         {children}
       </div>
@@ -195,7 +195,7 @@ export function SignupPage() {
     return (
       <AuthShell title={t('signup.verifyTitle')} subtitle={t('signup.verifyBody', { email: draft?.email ?? '' })}>
         {progress}
-        <div className="rounded-lg bg-[#f8f6f6] px-4 py-3 text-sm text-[#896a61] space-y-2">
+        <div className="rounded-lg bg-background-light px-4 py-3 text-sm text-ink-muted space-y-2">
           <p>{t('signup.verifyWaiting')}</p>
           <InboxLink email={draft?.email} />
         </div>
@@ -242,7 +242,7 @@ export function SignupPage() {
             <span className={LABEL}>{t('company.slug')}</span>
             <input className={FIELD} value={ws.careersSlug} onChange={(e) => setWs({ ...ws, careersSlug: e.target.value.toLowerCase() })} />
           </label>
-          <p className="text-xs text-[#896a61] -mt-2">/c/{ws.careersSlug || '…'}</p>
+          <p className="text-xs text-ink-muted -mt-2">/c/{ws.careersSlug || '…'}</p>
           <label className="flex items-start gap-2 text-sm">
             <input type="checkbox" className="mt-0.5 rounded border-gray-300 text-primary focus:ring-primary" checked={sample} onChange={(e) => setSample(e.target.checked)} />
             <span>{t('signup.sample')}</span>
@@ -305,7 +305,7 @@ export function VerifyEmailPage() {
       {draft?.token === check.token.token ? (
         <Link to={`/signup?verified=${check.token.token}`} className={`${PRIMARY} inline-flex items-center`}>{t('verify.continue')}</Link>
       ) : (
-        <p className="text-sm text-[#896a61]">{t('verify.otherTab')}</p>
+        <p className="text-sm text-ink-muted">{t('verify.otherTab')}</p>
       )}
     </AuthShell>
   );

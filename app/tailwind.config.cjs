@@ -27,6 +27,15 @@ module.exports = {
         amber: scale('c-amber'),
         canvas: v('c-canvas'),
         hairline: v('c-hairline'),
+        // Semantic text / line colours (tokens.css). Prefer these over raw hexes.
+        ink: v('c-ink'),
+        'ink-muted': v('c-ink-muted'),
+        line: v('c-line'),
+        // Dark mode surface ladder: canvas (page) < surface (cards, header) < raised (hover, inputs) ; line = borders.
+        'dark-canvas': v('c-dark-canvas'),
+        'dark-surface': v('c-dark-surface'),
+        'dark-raised': v('c-dark-raised'),
+        'dark-line': v('c-dark-line'),
         // Secondary text that must stay readable (small labels): 5.4:1 in the app, the mockup's gray-400 in fixture.
         muted: v('c-muted'),
         // Sidebar section labels: readable on the dark sidebar in the app.

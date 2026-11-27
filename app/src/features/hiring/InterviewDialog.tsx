@@ -101,7 +101,7 @@ export function InterviewDialog({ open, app, candidateName, hasEmail, onClose }:
           </Field>
           <Field id="iv-time" label={t('interview.time')}>
             <input id="iv-time" type="time" aria-describedby="iv-zone" className={FIELD} value={time} onChange={(e) => setTime(e.target.value)} />
-            {zone && <p id="iv-zone" className="text-xs text-[#896a61] mt-1">{t('interview.zone', { zone: `${zoneLabel(zone, `${date || '2026-01-01'}T${time || '00:00'}`)} · ${zone}` })}</p>}
+            {zone && <p id="iv-zone" className="text-xs text-ink-muted mt-1">{t('interview.zone', { zone: `${zoneLabel(zone, `${date || '2026-01-01'}T${time || '00:00'}`)} · ${zone}` })}</p>}
             {companyZone && (
               <select aria-label={t('company.timezone')} className={`${FIELD} mt-1 !py-1 text-xs`} value={zone} onChange={(e) => setZone(e.target.value)}>
                 {[...new Set([zone ?? companyZone, companyZone, ...TIMEZONES])].map((z) => <option key={z} value={z}>{z}</option>)}
@@ -127,7 +127,7 @@ export function InterviewDialog({ open, app, candidateName, hasEmail, onClose }:
           </div>
         </div>
         <fieldset>
-          <legend className="text-xs font-semibold text-[#896a61] mb-2">{t('interview.interviewers')}</legend>
+          <legend className="text-xs font-semibold text-ink-muted mb-2">{t('interview.interviewers')}</legend>
           <div className="grid grid-cols-2 gap-2">
             {assignableUsers(users).map((u) => (
               <label key={u.id} className="flex items-center gap-2 text-sm cursor-pointer">

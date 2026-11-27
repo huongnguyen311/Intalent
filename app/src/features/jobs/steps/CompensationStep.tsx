@@ -25,7 +25,7 @@ export function CompensationStep({ form }: { form: JobForm }) {
             </Field>
           </div>
           {form.err('salary') && <p className="text-xs text-red-600">{form.err('salary')}</p>}
-          <label className="flex items-center gap-2 text-sm text-[#181211] dark:text-white">
+          <label className="flex items-center gap-2 text-sm text-ink dark:text-white">
             <input type="checkbox" checked={v.showSalary} onChange={(e) => set.showSalary(e.target.checked)} className={CHECKBOX} />
             {t('jobs.drawer.showSalary')}
           </label>

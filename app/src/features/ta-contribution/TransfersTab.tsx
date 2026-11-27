@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { BTN_PRIMARY } from '../../components/ui';
 import { toast } from '../../components/Toast';
 import { inPeriod, type Period } from '../../domain/taContribution';
 import { assignableUsers, userName } from '../../domain/users';
@@ -6,8 +7,8 @@ import { useT } from '../../i18n/i18n';
 import { me } from '../../store/session';
 import { useStore } from '../../store/store';
 
-const SELECT = 'px-3 py-1.5 text-sm rounded-lg border border-gray-200 bg-white text-gray-700';
-const TH = 'px-4 py-3 text-left font-medium text-gray-600';
+const SELECT = 'px-3 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-dark-line bg-white dark:bg-dark-surface text-gray-700 dark:text-gray-300';
+const TH = 'px-4 py-3 text-left font-medium text-gray-600 dark:text-gray-300';
 
 /** Owner-transfer history for the period, plus a form to move one CV to another TA. */
 export function TransfersTab({ period }: { period: Period }) {
@@ -51,31 +52,31 @@ export function TransfersTab({ period }: { period: Period }) {
             <option key={u.id} value={u.id}>{u.name}</option>
           ))}
         </select>
-        <button data-testid="ta-contribution-transfer-button" disabled={!candidateId || !toId} onClick={transfer} className="px-4 py-1.5 text-sm rounded-lg bg-gray-900 text-white disabled:opacity-40">
+        <button data-testid="ta-contribution-transfer-button" disabled={!candidateId || !toId} onClick={transfer} className={BTN_PRIMARY}>
           {t('ta.transfer.submit')}
         </button>
       </div>
-      <div className="overflow-x-auto rounded-lg border border-gray-200">
-        <table data-testid="ta-contribution-transfers-table" className="min-w-full divide-y divide-gray-200 text-sm">
-          <thead className="bg-gray-50">
+      <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-dark-line">
+        <table data-testid="ta-contribution-transfers-table" className="min-w-full divide-y divide-gray-200 dark:divide-dark-line text-sm">
+          <thead className="bg-gray-50 dark:bg-white/5">
             <tr>
               {(['ta.transfers.time', 'ta.transfers.candidate', 'ta.transfers.from', 'ta.transfers.to', 'ta.transfers.by'] as const).map((k) => (
                 <th key={k} className={TH}>{t(k)}</th>
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100 bg-white">
+          <tbody className="divide-y divide-gray-100 dark:divide-dark-line bg-white dark:bg-dark-surface">
             {rows.map((a, i) => (
               <tr key={`${a.at}-${i}`}>
-                <td className="px-4 py-3 text-gray-600">{new Date(a.at).toLocaleString('en-US')}</td>
-                <td className="px-4 py-3 text-gray-900">{candidateName(a.candidateId)}</td>
-                <td className="px-4 py-3 text-gray-600">{nameOf(a.from)}</td>
-                <td className="px-4 py-3 text-gray-600">{nameOf(a.to)}</td>
-                <td className="px-4 py-3 text-gray-600">{nameOf(a.by)}</td>
+                <td className="px-4 py-3 text-gray-600 dark:text-gray-300">{new Date(a.at).toLocaleString('en-US')}</td>
+                <td className="px-4 py-3 text-gray-900 dark:text-white">{candidateName(a.candidateId)}</td>
+                <td className="px-4 py-3 text-gray-600 dark:text-gray-300">{nameOf(a.from)}</td>
+                <td className="px-4 py-3 text-gray-600 dark:text-gray-300">{nameOf(a.to)}</td>
+                <td className="px-4 py-3 text-gray-600 dark:text-gray-300">{nameOf(a.by)}</td>
               </tr>
             ))}
             {rows.length === 0 && (
-              <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-500">{t('ta.transfers.empty')}</td></tr>
+              <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">{t('ta.transfers.empty')}</td></tr>
             )}
           </tbody>
         </table>

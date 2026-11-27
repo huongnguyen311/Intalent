@@ -25,16 +25,16 @@ export function SuggestionsReview({ candidate }: { candidate: Candidate }) {
         <span className="material-symbols-outlined text-[18px]">rule</span>{t('suggest.banner', { n: list.length })}
       </div>
       {list.map((sg) => (
-        <div key={sg.id} className="rounded-lg bg-white dark:bg-[#1e1e1e] border border-amber-100 dark:border-amber-900/30 px-3 py-2 flex items-center gap-3">
+        <div key={sg.id} className="rounded-lg bg-white dark:bg-dark-surface border border-amber-100 dark:border-amber-900/30 px-3 py-2 flex items-center gap-3">
           <div className="flex-1 min-w-0 text-sm">
-            <div className="text-xs font-semibold text-[#896a61]">{t(`suggest.field.${sg.field}`)} · {fullDate(sg.at)}</div>
+            <div className="text-xs font-semibold text-ink-muted">{t(`suggest.field.${sg.field}`)} · {fullDate(sg.at)}</div>
             <div className="mt-0.5">
-              <span className="line-through text-gray-400">{show(candidate[sg.field])}</span>
-              <span className="mx-2 text-[#896a61]">→</span>
+              <span className="line-through text-muted dark:text-gray-400">{show(candidate[sg.field])}</span>
+              <span className="mx-2 text-ink-muted">→</span>
               <span className="font-semibold text-slate-800 dark:text-white">{show(sg.value)}</span>
             </div>
           </div>
-          <button onClick={() => review(sg, false)} className="px-3 py-1.5 text-xs font-bold rounded-full border border-[#e6dddb] dark:border-[#3a3433] hover:border-red-300 hover:text-red-600">
+          <button onClick={() => review(sg, false)} className="px-3 py-1.5 text-xs font-bold rounded-full border border-line dark:border-dark-line hover:border-red-300 hover:text-red-600">
             {t('suggest.reject')}
           </button>
           <button onClick={() => review(sg, true)} className="px-3 py-1.5 text-xs font-bold rounded-full bg-primary text-white hover:bg-primary-hover">
@@ -54,16 +54,16 @@ export function CvVersions({ candidate }: { candidate: Candidate }) {
   if (versions.length === 0) return null;
   return (
     <section data-testid="cv-versions">
-      <h3 className="text-sm font-bold text-[#181211] dark:text-white mb-3 flex items-center gap-2">
-        <span className="material-symbols-outlined text-[18px]">history</span>{t('cv.versions')}
+      <h3 className="text-base font-semibold text-ink dark:text-white mb-5 flex items-center gap-2">
+        <span className="material-symbols-outlined text-[20px] text-primary">history</span>{t('cv.versions')}
       </h3>
       <ul className="space-y-2">
         {versions.map((v, i) => (
-          <li key={v.id} className="flex items-center gap-3 rounded-lg bg-[#f8f6f6] dark:bg-[#251f1e] px-3 py-2 text-sm">
+          <li key={v.id} className="flex items-center gap-3 rounded-lg bg-background-light dark:bg-dark-surface px-3 py-2 text-sm">
             <span className="material-symbols-outlined text-[18px] text-red-500">picture_as_pdf</span>
             <span className="flex-1 min-w-0 truncate font-medium">{v.fileName}</span>
-            {i === 0 && <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[11px] font-bold">{t('cv.latest')}</span>}
-            <span className="text-xs text-[#896a61] whitespace-nowrap">{fullDate(v.at)} · {userName(users, v.by)}</span>
+            {i === 0 && <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-2xs font-bold">{t('cv.latest')}</span>}
+            <span className="text-xs text-ink-muted whitespace-nowrap">{fullDate(v.at)} · {userName(users, v.by)}</span>
           </li>
         ))}
       </ul>
@@ -84,11 +84,11 @@ export function ParseReview({ candidate }: { candidate: Candidate }) {
   };
   const chip = 'px-2 py-0.5 rounded-full text-xs font-bold';
   return (
-    <section data-testid="parse-review" className={`rounded-xl border p-4 space-y-2 ${reviewed || (low.length === 0 && missing.length === 0) ? 'border-[#e6dddb] dark:border-[#3a3433]' : 'border-sky-200 bg-sky-50 dark:bg-sky-900/10 dark:border-sky-800'}`}>
+    <section data-testid="parse-review" className={`rounded-xl border p-4 space-y-2 ${reviewed || (low.length === 0 && missing.length === 0) ? 'border-line dark:border-dark-line' : 'border-blue-200 bg-blue-50 dark:bg-blue-900/10 dark:border-blue-800'}`}>
       <div className="flex items-center gap-2 text-sm font-bold text-slate-800 dark:text-white">
         <span className="material-symbols-outlined text-[18px] text-primary">document_scanner</span>
         {t('parse.title')}
-        <span className="text-xs font-normal text-[#896a61]">{parse.model} · {fullDate(parse.at)}</span>
+        <span className="text-xs font-normal text-ink-muted">{parse.model} · {fullDate(parse.at)}</span>
         {reviewed && <span className={`${chip} ml-auto bg-emerald-50 text-emerald-700`}>{t('parse.reviewed')}</span>}
       </div>
       <div className="flex flex-wrap gap-1.5">
@@ -107,7 +107,7 @@ export function ParseReview({ candidate }: { candidate: Candidate }) {
       </div>
       {!reviewed && (low.length > 0 || missing.length > 0) && (
         <div className="flex items-center gap-3">
-          <p className="text-xs text-[#896a61] flex-1">{t('parse.hint', { n: low.length + missing.length })}</p>
+          <p className="text-xs text-ink-muted flex-1">{t('parse.hint', { n: low.length + missing.length })}</p>
           <button onClick={markReviewed} className="px-3 py-1.5 text-xs font-bold rounded-full bg-primary text-white hover:bg-primary-hover">{t('parse.markReviewed')}</button>
         </div>
       )}

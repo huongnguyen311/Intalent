@@ -3,15 +3,18 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { activeWorkspaceId, DEFAULT_WS, enterWorkspace, setPendingLogin, takePendingLogin } from '../../store/platform';
 import { findAccounts, passwordMatches } from './accounts';
 import { normalizeEmail } from '../../domain/normalize';
-import { homeFor, normalizeRole, ROLES } from '../../domain/permissions';
+import { homeFor } from '../../domain/permissions';
 import { CURRENT_USER_ID } from '../../domain/users';
 import { BrandMark } from '../../components/BrandMark';
 import { useShowNew } from '../../hooks';
 import { signInAs } from '../../store/session';
 import { useStore } from '../../store/store';
 
+const DEMO_EMAIL = 'admin@company.demo';
+const DEMO_PASSWORD = 'demo1234';
+
 const INPUT =
-  'w-full h-12 px-4 pr-11 rounded-lg bg-[#f8f6f6] border-none ring-1 transition-all duration-200 outline-none text-sm ring-gray-200 focus:ring-2 focus:ring-primary';
+  'w-full h-12 px-4 pr-11 rounded-lg bg-background-light border-none ring-1 transition-all duration-200 outline-none text-sm ring-gray-200 focus:ring-2 focus:ring-primary';
 
 /**
  * Demo login, no password check: a staff email signs in as that user (so each role can be tried); a candidate
@@ -22,7 +25,8 @@ export function LoginPage() {
   const showNew = useShowNew();
   const [showPassword, setShowPassword] = useState(false);
   const [params] = useSearchParams();
-  const [emailValue, setEmailValue] = useState(() => params.get('email') ?? '');
+  // The app pre-fills the demo Super Admin (no password set, so any password works) so a visitor signs in with one click.
+  const [emailValue, setEmailValue] = useState(() => params.get('email') ?? (showNew ? DEMO_EMAIL : ''));
   const [emailError, setEmailError] = useState(false);
   const [loginError, setLoginError] = useState('');
   /** Shows the "Applying for a job? Candidate sign-in" link next to a failed sign in. */
@@ -48,11 +52,6 @@ export function LoginPage() {
     if (email && !enter(email)) setLoginError('That account is no longer active in this workspace.');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  const users = useStore((s) => s.users);
-  // One active staff account per role, so a demo audience can try every role (candidates use the careers site).
-  const demo = ROLES.filter((r) => r !== 'Candidate')
-    .map((r) => users.find((u) => u.status === 'Active' && !u.candidateId && normalizeRole(u.role) === r))
-    .filter((u): u is NonNullable<typeof u> => !!u);
   const submit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const email = normalizeEmail(String(new FormData(e.currentTarget).get('email') ?? ''));
@@ -114,25 +113,24 @@ export function LoginPage() {
                 <div className="w-10 h-10 flex items-center justify-center">
                   <BrandMark className="h-9" />
                 </div>
-                <h1 className="text-xl font-bold tracking-tight text-[#181211]">InTalent</h1>
+                <h1 className="text-xl font-bold tracking-tight text-ink">InTalent</h1>
               </div>
             ) : (
               <div className="flex items-center gap-3 mb-1.5">
                 <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
                   <span className="material-symbols-outlined text-primary" style={{ fontSize: 26 }}>hub</span>
                 </div>
-                <h1 className="text-xl font-bold tracking-tight text-[#181211]">InApps Talent Pool</h1>
+                <h1 className="text-xl font-bold tracking-tight text-ink">InApps Talent Pool</h1>
               </div>
             )}
-            <p className="text-xs text-[#896a61] font-medium ml-[52px]">Internal tool for authorized staff only.</p>
           </div>
           <div className="mb-6">
-            <h2 className="text-3xl font-bold text-[#181211] mb-2">Welcome back</h2>
-            <p className="text-base text-[#896a61]">Manage CVs and find the perfect match with AI.</p>
+            <h2 className="text-3xl font-bold text-ink mb-2">Welcome back</h2>
+            <p className="text-base text-ink-muted">Manage CVs and find the perfect match with AI.</p>
           </div>
           <form className="space-y-4 w-full" onSubmit={submit}>
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-[#181211] uppercase tracking-wide" htmlFor="email">
+              <label className="text-xs font-bold text-ink uppercase tracking-wide" htmlFor="email">
                 Email Address <span className="text-red-500">*</span>
               </label>
               <div className="relative">
@@ -159,11 +157,11 @@ export function LoginPage() {
               )}
             </div>
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-[#181211] uppercase tracking-wide" htmlFor="password">
+              <label className="text-xs font-bold text-ink uppercase tracking-wide" htmlFor="password">
                 Password <span className="text-red-500">*</span>
               </label>
               <div className="relative">
-                <input id="password" className={INPUT} placeholder="••••••••" type={showPassword ? 'text' : 'password'} name="password" />
+                <input id="password" className={INPUT} placeholder="••••••••" type={showPassword ? 'text' : 'password'} name="password" defaultValue={showNew && !params.get('email') ? DEMO_PASSWORD : undefined} />
                 <button
                   type="button"
                   aria-label="Toggle password visibility"
@@ -177,7 +175,7 @@ export function LoginPage() {
             <div className="flex items-center justify-between pt-1">
               <label className="flex items-center gap-2 cursor-pointer">
                 <input className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary" type="checkbox" name="rememberMe" />
-                <span className="text-sm text-[#896a61]">Remember me</span>
+                <span className="text-sm text-ink-muted">Remember me</span>
               </label>
               <button
                 type="button"
@@ -195,9 +193,9 @@ export function LoginPage() {
             </button>
           </form>
           <div className="flex items-center gap-3 my-4">
-            <div className="flex-1 h-px bg-[#e6dddb]"></div>
-            <span className="text-xs text-[#896a61]">or</span>
-            <div className="flex-1 h-px bg-[#e6dddb]"></div>
+            <div className="flex-1 h-px bg-line"></div>
+            <span className="text-xs text-ink-muted">or</span>
+            <div className="flex-1 h-px bg-line"></div>
           </div>
           <div className="w-full relative">
             <button
@@ -217,7 +215,7 @@ export function LoginPage() {
               </div>
             </button>
           </div>
-          <div className="mt-6 text-center text-[#896a61]">
+          <div className="mt-6 text-center text-ink-muted">
             <p className="text-sm">
               Don&apos;t have an account?{' '}
               <button
@@ -235,23 +233,6 @@ export function LoginPage() {
               </p>
             )}
           </div>
-          {showNew && demo.length > 0 && (
-            <div className="mt-4 rounded-xl bg-[#f8f6f6] px-4 py-3 text-xs text-[#896a61]">
-              <p className="font-bold mb-1">Demo accounts: pick a role to fill the email (any password)</p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4">
-                {demo.map((u) => (
-                  <button
-                    key={u.id}
-                    type="button"
-                    onClick={() => { setEmailValue(u.email); setEmailError(false); }}
-                    className="text-left py-0.5 hover:text-primary"
-                  >
-                    <span className="font-semibold text-[#181211]">{normalizeRole(u.role)}</span> · {u.name}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
         <div className="hidden lg:block lg:w-1/2 bg-[#0a192f] relative">
           <div

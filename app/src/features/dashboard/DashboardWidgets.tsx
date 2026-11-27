@@ -11,7 +11,7 @@ import { ApprovalsRow, TODO_ICON, useApprovals, useTodo, useTodoHref, useTodoLab
  * Shared look for the app Dashboard: white panels, 16px radius, hairline border, no drop shadow;
  * sentence-case titles with a muted caption; brand primary is the only data colour.
  */
-export const PANEL = 'rounded-2xl border border-hairline bg-white dark:bg-[#1e1e1e] dark:border-white/10';
+export const PANEL = 'rounded-2xl border border-hairline bg-white dark:bg-dark-surface dark:border-white/10';
 export const CAPTION = 'text-xs text-muted';
 export const TRACK = 'h-2 rounded bg-slate-100 dark:bg-white/10';
 const TITLE = 'ty-section text-base font-bold text-slate-900 dark:text-white';
@@ -40,7 +40,7 @@ export function Panel({ title, caption, action, testId, className = '', children
 }
 
 const RANGE_KINDS = ['all', 'today', 'week', 'month', 'custom'] as const;
-const RANGE_SELECT = 'h-9 rounded-lg border border-hairline bg-white dark:bg-[#1e1e1e] dark:border-white/10 pl-3 pr-9 text-xs font-semibold text-slate-700 dark:text-gray-200';
+const RANGE_SELECT = 'h-9 rounded-lg border border-hairline bg-white dark:bg-dark-surface dark:border-white/10 pl-3 pr-9 text-xs font-semibold text-slate-700 dark:text-gray-200';
 
 /** Dashboard date range: a dropdown of presets; "Custom" reveals a from/to pair of date pickers. */
 export function DateRangeControl({ value, onChange, today }: { value: DateRange; onChange: (r: DateRange) => void; today: string }) {
@@ -76,16 +76,16 @@ export function DateRangeControl({ value, onChange, today }: { value: DateRange;
 export function PeriodControl({ value, onChange, testId }: { value: Period; onChange: (p: Period) => void; testId?: string }) {
   const t = useT();
   return (
-    <div data-testid={testId} className="flex h-9 items-center gap-0.5 rounded-lg bg-slate-100 dark:bg-white/10 p-0.5">
+    <div data-testid={testId} className="ui-seg flex h-9 items-center gap-0.5 rounded-lg bg-slate-100 dark:bg-white/10 p-0.5">
       {PERIODS.map((p) => (
         <button
           key={p}
           type="button"
           onClick={() => onChange(p)}
           aria-pressed={value === p}
-          className={`h-8 px-3 rounded-md text-xs font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary ${
+          className={`ui-seg-item h-8 px-3 rounded-md text-xs font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary ${
             value === p
-              ? 'bg-white dark:bg-[#2a2a2a] text-slate-900 dark:text-white shadow-[0_1px_2px_rgb(0_0_0/0.08)]'
+              ? 'bg-white dark:bg-dark-raised text-slate-900 dark:text-white shadow-[0_1px_2px_rgb(0_0_0/0.08)]'
               : 'text-slate-500 hover:text-slate-900 dark:text-gray-400 dark:hover:text-white'
           }`}
         >
@@ -158,7 +158,7 @@ function Column({ id, title, count, action, control, footer, children }: {
   children: React.ReactNode;
 }) {
   return (
-    <section aria-labelledby={id} className="flex h-full min-w-0 flex-col bg-white p-5 dark:bg-[#1e1e1e] sm:p-6">
+    <section aria-labelledby={id} className="flex h-full min-w-0 flex-col bg-white p-5 dark:bg-dark-surface sm:p-6">
       <div className="flex h-7 items-center gap-2">
         <h4 id={id} className="text-base font-bold text-slate-900 dark:text-white">{title}</h4>
         {count !== undefined && count > 0 && (
@@ -259,10 +259,10 @@ function ScheduleColumn({ week }: { week: DashboardMetrics['recruitment']['week'
                 aria-pressed={selected}
                 aria-label={date.toLocaleDateString(locale, { weekday: 'long', day: 'numeric', month: 'numeric' })}
                 className={`relative flex flex-col items-center rounded-md pb-1.5 pt-1 leading-tight transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary ${
-                  selected ? 'bg-white shadow-[0_1px_2px_rgb(0_0_0/0.08)] dark:bg-[#2a2a2a]' : 'hover:bg-white/60 dark:hover:bg-white/5'
+                  selected ? 'bg-white shadow-[0_1px_2px_rgb(0_0_0/0.08)] dark:bg-dark-raised' : 'hover:bg-white/60 dark:hover:bg-white/5'
                 }`}
               >
-                <span className="text-[11px] text-muted">{date.toLocaleDateString(locale, { weekday: 'narrow' })}</span>
+                <span className="text-2xs text-muted">{date.toLocaleDateString(locale, { weekday: 'narrow' })}</span>
                 <span className={`text-sm font-bold tabular-nums ${d === week.today ? 'text-primary' : 'text-slate-900 dark:text-white'}`}>{date.getDate()}</span>
                 {busy.has(d) && <span aria-hidden="true" className="absolute bottom-0.5 left-1/2 size-1 -translate-x-1/2 rounded-full bg-primary" />}
               </button>
@@ -277,7 +277,7 @@ function ScheduleColumn({ week }: { week: DashboardMetrics['recruitment']['week'
       ) : (
         <ul>
           {items.slice(0, DAY_ROWS).map((i) => (
-            <InterviewRow key={i.id} i={i} lead={<><b className="block text-sm font-bold text-slate-900 dark:text-white">{i.at.slice(11, 16)}</b><span className="block text-[11px] text-muted">{endOf(i)}</span></>} />
+            <InterviewRow key={i.id} i={i} lead={<><b className="block text-sm font-bold text-slate-900 dark:text-white">{i.at.slice(11, 16)}</b><span className="block text-2xs text-muted">{endOf(i)}</span></>} />
           ))}
         </ul>
       )}

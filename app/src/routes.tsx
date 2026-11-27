@@ -61,9 +61,9 @@ export function AppRoutes() {
       <Route path="/jd-matching" element={<Guard perms={['pool']}><JdMatchingPage /></Guard>} />
       <Route path="/upload" element={<Guard perms={['pool']}><UploadPage /></Guard>} />
       <Route path="/upload-ultra" element={<Guard perms={['pool']}><UltraUploadPage /></Guard>} />
-      <Route path="/taxonomy" element={<Guard perms={['config']}><TaxonomyPage /></Guard>} />
+      <Route path="/taxonomy" element={<Guard perms={['taxonomy']}><TaxonomyPage /></Guard>} />
       <Route path="/system-config" element={<Guard perms={['config']}><SystemConfigPage /></Guard>} />
-      <Route path="/users" element={<Guard perms={['config']}><UsersPage /></Guard>} />
+      <Route path="/users" element={<Guard perms={['users.manage']}><UsersPage /></Guard>} />
       <Route path="/audit" element={<Guard perms={['privacy']}><AuditLogPage /></Guard>} />
       <Route path="/settings" element={<Guard perms={['config']}><CompanySettingsPage /></Guard>} />
       <Route path="/ta-contribution" element={<Guard perms={['reports']}><TaContributionPage /></Guard>} />

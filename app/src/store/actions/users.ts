@@ -2,7 +2,8 @@ import { normalizeEmail } from '../../domain/normalize';
 import type { User } from '../../domain/types';
 import { CURRENT_USER_ID, ROLES } from '../../domain/users';
 import type { DemoActions, Env, Get, Set } from './types';
-import { logAudit } from './audit';
+import { actorOf, logAudit } from './audit';
+import { activeSuperAdmins, canManageUser, manageableRoles } from '../../domain/permissions';
 import { companyOf } from '../../domain/company';
 import { updateWorkspaceEntry } from '../platform';
 
@@ -15,12 +16,23 @@ export function userActions(
     get().users.some((u) => u.id !== exceptId && normalizeEmail(u.email) === email);
   const patchUser = (id: string, change: Partial<User>) =>
     set((s) => ({ users: s.users.map((u) => (u.id === id ? { ...u, ...change } : u)) }));
+  /** The signed-in user; the demo workspace without its admin record still acts as Super Admin (as the session does). */
+  const actor = (): Pick<User, 'role'> | undefined => {
+    const id = actorOf(get);
+    return get().users.find((u) => u.id === id) ?? (id === CURRENT_USER_ID ? { role: 'Super Admin' } : undefined);
+  };
+  /** Demoting or deactivating this user would leave the workspace without an active Super Admin. */
+  const isLastAdmin = (user: User) => {
+    const admins = activeSuperAdmins(get().users);
+    return admins.length === 1 && admins[0].id === user.id;
+  };
 
   return {
     addUser(input) {
       const name = input.name.trim();
       const email = normalizeEmail(input.email);
       if (!name || !email || !ROLES.includes(input.role)) return { ok: false, reason: 'invalid' };
+      if (!manageableRoles(actor()).includes(input.role)) return { ok: false, reason: 'forbidden' };
       if (emailTaken(email)) return { ok: false, reason: 'duplicate' };
       const user: User = { id: env.id('user'), name, email, role: input.role, status: 'Invited', createdAt: env.now().slice(0, 10) };
       set((s) => ({ users: [...s.users, user] }));
@@ -31,6 +43,7 @@ export function userActions(
     updateUser(id, patch) {
       const user = get().users.find((u) => u.id === id);
       if (!user) return { ok: false, reason: 'not_found' };
+      if (!canManageUser(actor(), user)) return { ok: false, reason: 'forbidden' };
       const name = patch.name.trim();
       const email = normalizeEmail(patch.email);
       if (!name || !email) return { ok: false, reason: 'invalid' };
@@ -44,6 +57,8 @@ export function userActions(
       const user = get().users.find((u) => u.id === id);
       if (!user) return { ok: false, reason: 'not_found' };
       if (id === CURRENT_USER_ID && role !== 'Super Admin') return { ok: false, reason: 'protected' };
+      if (!canManageUser(actor(), user) || !manageableRoles(actor()).includes(role)) return { ok: false, reason: 'forbidden' };
+      if (role !== 'Super Admin' && isLastAdmin(user)) return { ok: false, reason: 'last_admin' };
       patchUser(id, { role });
       if (user.role !== role) logAudit(set, get, env.now(), { type: 'user_role_changed', userId: id, detail: `${user.role} → ${role}` });
       return { ok: true, user: { ...user, role } };
@@ -82,6 +97,8 @@ export function userActions(
       const user = get().users.find((u) => u.id === id);
       if (!user) return { ok: false, reason: 'not_found' };
       if (id === CURRENT_USER_ID && !active) return { ok: false, reason: 'protected' };
+      if (!canManageUser(actor(), user)) return { ok: false, reason: 'forbidden' };
+      if (!active && isLastAdmin(user)) return { ok: false, reason: 'last_admin' };
       const status = active ? 'Active' : 'Inactive';
       patchUser(id, { status });
       if (user.status !== status) logAudit(set, get, env.now(), { type: 'user_status_changed', userId: id, detail: `${user.status} → ${status}` });

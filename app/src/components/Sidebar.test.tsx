@@ -70,11 +70,10 @@ describe('Sidebar', () => {
     expect(screen.getByRole('link', { name: /JD Management/ })).toHaveClass('bg-primary');
   });
 
-  it('user menu offers language toggle, reset and log out', () => {
+  it('user menu offers reset and log out; language lives in the page header', () => {
     renderAt('/');
     fireEvent.click(screen.getByRole('button', { name: /Super Admin/ }));
-    expect(screen.getByRole('button', { name: 'EN' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'VI' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'EN' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Reset demo data' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Log out' })).toBeInTheDocument();
   });

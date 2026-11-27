@@ -39,6 +39,13 @@ describe('taContribution', () => {
     expect(m3?.newCv).toBe(2);
   });
 
+  it('limits activity to a custom date range, either order', () => {
+    const r = taContribution(state, { from: '2026-11-02', to: '2026-11-03' }, NOW).rows;
+    expect(r.find((x) => x.ta === 'Ann')?.newCv).toBe(1);
+    expect(r.find((x) => x.ta === 'Bao')?.newCv).toBe(1);
+    expect(taContribution(state, { from: '2026-11-03', to: '2026-11-02' }, NOW).rows).toEqual(r);
+  });
+
   it('transfer moves count from one TA to another', () => {
     const store = createDemoStore(
       { getItem: () => null, setItem: () => {}, removeItem: () => {}, clear: () => {}, key: () => null, length: 0 },

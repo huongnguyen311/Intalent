@@ -19,8 +19,8 @@ type Props = {
   footer?: ReactNode;
   /** Edits the form makes without a DOM change event (adding a row, an AI draft...) — counted like typed changes. */
   dirty?: boolean;
-  /** Side variant width: `md` (default, forms) or `sm` (short lists such as chat history). */
-  size?: 'md' | 'sm';
+  /** Side variant width: `md` (default, forms), `sm` (short lists such as chat history) or `lg` (data-heavy panels such as an application). */
+  size?: 'md' | 'sm' | 'lg';
 };
 
 /** Right-hand slide-over or centred dialog (`animate-slide-left` / `animate-pop-in` come from supplement.css). */
@@ -45,35 +45,35 @@ export function Drawer({ open, title, subtitle, onClose, children, guardUnsaved,
         aria-modal="true"
         aria-label={title}
         tabIndex={-1}
-        className={`outline-none w-full bg-white dark:bg-[#1e1e1e] shadow-2xl flex flex-col ${
+        className={`outline-none w-full bg-white dark:bg-dark-surface shadow-2xl flex flex-col ${
           center
-            ? 'max-w-3xl max-h-[min(90vh,960px)] rounded-xl border border-[#e6dddb] dark:border-[#2a2423] overflow-hidden animate-pop-in'
-            : `${size === 'sm' ? 'max-w-sm' : 'max-w-xl'} h-full animate-slide-left`
+            ? 'max-w-3xl max-h-[min(90vh,960px)] rounded-xl border border-line dark:border-dark-raised overflow-hidden animate-pop-in'
+            : `${size === 'sm' ? 'max-w-sm' : size === 'lg' ? 'max-w-3xl' : 'max-w-xl'} h-full animate-slide-left`
         }`}
         onClick={(e) => e.stopPropagation()}
         // Any input in the body, subheader or footer counts as an unsaved edit.
         onChange={() => guardUnsaved && setDirty(true)}
       >
-        <div className="min-h-16 py-3 px-6 border-b border-[#e6dddb] dark:border-[#2a2423] flex items-center justify-between gap-3 shrink-0">
+        <div className="min-h-16 py-3 px-6 border-b border-line dark:border-dark-raised flex items-center justify-between gap-3 shrink-0">
           <div className="min-w-0">
-            <h3 className="text-lg font-bold text-[#181211] dark:text-white truncate">{title}</h3>
-            {subtitle && <div className="mt-0.5 text-sm text-[#896a61] min-w-0">{subtitle}</div>}
+            <h3 className="text-lg font-bold text-ink dark:text-white truncate">{title}</h3>
+            {subtitle && <div className="mt-0.5 text-sm text-ink-muted min-w-0">{subtitle}</div>}
           </div>
           {/* X is a deliberate close: never second-guess it. Only the backdrop and Escape (easy to hit by accident) ask. */}
-          <button aria-label="Close" onClick={onClose} className="text-[#896a61] hover:text-[#181211] dark:hover:text-white">
+          <button aria-label="Close" onClick={onClose} className="text-ink-muted hover:text-ink dark:hover:text-white">
             <span className="material-symbols-outlined">close</span>
           </button>
         </div>
         {asking && (
           <div role="alertdialog" aria-label={t('drawer.discard.title')} className="px-6 py-3 bg-amber-50 dark:bg-amber-900/20 border-b border-amber-200 dark:border-amber-800 flex items-center gap-3 text-sm">
             <span className="flex-1 font-semibold text-amber-900 dark:text-amber-100">{t('drawer.discard.title')}</span>
-            <button onClick={() => setAsking(false)} className="px-3 py-1.5 rounded-full border border-[#e6dddb] bg-white dark:bg-transparent font-bold">{t('drawer.discard.keep')}</button>
+            <button onClick={() => setAsking(false)} className="px-3 py-1.5 rounded-full border border-line bg-white dark:bg-transparent font-bold">{t('drawer.discard.keep')}</button>
             <button onClick={onClose} className="px-3 py-1.5 rounded-full bg-red-600 text-white font-bold">{t('drawer.discard.confirm')}</button>
           </div>
         )}
-        {subheader && <div className="shrink-0 px-6 pt-4 pb-3 border-b border-[#e6dddb] dark:border-[#2a2423]">{subheader}</div>}
+        {subheader && <div className="shrink-0 px-6 pt-4 pb-3 border-b border-line dark:border-dark-raised">{subheader}</div>}
         <div className="flex-1 overflow-y-auto custom-scrollbar p-6">{children}</div>
-        {footer && <div className="shrink-0 px-6 py-4 border-t border-[#e6dddb] dark:border-[#2a2423]">{footer}</div>}
+        {footer && <div className="shrink-0 px-6 py-4 border-t border-line dark:border-dark-raised">{footer}</div>}
       </aside>
     </div>
   );

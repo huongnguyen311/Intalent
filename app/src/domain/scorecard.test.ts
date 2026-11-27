@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { averageOf, criteriaOf, roleFamily, roundFocus, scorecardTemplate, validScores } from './scorecard';
+import { addCriterion, averageOf, criteriaOf, removeCriterion, roleFamily, roundFocus, scorecardTemplate, validScores } from './scorecard';
 import type { Job } from './types';
 
 const job = (p: Partial<Job>) => ({ id: 'j', jdId: 'jd', title: 'Senior Frontend Developer', department: 'Engineering', level: 'Senior', ...p }) as Job;
@@ -39,6 +39,26 @@ describe('scorecard template', () => {
     expect(validScores({ ...core, design: 0 }, c)).toBe(false);
     expect(validScores({ ...core, 'skill:React': 6 }, c)).toBe(false);
     expect(averageOf({ ...core, 'skill:React': 0 })).toBe(4);
+  });
+
+  it('the interviewer adds criteria at the end of their group, never twice', () => {
+    const c = scorecardTemplate(job({}), { skills: ['React'] }, 'Technical interview').criteria;
+    const a = addCriterion(c, 'skill', 'GraphQL');
+    expect(a.map((x) => x.key)).toEqual(['skill:React', 'skill:GraphQL', 'problem', 'design', 'communication', 'culture']);
+    expect(addCriterion(a, 'skill', ' graphql ')).toBe(a);
+    const b = addCriterion(a, 'core', 'Leadership & mentoring', 'leadership');
+    expect(b[b.length - 1]).toEqual({ key: 'leadership', group: 'core' });
+    expect(addCriterion(b, 'core', 'Teamwork').slice(-1)[0]).toEqual({ key: 'core:Teamwork', group: 'core', label: 'Teamwork' });
+    expect(addCriterion(b, 'core', '   ')).toBe(b);
+    expect(addCriterion(b, 'core', 'Problem solving', 'problem')).toBe(b);
+  });
+
+  it('removes a criterion but keeps at least one core competency', () => {
+    const c = scorecardTemplate(job({}), { skills: ['React'] }, 'Technical interview').criteria;
+    expect(removeCriterion(c, 'skill:React').map((x) => x.key)).toEqual(['problem', 'design', 'communication', 'culture']);
+    const one = [{ key: 'skill:React', group: 'skill' as const }, { key: 'problem', group: 'core' as const }];
+    expect(removeCriterion(one, 'problem')).toBe(one);
+    expect(validScores({ 'skill:React': 4 }, [one[0]])).toBe(false);
   });
 
   it('cards saved before templates keep the four fixed criteria', () => {

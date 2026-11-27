@@ -5,7 +5,7 @@ export type AnyPriority = HiringPriority | 'low' | 'medium';
 
 const STYLE: Record<Exclude<AnyPriority, 'normal'>, string> = {
   low: 'bg-gray-100 text-gray-500',
-  medium: 'bg-sky-50 text-sky-600',
+  medium: 'bg-blue-50 text-blue-600',
   high: 'bg-amber-50 text-amber-700',
   // Urgent: warm outline, reads as "act soon" without shouting.
   urgent: 'bg-orange-50 text-orange-700 ring-1 ring-inset ring-orange-300 dark:bg-orange-500/15 dark:text-orange-300 dark:ring-orange-400/40',

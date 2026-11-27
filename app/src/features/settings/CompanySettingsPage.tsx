@@ -5,10 +5,10 @@ import { companyOf, COUNTRIES, isValidSlug, TIMEZONES, type CompanySettings } fr
 import { useT } from '../../i18n/i18n';
 import { useStore } from '../../store/store';
 import { slugTaken } from '../../store/platform';
+import { FIELD } from '../../components/ui';
 
-const FIELD = 'w-full h-10 rounded-xl border border-[#e6dddb] dark:border-[#3a3433] bg-white dark:bg-[#2a2423] px-3 text-sm text-slate-800 dark:text-white focus:outline-none focus:border-primary';
-const LABEL = 'text-xs font-semibold text-[#896a61]';
-const CARD = 'bg-white dark:bg-[#1e1e1e] rounded-2xl border border-[#e6dddb] dark:border-[#2a2423] p-6';
+const LABEL = 'text-xs font-semibold text-ink-muted';
+const CARD = 'bg-white dark:bg-dark-surface rounded-2xl border border-line dark:border-dark-raised p-6';
 
 /** PRD 3.1 "Company settings" / BE-02: company profile, locale, timezone and careers page slug. */
 export function CompanySettingsPage() {
@@ -33,7 +33,7 @@ export function CompanySettingsPage() {
 
   return (
     <AppLayout title={t('nav.companySettings')} subtitle={t('company.subtitle')}>
-      <div className="p-8 max-w-[900px] mx-auto space-y-6">
+      <div className="p-8 max-w-[1400px] mx-auto space-y-6">
         <section className={`${CARD} space-y-4`}>
           <h2 className="ty-section font-bold text-slate-900 dark:text-white">{t('company.section.profile')}</h2>
           <div className="flex items-center gap-4">
@@ -42,7 +42,7 @@ export function CompanySettingsPage() {
               <span className={LABEL}>{t('company.logo')}</span>
               <input className={FIELD} maxLength={3} value={form.logoText} onChange={(e) => set('logoText')(e.target.value.toUpperCase())} />
             </label>
-            <p className="text-xs text-[#896a61] flex-1">{t('company.logoHint')}</p>
+            <p className="text-xs text-ink-muted flex-1">{t('company.logoHint')}</p>
           </div>
           <label className="flex flex-col gap-1">
             <span className={LABEL}>{t('company.name')}</span>
@@ -80,7 +80,7 @@ export function CompanySettingsPage() {
             {errors.slug && <span className="text-xs text-red-600">{t('company.err.slug')}</span>}
             {errors.taken && <span className="text-xs text-red-600">{t('signup.err.slugTaken')}</span>}
           </label>
-          <p className="text-sm text-[#896a61]">
+          <p className="text-sm text-ink-muted">
             {t('company.careersUrl')}{' '}
             <a className="text-primary font-semibold hover:underline break-all" href={`/c/${form.careersSlug}`} target="_blank" rel="noreferrer">{careersUrl}</a>
           </p>
@@ -88,8 +88,8 @@ export function CompanySettingsPage() {
 
         <section className={`${CARD} space-y-2`}>
           <h2 className="ty-section font-bold text-slate-900 dark:text-white">{t('company.section.workspace')}</h2>
-          <p className="text-sm text-[#896a61]">{t('company.workspaceId', { id: form.workspaceId })}</p>
-          <p className="text-sm text-[#896a61]">{t('company.isolation')}</p>
+          <p className="text-sm text-ink-muted">{t('company.workspaceId', { id: form.workspaceId })}</p>
+          <p className="text-sm text-ink-muted">{t('company.isolation')}</p>
         </section>
 
         <div className="flex justify-end">

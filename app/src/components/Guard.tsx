@@ -16,8 +16,10 @@ export function Guard({ perms, redirect, children }: { perms: Perm[]; redirect?:
   if (isGuest(user)) return <Navigate to={`/login?next=${encodeURIComponent(pathname + search)}`} replace />;
   if (normalizeRole(user.role) === 'Candidate') return <Navigate to="/me" replace />;
   if (perms.some((p) => can(user, p))) return <>{children}</>;
-  // `redirect`: send the user to their own start page instead (used for the dashboard at "/").
-  return redirect ? <Navigate to={homeFor(user)} replace /> : <NoAccess home={homeFor(user)} />;
+  // `redirect`: send the user to their own start page instead (used for the dashboard at "/"), unless that is
+  // this very page (an account whose role is unknown has no permissions and would bounce forever).
+  const home = homeFor(user);
+  return redirect && home !== pathname ? <Navigate to={home} replace /> : <NoAccess home={home} />;
 }
 
 function NoAccess({ home }: { home: string }) {
@@ -29,7 +31,7 @@ function NoAccess({ home }: { home: string }) {
           <span className="material-symbols-outlined text-[28px]">lock</span>
         </span>
         <h2 className="text-lg font-bold text-slate-800 dark:text-white">{t('access.title')}</h2>
-        <p className="text-sm text-[#896a61] max-w-md">{t('access.desc')}</p>
+        <p className="text-sm text-ink-muted max-w-md">{t('access.desc')}</p>
         <Link to={home} className="mt-2 px-5 py-2.5 rounded-full bg-primary text-white text-sm font-bold">{t('access.home')}</Link>
       </div>
     </AppLayout>

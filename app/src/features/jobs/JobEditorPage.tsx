@@ -18,7 +18,7 @@ import { BTN_GHOST, BTN_PRIMARY, CHECKBOX } from './steps/ui';
 import { useJobForm, type JobFormMode } from './useJobForm';
 
 const PREVIEW_BTN =
-  'ml-auto shrink-0 items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-full border border-[#e6dddb] dark:border-[#3a3433] text-[#896a61] hover:text-primary hover:border-primary/50';
+  'ml-auto shrink-0 items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-full border border-line dark:border-dark-line text-ink-muted hover:text-primary hover:border-primary/50';
 /** Candidate-facing parts first, then the internal hiring team. */
 const SECTIONS = [
   { key: 'details', label: 'jobs.drawer.step.details' },
@@ -105,10 +105,10 @@ function Editor({ mode, job }: { mode: JobFormMode; job?: Job }) {
 
   // Always on screen: the publish decision and the save buttons.
   const footer = (
-    <div className="bg-white dark:bg-[#1e1e1e] border-t border-[#e6dddb] dark:border-[#2a2423] shadow-[0_-2px_8px_rgba(0,0,0,0.04)]">
+    <div className="bg-white dark:bg-dark-surface border-t border-line dark:border-dark-raised shadow-[0_-2px_8px_rgba(0,0,0,0.04)]">
       {/* Right padding keeps the buttons clear of the floating AI button. */}
       <div className="max-w-[1400px] mx-auto pl-8 pr-20 py-3 flex items-center gap-2">
-        <label className="flex items-center gap-2 text-sm text-[#181211] dark:text-white">
+        <label className="flex items-center gap-2 text-sm text-ink dark:text-white">
           <input type="checkbox" checked={form.values.publish} onChange={(e) => form.set.publish(e.target.checked)} className={CHECKBOX} />
           {t(form.approvalFree ? 'jobs.drawer.publish' : 'jobs.drawer.submit')}
         </label>
@@ -133,11 +133,11 @@ function Editor({ mode, job }: { mode: JobFormMode; job?: Job }) {
         </button>
       }
     >
-      <div data-testid="job-editor" className="min-h-full bg-[#fbf9f8] dark:bg-background-dark">
+      <div data-testid="job-editor" className="min-h-full bg-gray-50 dark:bg-dark-canvas">
         {leaveTo && (
           <div role="alertdialog" aria-label={t('drawer.discard.title')} className="sticky top-0 z-20 px-8 py-3 bg-amber-50 dark:bg-amber-900/30 border-b border-amber-200 dark:border-amber-800 flex items-center gap-3 text-sm">
             <span className="flex-1 font-semibold text-amber-900 dark:text-amber-100">{t('drawer.discard.title')}</span>
-            <button type="button" onClick={() => setLeaveTo(null)} className="px-3 py-1.5 rounded-full border border-[#e6dddb] bg-white dark:bg-transparent dark:text-white font-bold">{t('drawer.discard.keep')}</button>
+            <button type="button" onClick={() => setLeaveTo(null)} className="px-3 py-1.5 rounded-full border border-line bg-white dark:bg-transparent dark:text-white font-bold">{t('drawer.discard.keep')}</button>
             <button type="button" onClick={() => navigate(leaveTo.to, { state: leaveTo.state })} className="px-3 py-1.5 rounded-full bg-red-600 text-white font-bold">{t('drawer.discard.confirm')}</button>
           </div>
         )}
@@ -152,9 +152,9 @@ function Editor({ mode, job }: { mode: JobFormMode; job?: Job }) {
             <section
               key={key}
               aria-labelledby={`job-section-${key}`}
-              className="bg-white dark:bg-[#1e1e1e] rounded-xl border border-[#e6dddb] dark:border-[#2a2423] p-6 lg:p-8 shadow-sm flex flex-col gap-4"
+              className="bg-white dark:bg-dark-surface rounded-xl border border-line dark:border-dark-raised p-6 lg:p-8 shadow-sm flex flex-col gap-4"
             >
-              <h2 id={`job-section-${key}`} className="flex items-center gap-2 text-base font-bold text-[#181211] dark:text-white">
+              <h2 id={`job-section-${key}`} className="flex items-center gap-2 text-base font-bold text-ink dark:text-white">
                 <span aria-hidden="true" className="size-6 grid place-items-center rounded-full bg-primary/10 text-primary text-xs">{i + 1}</span>
                 {t(label)}
               </h2>
@@ -184,24 +184,24 @@ function JobPreviewModal({ job, jd, onClose }: { job: Job; jd?: Jd; onClose: () 
     <div className="fixed inset-0 z-50 grid place-items-center p-3 sm:p-4 bg-black/50" onClick={onClose}>
       <div role="dialog" aria-modal="true" aria-label={t('jobs.editor.preview')} onClick={(e) => e.stopPropagation()}
         className="w-full max-w-[1600px] h-full flex flex-col rounded-2xl overflow-hidden bg-background-light shadow-2xl">
-        <div className="shrink-0 px-5 py-3 flex items-center gap-3 bg-white dark:bg-[#1e1e1e] border-b border-[#e6dddb] dark:border-[#2a2423] text-sm">
-          <span aria-hidden="true" className="material-symbols-outlined text-[20px] text-[#896a61]">visibility</span>
+        <div className="shrink-0 px-5 py-3 flex items-center gap-3 bg-white dark:bg-dark-surface border-b border-line dark:border-dark-raised text-sm">
+          <span aria-hidden="true" className="material-symbols-outlined text-[20px] text-ink-muted">visibility</span>
           <div className="min-w-0">
-            <p className="font-bold text-[#181211] dark:text-white">{t('jobs.preview.note')}</p>
+            <p className="font-bold text-ink dark:text-white">{t('jobs.preview.note')}</p>
             {job.status !== 'open' && <p className="text-xs text-orange-600">{t('jobs.preview.unpublished')}</p>}
           </div>
-          <div role="group" aria-label={t('careers.lang.label')} className="ml-auto flex rounded-full border border-[#e6dddb] dark:border-[#3a3433] p-0.5 text-xs font-bold">
+          <div role="group" aria-label={t('careers.lang.label')} className="ui-seg ml-auto flex rounded-full border border-line dark:border-dark-line p-0.5 text-xs font-bold">
             {(['vi', 'en'] as const).map((l) => (
               <button key={l} type="button" aria-pressed={lang === l} onClick={() => setLang(l)}
-                className={`px-2.5 py-1 rounded-full uppercase ${lang === l ? 'bg-primary text-white' : 'text-[#896a61] hover:text-primary'}`}>{l}</button>
+                className={`ui-seg-item px-2.5 py-1 rounded-full uppercase ${lang === l ? 'bg-primary text-white' : 'text-ink-muted hover:text-primary'}`}>{l}</button>
             ))}
           </div>
           <button type="button" autoFocus onClick={onClose} aria-label={t('jobs.preview.close')}
-            className="size-9 grid place-items-center rounded-full text-[#896a61] hover:bg-gray-100 dark:hover:bg-white/10 hover:text-[#181211] dark:hover:text-white">
-            <span aria-hidden="true" className="material-symbols-outlined text-[22px]">close</span>
+            className="size-9 grid place-items-center rounded-full text-ink-muted hover:bg-gray-100 dark:hover:bg-white/10 hover:text-ink dark:hover:text-white">
+            <span aria-hidden="true" className="material-symbols-outlined text-[24px]">close</span>
           </button>
         </div>
-        <div className="flex-1 overflow-y-auto p-6 sm:p-8 text-[#181211]" onClickCapture={(e) => { if ((e.target as HTMLElement).closest('a')) e.preventDefault(); }}>
+        <div className="flex-1 overflow-y-auto p-6 sm:p-8 text-ink" onClickCapture={(e) => { if ((e.target as HTMLElement).closest('a')) e.preventDefault(); }}>
           <CareersJobView job={job} jd={jd} preview />
         </div>
       </div>

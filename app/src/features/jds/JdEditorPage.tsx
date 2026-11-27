@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { canEditJd } from '../../domain/permissions';
+import { useMe } from '../../store/session';
 import { AppLayout } from '../../components/AppLayout';
 import { Field, TagField } from '../../components/TagField';
 import { NotFoundState } from '../../components/NotFoundState';
@@ -12,15 +14,15 @@ import { useT } from '../../i18n/i18n';
 import { useStore } from '../../store/store';
 
 const INPUT =
-  'w-full px-4 py-2.5 bg-white dark:bg-[#251f1e] border border-[#e6dddb] dark:border-[#3a3433] rounded-xl text-sm text-[#181211] dark:text-white placeholder-[#b5a7a3] focus:ring-1 focus:ring-primary focus:border-primary focus:outline-none';
+  'w-full px-4 py-2.5 bg-white dark:bg-dark-surface border border-line dark:border-dark-line rounded-xl text-sm text-ink dark:text-white placeholder-[#b5a7a3] focus:ring-1 focus:ring-primary focus:border-primary focus:outline-none';
 // Compact footer buttons, the same size as the JD detail action bar.
 const BTN_BAR = 'h-8 px-3.5 rounded-full text-[13px] font-semibold inline-flex items-center gap-1.5 whitespace-nowrap transition-colors';
-const BTN_GHOST = `${BTN_BAR} border border-[#e6dddb] dark:border-[#3a3433] text-[#181211] dark:text-white hover:bg-gray-50 dark:hover:bg-[#332d2c]`;
-const BTN_PRIMARY = `${BTN_BAR} font-bold text-white bg-brand-vivid hover:bg-[#e65e00] shadow-sm`;
+const BTN_GHOST = `${BTN_BAR} border border-line dark:border-dark-line text-ink dark:text-white hover:bg-gray-50 dark:hover:bg-dark-raised`;
+const BTN_PRIMARY = `${BTN_BAR} font-bold text-white bg-brand-vivid hover:bg-brand-strong shadow-sm`;
 const BTN_SM_PRIMARY =
   'px-4 py-1.5 text-sm font-semibold bg-brand-accent hover:bg-brand-strong text-white rounded-full transition-colors inline-flex items-center gap-1 disabled:opacity-40';
 const BTN_SM_GHOST =
-  'px-4 py-1.5 text-sm font-semibold border border-[#e6dddb] dark:border-[#3a3433] text-[#181211] dark:text-white rounded-full hover:border-primary/50 transition-colors inline-flex items-center gap-1';
+  'px-4 py-1.5 text-sm font-semibold border border-line dark:border-dark-line text-ink dark:text-white rounded-full hover:border-primary/50 transition-colors inline-flex items-center gap-1';
 const MODELS = ['Onsite', 'Hybrid', 'Remote'] as const;
 /** One-click starting points for "Create with AI". */
 const EXAMPLES = ['Senior Backend Engineer', 'QA Engineer', 'Junior Mobile Developer', 'Growth Marketing Manager'];
@@ -81,14 +83,14 @@ function toInput(f: Form): JdInput {
 /** A numbered form block, styled like the Job editor's sections. */
 function Section({ n, id, title, hint, badge, children }: { n: number; id: string; title: string; hint: string; badge?: ReactNode; children: ReactNode }) {
   return (
-    <section aria-labelledby={`jd-section-${id}`} className="bg-white dark:bg-[#1e1e1e] rounded-xl border border-[#e6dddb] dark:border-[#2a2423] p-6 lg:p-8 shadow-sm flex flex-col gap-6">
+    <section aria-labelledby={`jd-section-${id}`} className="bg-white dark:bg-dark-surface rounded-xl border border-line dark:border-dark-raised p-6 lg:p-8 shadow-sm flex flex-col gap-6">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h2 id={`jd-section-${id}`} className="flex items-center gap-2 text-base font-bold text-[#181211] dark:text-white">
+          <h2 id={`jd-section-${id}`} className="flex items-center gap-2 text-base font-bold text-ink dark:text-white">
             <span aria-hidden="true" className="size-6 grid place-items-center rounded-full bg-primary/10 text-primary text-xs">{n}</span>
             {title}
           </h2>
-          <p className="mt-1 ml-8 text-xs text-[#896a61]">{hint}</p>
+          <p className="mt-1 ml-8 text-xs text-ink-muted">{hint}</p>
         </div>
         {badge}
       </div>
@@ -99,8 +101,8 @@ function Section({ n, id, title, hint, badge, children }: { n: number; id: strin
 
 function SectionHead({ children, active }: { children: ReactNode; active?: boolean }) {
   return (
-    <h4 className="flex items-center gap-2 text-xs font-bold tracking-wider text-[#5b4a45] dark:text-gray-300">
-      <span className={`size-1.5 rounded-full ${active ? 'bg-brand-accent' : 'bg-[#896a61]'}`}></span>{children}
+    <h4 className="flex items-center gap-2 text-xs font-bold tracking-wider text-gray-600 dark:text-gray-300">
+      <span className={`size-1.5 rounded-full ${active ? 'bg-brand-accent' : 'bg-ink-muted'}`}></span>{children}
     </h4>
   );
 }
@@ -110,10 +112,20 @@ export function JdEditorPage({ mode }: { mode: 'create' | 'edit' }) {
   const t = useT();
   const { id } = useParams();
   const jd = useStore((s) => (id ? s.jds.find((j) => j.id === id) : undefined));
+  const user = useMe();
+  const jobs = useStore((s) => s.jobs);
   if (mode === 'edit' && !jd) {
     return (
       <AppLayout title={t('nav.jdManagement')}>
         <NotFoundState icon="search_off" message={t('jds.page.notFound')} backTo="/jds" backLabel={t('jds.page.backList')} />
+      </AppLayout>
+    );
+  }
+  // An edit link to someone else's JD (typed or shared) lands on a read-only notice, not the editor.
+  if (mode === 'edit' && jd && !canEditJd(user, jd, jobs)) {
+    return (
+      <AppLayout title={t('nav.jdManagement')}>
+        <NotFoundState icon="lock" message={t('jds.page.readOnly')} backTo="/jds" backLabel={t('jds.page.backList')} />
       </AppLayout>
     );
   }
@@ -276,13 +288,13 @@ function Editor({ jd }: { jd?: Jd }) {
         {!value && <option value="">—</option>}
         {opts.map((o) => <option key={o} value={o}>{label(o)}</option>)}
       </select>
-      <span aria-hidden="true" className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-[18px] text-[#896a61] pointer-events-none">expand_more</span>
+      <span aria-hidden="true" className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-[18px] text-ink-muted pointer-events-none">expand_more</span>
     </div>
   );
 
   // Always on screen, like the Job editor. Saving is the main action (far right); Save & Match saves, then opens matching.
   const footer = (
-    <div className="bg-white dark:bg-[#1e1e1e] border-t border-[#e6dddb] dark:border-[#2a2423] shadow-[0_-2px_8px_rgba(0,0,0,0.04)]">
+    <div className="bg-white dark:bg-dark-surface border-t border-line dark:border-dark-raised shadow-[0_-2px_8px_rgba(0,0,0,0.04)]">
       {/* Right padding keeps the buttons clear of the floating AI button. */}
       <div className="max-w-[1400px] mx-auto pl-8 pr-20 py-2 flex items-center gap-2 flex-wrap">
         <button type="button" onClick={leave} className={BTN_GHOST}>{t('common.cancel')}</button>
@@ -303,11 +315,11 @@ function Editor({ jd }: { jd?: Jd }) {
 
   return (
     <AppLayout title={t(jd ? 'jds.page.editTitle' : 'jds.page.createTitle')} subtitle={t('jds.page.subtitle')} back={{ label: backLabel, onClick: leave }} footer={footer}>
-      <div className="min-h-full bg-[#fbf9f8] dark:bg-background-dark">
+      <div className="min-h-full bg-gray-50 dark:bg-dark-canvas">
         {asking && (
           <div role="alertdialog" aria-label={t('drawer.discard.title')} className="sticky top-0 z-20 px-8 py-3 bg-amber-50 dark:bg-amber-900/30 border-b border-amber-200 dark:border-amber-800 flex items-center gap-3 text-sm">
             <span className="flex-1 font-semibold text-amber-900 dark:text-amber-100">{t('drawer.discard.title')}</span>
-            <button type="button" onClick={() => setAsking(false)} className="px-3 py-1.5 rounded-full border border-[#e6dddb] bg-white dark:bg-transparent dark:text-white font-bold">{t('drawer.discard.keep')}</button>
+            <button type="button" onClick={() => setAsking(false)} className="px-3 py-1.5 rounded-full border border-line bg-white dark:bg-transparent dark:text-white font-bold">{t('drawer.discard.keep')}</button>
             <button type="button" onClick={() => navigate(from)} className="px-3 py-1.5 rounded-full bg-red-600 text-white font-bold">{t('drawer.discard.confirm')}</button>
           </div>
         )}
@@ -320,8 +332,8 @@ function Editor({ jd }: { jd?: Jd }) {
                   <span className="material-symbols-outlined text-[18px]">check</span>
                 </span>
                 <div className="flex-1 min-w-0">
-                  <h2 id="jd-section-ai" className="text-[15px] font-bold text-[#181211] dark:text-white">{t('jds.ai.appliedTitle', { from: filled.from })}</h2>
-                  <p className="text-xs text-[#5b4a45] dark:text-gray-400">{t('jds.ai.appliedHint')}</p>
+                  <h2 id="jd-section-ai" className="ty-section text-[15px] font-bold text-ink dark:text-white">{t('jds.ai.appliedTitle', { from: filled.from })}</h2>
+                  <p className="text-xs text-gray-600 dark:text-gray-400">{t('jds.ai.appliedHint')}</p>
                 </div>
                 <button type="button" onClick={undoFill} className={`${BTN_SM_GHOST} bg-white dark:bg-transparent`}>
                   <span aria-hidden="true" className="material-symbols-outlined text-[16px]">undo</span>{t('jds.ai.undo')}
@@ -334,8 +346,8 @@ function Editor({ jd }: { jd?: Jd }) {
               <dl className="ml-[42px] grid grid-cols-1 sm:grid-cols-[240px_1fr] gap-x-4 gap-y-1 text-xs">
                 {filled.summary.map(([n, title, found]) => (
                   <div key={n} className="contents">
-                    <dt className="text-[#896a61]">{n}. {title}</dt>
-                    <dd className="text-[#181211] dark:text-gray-200">
+                    <dt className="text-ink-muted">{n}. {title}</dt>
+                    <dd className="text-ink dark:text-gray-200">
                       {found ? <><span aria-hidden="true" className="text-green-600">✓ </span>{found}</> : <span className="text-[#b5a7a3]">{t('jds.ai.nothing')}</span>}
                       {gaps[n - 1].length > 0 && <span className="ml-2 text-amber-700 dark:text-amber-300 font-semibold">{t('jds.ai.missing', { fields: gaps[n - 1].join(', ') })}</span>}
                     </dd>
@@ -346,23 +358,23 @@ function Editor({ jd }: { jd?: Jd }) {
           ) : (
             <section aria-labelledby="jd-section-ai" className="rounded-xl border border-orange-200 dark:border-orange-500/30 bg-orange-50/60 dark:bg-orange-500/5 p-5 lg:p-6 flex flex-col gap-4">
               <div className="flex items-center gap-2.5 flex-wrap">
-                <span aria-hidden="true" className="size-8 shrink-0 rounded-lg bg-white dark:bg-[#1e1e1e] border border-orange-200 dark:border-orange-500/30 text-orange-500 grid place-items-center">
+                <span aria-hidden="true" className="size-8 shrink-0 rounded-lg bg-white dark:bg-dark-surface border border-orange-200 dark:border-orange-500/30 text-orange-500 grid place-items-center">
                   <span className="material-symbols-outlined text-[18px]">auto_awesome</span>
                 </span>
-                <h2 id="jd-section-ai" className="text-[15px] font-bold text-[#181211] dark:text-white">{t('jds.page.std.title')}</h2>
-                <span className="text-xs text-[#896a61]">{t('jds.page.std.hint')}</span>
+                <h2 id="jd-section-ai" className="ty-section text-[15px] font-bold text-ink dark:text-white">{t('jds.page.std.title')}</h2>
+                <span className="text-xs text-ink-muted">{t('jds.page.std.hint')}</span>
               </div>
 
               {review !== null ? (
                 <div className="flex flex-col gap-2.5">
-                  <div className="rounded-xl bg-white dark:bg-[#251f1e] border border-[#e6dddb] dark:border-[#3a3433] focus-within:border-primary focus-within:ring-1 focus-within:ring-primary">
-                    <div className="flex items-center gap-2 px-4 pt-3 pb-2 border-b border-[#f0ebe9] dark:border-[#3a3433]">
+                  <div className="rounded-xl bg-white dark:bg-dark-surface border border-line dark:border-dark-line focus-within:border-primary focus-within:ring-1 focus-within:ring-primary">
+                    <div className="flex items-center gap-2 px-4 pt-3 pb-2 border-b border-hairline dark:border-dark-line">
                       <span aria-hidden="true" className="material-symbols-outlined text-[16px] text-orange-500">spellcheck</span>
-                      <span className="text-sm font-bold text-[#181211] dark:text-white">{t('jds.ai.reviewTitle')}</span>
-                      <span className="text-xs text-[#896a61]">{t('jds.ai.reviewHint')}</span>
+                      <span className="text-sm font-bold text-ink dark:text-white">{t('jds.ai.reviewTitle')}</span>
+                      <span className="text-xs text-ink-muted">{t('jds.ai.reviewHint')}</span>
                     </div>
                     <textarea aria-label={t('jds.ai.reviewTitle')} rows={16} value={review} onChange={(e) => setReview(e.target.value)}
-                      className="w-full block resize-y bg-transparent border-0 px-4 py-3 text-sm leading-relaxed text-[#181211] dark:text-white focus:ring-0 focus:outline-none" />
+                      className="w-full block resize-y bg-transparent border-0 px-4 py-3 text-sm leading-relaxed text-ink dark:text-white focus:ring-0 focus:outline-none" />
                     <div className="flex flex-wrap items-center gap-2 px-2.5 pb-2.5">
                       <button type="button" onClick={() => setReview(null)} className={BTN_SM_GHOST}>
                         <span aria-hidden="true" className="material-symbols-outlined text-[16px]">arrow_back</span>{t('jds.ai.backToSource')}
@@ -383,21 +395,21 @@ function Editor({ jd }: { jd?: Jd }) {
                     onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
                     onDragLeave={() => setDragging(false)}
                     onDrop={(e) => { e.preventDefault(); setDragging(false); void upload(e.dataTransfer.files?.[0]); }}
-                    className={`rounded-xl bg-white dark:bg-[#251f1e] border transition-colors focus-within:border-primary focus-within:ring-1 focus-within:ring-primary ${dragging ? 'border-primary border-dashed' : 'border-[#e6dddb] dark:border-[#3a3433]'}`}
+                    className={`rounded-xl bg-white dark:bg-dark-surface border transition-colors focus-within:border-primary focus-within:ring-1 focus-within:ring-primary ${dragging ? 'border-primary border-dashed' : 'border-line dark:border-dark-line'}`}
                   >
                     <textarea aria-label={t('jds.page.std.pasteLabel')} rows={Math.min(Math.max(source.split('\n').length, 3), 18)} value={source}
                       onChange={(e) => setSource(e.target.value)}
                       onKeyDown={(e) => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && canRun) fillWithAi(); }}
                       placeholder={t('jds.page.std.pastePlaceholder')}
-                      className="w-full block resize-y bg-transparent border-0 rounded-t-xl px-4 pt-3 pb-1 text-sm text-[#181211] dark:text-white placeholder-[#b5a7a3] focus:ring-0 focus:outline-none" />
+                      className="w-full block resize-y bg-transparent border-0 rounded-t-xl px-4 pt-3 pb-1 text-sm text-ink dark:text-white placeholder-[#b5a7a3] focus:ring-0 focus:outline-none" />
                     <div className="flex flex-wrap items-center gap-2 px-2.5 pb-2.5">
-                      <label className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium text-[#896a61] hover:text-[#181211] hover:bg-[#f4f1f0] dark:hover:bg-white/10 dark:hover:text-white cursor-pointer">
+                      <label className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium text-ink-muted hover:text-ink hover:bg-gray-100 dark:hover:bg-white/10 dark:hover:text-white cursor-pointer">
                         <span aria-hidden="true" className="material-symbols-outlined text-[16px]">attach_file</span>{t('jds.ai.attach')}
                         <input type="file" accept=".txt,.md,.pdf,.doc,.docx" className="sr-only" onChange={(e) => { void upload(e.target.files?.[0]); e.target.value = ''; }} />
                       </label>
                       {source.trim() && (
                         <span role="status" className="inline-flex items-center gap-1 text-xs text-orange-700 dark:text-orange-300">
-                          <span aria-hidden="true" className="material-symbols-outlined text-[15px]">{generating ? 'edit_square' : 'manage_search'}</span>
+                          <span aria-hidden="true" className="material-symbols-outlined text-[16px]">{generating ? 'edit_square' : 'manage_search'}</span>
                           {t(generating ? 'jds.page.std.modeTitle' : 'jds.page.std.modeJd')}
                         </span>
                       )}
@@ -409,12 +421,12 @@ function Editor({ jd }: { jd?: Jd }) {
                       </button>
                     </div>
                   </div>
-                  <p className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-[#896a61]">
+                  <p className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-ink-muted">
                     {t('jds.ai.try')}
                     {EXAMPLES.map((x, i) => (
                       <span key={x} className="inline-flex items-center gap-1.5">
                         {i > 0 && <span aria-hidden="true">·</span>}
-                        <button type="button" onClick={() => setSource(x)} className="font-medium text-[#5b4a45] dark:text-gray-300 hover:text-primary hover:underline underline-offset-2">{x}</button>
+                        <button type="button" onClick={() => setSource(x)} className="font-medium text-gray-600 dark:text-gray-300 hover:text-primary hover:underline underline-offset-2">{x}</button>
                       </span>
                     ))}
                   </p>
@@ -425,10 +437,10 @@ function Editor({ jd }: { jd?: Jd }) {
 
           {/* The other way in: fill the sections by hand. */}
           {!filled && (
-            <div role="separator" aria-label={t('jds.page.orManual')} className="flex items-center gap-3 text-xs text-[#896a61]">
-              <span className="flex-1 border-t border-[#e6dddb] dark:border-[#3a3433]"></span>
+            <div role="separator" aria-label={t('jds.page.orManual')} className="flex items-center gap-3 text-xs text-ink-muted">
+              <span className="flex-1 border-t border-line dark:border-dark-line"></span>
               {t('jds.page.orManual')}
-              <span className="flex-1 border-t border-[#e6dddb] dark:border-[#3a3433]"></span>
+              <span className="flex-1 border-t border-line dark:border-dark-line"></span>
             </div>
           )}
 
@@ -491,7 +503,7 @@ function Editor({ jd }: { jd?: Jd }) {
               onStar={(v) => set('criticalSkills', form.criticalSkills.includes(v) ? form.criticalSkills.filter((x) => x !== v) : [...form.criticalSkills, v])} />
             <TagField id="jd-must" label={t('jds.page.must')} required placeholder={t('jds.page.mustAdd')} values={form.mustHave} onChange={(v) => set('mustHave', v)} error={err('mustHave')} list options={mustLibrary} quick={ideas.mustHave} />
             <TagField id="jd-nice" label={t('jds.page.nice')} placeholder={t('jds.page.niceAdd')} values={form.niceToHave} onChange={(v) => set('niceToHave', v)} list quick={ideas.niceToHave} />
-            <div className="pt-6 border-t border-[#f0ebe9] dark:border-[#2a2423] flex flex-col gap-6">
+            <div className="pt-6 border-t border-hairline dark:border-dark-raised flex flex-col gap-6">
               <SectionHead>{t('jds.page.qualifications')}</SectionHead>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-6">
                 <Field id="jd-education" label={t('jds.page.education')}>
@@ -503,7 +515,7 @@ function Editor({ jd }: { jd?: Jd }) {
               </div>
               <TagField id="jd-certs" label={t('jds.page.certs')} placeholder={t('jds.page.certsAdd')} values={form.certifications} onChange={(v) => set('certifications', v)} options={CERT_OPTIONS} />
               <TagField id="jd-languages" label={t('jds.page.languages')} placeholder={t('jds.page.languagesAdd')} values={form.languages} onChange={(v) => set('languages', v)} options={LANGUAGE_OPTIONS} />
-              <Field id="jd-other" label={t('jds.page.other')} aside={<span className="text-2xs text-[#896a61]">{t('jds.page.otherAside')}</span>}>
+              <Field id="jd-other" label={t('jds.page.other')} aside={<span className="text-2xs text-ink-muted">{t('jds.page.otherAside')}</span>}>
                 <textarea id="jd-other" rows={3} className={INPUT} placeholder={t('jds.page.otherPlaceholder')} value={form.otherRequirements} onChange={(e) => set('otherRequirements', e.target.value)} />
               </Field>
             </div>

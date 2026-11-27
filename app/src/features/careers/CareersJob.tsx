@@ -9,10 +9,10 @@ import { SharePanel, ShareButton } from './JobShare';
 
 // Section headings in sentence case: easier to scan than the old small uppercase labels.
 // Each heading keeps its top gap; only the very first one on the card drops it (see BODY).
-const H2 = 'text-xl font-bold text-[#181211] mt-10 mb-3';
-const BODY = 'bg-white rounded-3xl border border-[#e6dddb] p-6 sm:p-10 text-[15px] leading-relaxed text-[#3d312e] [&>h2:first-child]:mt-0 [&>section:first-child>h2]:mt-0';
+const H2 = 'text-xl font-bold text-ink mt-10 mb-3';
+const BODY = 'bg-white rounded-3xl border border-stone-200/80 shadow-sm shadow-stone-900/[0.03] p-6 sm:p-10 text-[15px] leading-relaxed text-gray-700 [&>h2:first-child]:mt-0 [&>section:first-child>h2]:mt-0';
 
-const APPLY = 'inline-flex items-center justify-center gap-2 h-12 px-8 rounded-full bg-primary hover:bg-primary-hover text-white font-bold text-sm shadow-lg shadow-primary/20';
+const APPLY = 'inline-flex items-center justify-center gap-2 h-12 px-8 rounded-full bg-primary hover:bg-primary-hover text-white font-bold text-sm shadow-lg shadow-orange-500/25';
 
 /** Public job page; only open jobs are shown. */
 export function CareersJob() {
@@ -47,14 +47,14 @@ export function CareersJobView({ job, jd, preview }: { job: Job; jd?: Jd; previe
   return (
     <article>
       {!preview && (
-        <Link to="/careers#jobs" className="text-sm font-medium text-[#896a61] hover:text-primary inline-flex items-center gap-1 mb-6">
+        <Link to="/careers#jobs" className="text-sm font-medium text-ink-muted hover:text-primary inline-flex items-center gap-1 mb-6">
           <span className="material-symbols-outlined text-[18px]">arrow_back</span>
           {t('careers.back')}
         </Link>
       )}
       {/* Title band: dark, matching the careers hero. */}
-      <header className="relative overflow-hidden rounded-3xl bg-sidebar-dark text-white p-6 sm:p-10">
-        <div aria-hidden="true" className="pointer-events-none absolute -right-20 -top-24 size-72 rounded-full bg-primary/20 blur-3xl" />
+      <header className="relative overflow-hidden rounded-3xl careers-dark text-white p-6 sm:p-10">
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0 careers-grid" />
         {!preview && <div className="relative float-right ml-4 mb-2"><ShareButton job={job} /></div>}
         <p className="relative text-xs font-bold uppercase tracking-[0.14em] text-brand-light">{job.department}</p>
         <h1 className="relative mt-2 text-3xl sm:text-4xl font-bold tracking-tight text-balance max-w-3xl">{job.title}</h1>
@@ -73,21 +73,21 @@ export function CareersJobView({ job, jd, preview }: { job: Job; jd?: Jd; previe
           <JobPostBody job={job} jd={jd} headingClass={H2} />
         </div>
 
-        <aside className={`lg:sticky ${preview ? 'lg:top-0' : 'lg:top-24'} bg-white rounded-3xl border border-[#e6dddb] p-6`}>
+        <aside className={`lg:sticky ${preview ? 'lg:top-0' : 'lg:top-24'} bg-white rounded-3xl border border-stone-200/80 shadow-sm shadow-stone-900/[0.03] p-6`}>
           <h2 className="font-bold">{t('careers.job.overview')}</h2>
           <dl className="mt-4 space-y-4">
             {facts.filter(([, , v]) => v).map(([icon, label, v]) => (
               <div key={label} className="flex gap-3">
-                <span className="size-9 shrink-0 grid place-items-center rounded-lg bg-[#f4efee] text-[#3d312e]"><span className="material-symbols-outlined text-[20px]">{icon}</span></span>
+                <span className="size-9 shrink-0 grid place-items-center rounded-lg bg-orange-50 text-primary-ink ring-1 ring-orange-100"><span className="material-symbols-outlined text-[20px]">{icon}</span></span>
                 <div className="min-w-0">
-                  <dt className="text-xs text-[#896a61]">{t(label)}</dt>
-                  <dd className="text-sm font-semibold text-[#181211]">{v}</dd>
+                  <dt className="text-xs text-ink-muted">{t(label)}</dt>
+                  <dd className="text-sm font-semibold text-ink">{v}</dd>
                 </div>
               </div>
             ))}
           </dl>
           <Link to={apply} className={`${APPLY} mt-6 w-full`}>{t('careers.job.apply')}</Link>
-          <p className="mt-3 text-xs text-[#896a61] text-center leading-snug">{t('careers.job.applyHint')}</p>
+          <p className="mt-3 text-xs text-ink-muted text-center leading-snug">{t('careers.job.applyHint')}</p>
           {!preview && <SharePanel job={job} />}
         </aside>
       </div>

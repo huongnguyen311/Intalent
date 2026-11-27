@@ -4,9 +4,9 @@ import { toast } from '../../components/Toast';
 import type { Prompt } from '../../domain/types';
 import { useT } from '../../i18n/i18n';
 import { useStore } from '../../store/store';
+import { FIELD } from '../../components/ui';
 
-const FIELD = 'w-full px-3 py-2 bg-white dark:bg-[#251f1e] border border-[#e6dddb] dark:border-[#3a3433] focus:border-primary focus:ring-0 rounded-lg text-sm text-[#181211] dark:text-white';
-const LABEL = 'block text-xs font-bold text-[#896a61] uppercase tracking-wider mb-1';
+const LABEL = 'block text-xs font-bold text-ink-muted uppercase tracking-wider mb-1';
 
 /** Edits a prompt or email template; the text is saved, never executed. */
 export function PromptEditor({ prompt, onClose }: { prompt: Prompt; onClose: () => void }) {
@@ -27,7 +27,7 @@ export function PromptEditor({ prompt, onClose }: { prompt: Prompt; onClose: () 
       onClose={onClose}
       footer={
         <>
-          <button onClick={onClose} className="px-4 py-2 text-sm font-medium text-[#5a4a46] hover:text-[#181211]">{t('common.cancel')}</button>
+          <button onClick={onClose} className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-ink">{t('common.cancel')}</button>
           <button onClick={save} className="px-4 py-2 bg-primary hover:bg-primary-hover text-white rounded-lg font-semibold text-sm transition-colors">{t('systemConfig.save')}</button>
         </>
       }

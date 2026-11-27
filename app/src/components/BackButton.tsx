@@ -13,7 +13,7 @@ export function BackButton({ label, onClick, size = 'md' }: Props) {
       aria-label={label}
       title={label}
       onClick={onClick}
-      className={`${size === 'sm' ? 'size-9' : 'size-10'} shrink-0 rounded-full bg-white dark:bg-[#2a2423] border border-[#e6dddb] dark:border-[#3a3433] flex items-center justify-center text-[#896a61] hover:text-brand-vivid transition-colors shadow-sm`}
+      className={`${size === 'sm' ? 'size-9' : 'size-10'} shrink-0 rounded-full bg-white dark:bg-dark-raised border border-line dark:border-dark-line flex items-center justify-center text-ink-muted hover:text-brand-vivid transition-colors shadow-sm`}
     >
       <span aria-hidden="true" className={`material-symbols-outlined ${size === 'sm' ? 'text-[20px]' : ''}`}>arrow_back</span>
     </button>

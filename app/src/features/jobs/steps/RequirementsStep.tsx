@@ -25,7 +25,7 @@ export function RequirementsStep({ form }: { form: JobForm }) {
         </Field>
       </div>
       <TagField id="job-skills" label={t('jobs.post.skills')} placeholder={t('jobs.post.skillsPlaceholder')} values={v.skills} onChange={set.skills} options={skillOptions}
-        labelClass="text-xs font-semibold text-[#896a61]" />
+        labelClass="text-xs font-semibold text-ink-muted" />
       <div className="grid gap-4 lg:grid-cols-2">
         <PostArea form={form} id="job-must-have" label={t('jobs.post.mustHave')} field="mustHave" rows={5} perLine />
         <PostArea form={form} id="job-nice-to-have" label={t('jobs.post.niceToHave')} field="niceToHave" rows={5} perLine />

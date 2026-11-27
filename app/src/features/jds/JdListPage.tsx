@@ -9,16 +9,18 @@ import type { Jd } from '../../domain/types';
 import { useT } from '../../i18n/i18n';
 import { useStore } from '../../store/store';
 import { DeleteJdModal } from './DeleteJdModal';
+import { canEditJd } from '../../domain/permissions';
+import { useMe } from '../../store/session';
 import { monthDay, year } from './format';
 
 const PAGE_SIZE = 10;
 /** Filter value for JDs without a client. */
 const INTERNAL = '__internal__';
 const FILTER_BTN =
-  'flex items-center gap-2 px-3 py-2 bg-white dark:bg-[#251f1e] border border-[#e6dddb] dark:border-[#3a3433] rounded-lg text-sm font-medium text-[#181211] dark:text-white hover:border-primary/50 transition-colors whitespace-nowrap ';
+  'flex items-center gap-2 px-3 py-2 bg-white dark:bg-dark-surface border border-line dark:border-dark-line rounded-lg text-sm font-medium text-ink dark:text-white hover:border-primary/50 transition-colors whitespace-nowrap ';
 const INPUT =
-  'w-full pl-10 pr-4 py-2.5 bg-white dark:bg-[#251f1e] border border-[#e6dddb] dark:border-[#3a3433] focus:border-primary focus:ring-0 rounded-lg text-sm text-[#181211] dark:text-white transition-all placeholder-[#896a61]';
-const TH = 'px-4 py-4 whitespace-nowrap text-xs font-bold text-[#896a61] uppercase tracking-wider border-b border-[#e6dddb] dark:border-[#2a2423]  ';
+  'w-full pl-10 pr-4 py-2.5 bg-white dark:bg-dark-surface border border-line dark:border-dark-line focus:border-primary focus:ring-0 rounded-lg text-sm text-ink dark:text-white transition-all placeholder-ink-muted';
+const TH = 'px-4 py-4 whitespace-nowrap text-xs font-bold text-ink-muted uppercase tracking-wider border-b border-line dark:border-dark-raised  ';
 // Cells wrap so the table fits the page without a sideways scroll.
 const TD = 'px-4 py-4 align-middle ';
 
@@ -26,8 +28,8 @@ export function StatusBadge({ status }: { status: string }) {
   const t = useT();
   const published = status === 'Published';
   return (
-    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-2xs font-bold ${published ? 'bg-[#ECFDF5] text-[#10B981]' : 'bg-gray-100 text-gray-500'}`}>
-      <span className={`size-1.5 rounded-full ${published ? 'bg-[#10B981]' : 'bg-gray-400'}`}></span>
+    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-2xs font-bold ${published ? 'bg-emerald-50 text-emerald-500' : 'bg-gray-100 text-gray-500'}`}>
+      <span className={`size-1.5 rounded-full ${published ? 'bg-emerald-500' : 'bg-gray-400'}`}></span>
       {t(published ? 'jds.status.published' : 'jds.status.draft')}
     </span>
   );
@@ -36,9 +38,9 @@ export function StatusBadge({ status }: { status: string }) {
 function FilterButton({ icon, label, onClick }: { icon: string; label: string; onClick: () => void }) {
   return (
     <button onClick={onClick} className={FILTER_BTN}>
-      <span className="material-symbols-outlined text-[18px] text-[#896a61]">{icon}</span>
+      <span className="material-symbols-outlined text-[18px] text-ink-muted">{icon}</span>
       <span>{label}</span>
-      <span className="material-symbols-outlined text-[18px] text-[#896a61]">expand_more</span>
+      <span className="material-symbols-outlined text-[18px] text-ink-muted">expand_more</span>
     </button>
   );
 }
@@ -50,6 +52,7 @@ export function JdListPage() {
   const navigate = useNavigate();
   const jds = useStore((s) => s.jds);
   const jobs = useStore((s) => s.jobs);
+  const user = useMe();
   const jobCount = useMemo(() => {
     const m = new Map<string, number>();
     for (const j of jobs) m.set(j.jdId, (m.get(j.jdId) ?? 0) + 1);
@@ -100,7 +103,7 @@ export function JdListPage() {
       <div className="p-8 max-w-[1400px] mx-auto space-y-8 min-h-full">
         <div className="flex items-center gap-3 flex-wrap">
           <div className="flex-1 min-w-[200px] max-w-md relative group">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#896a61] group-focus-within:text-primary transition-colors">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted group-focus-within:text-primary transition-colors">
               <span className="material-symbols-outlined text-[20px]">search</span>
             </span>
             <input className={INPUT} placeholder={t('jds.search')} type="text" value={q} onChange={(e) => reset(setQ)(e.target.value)} />
@@ -120,25 +123,25 @@ export function JdListPage() {
           </button>
         </div>
 
-        <div className="bg-white dark:bg-surface-dark rounded-[1.5rem] shadow-sm border border-gray-100 dark:border-white/10 overflow-hidden">
-          <div className="bg-white dark:bg-[#1e1e1e] rounded-xl border border-[#e6dddb] dark:border-[#2a2423] shadow-sm flex flex-col border-0 shadow-none rounded-none">
+        <div className="bg-white dark:bg-dark-surface rounded-[1.5rem] shadow-sm border border-gray-100 dark:border-white/10 overflow-hidden">
+          <div className="bg-white dark:bg-dark-surface rounded-xl border border-line dark:border-dark-raised shadow-sm flex flex-col border-0 shadow-none rounded-none">
             <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-274px)] custom-scrollbar">
               <table className="w-full text-left border-collapse">
-                <thead className="bg-[#f8f6f6] dark:bg-[#251f1e] sticky top-0 z-10">
+                <thead className="bg-background-light dark:bg-dark-surface sticky top-0 z-10">
                   <tr>
                     {(['jds.col.client', 'jds.col.jd', 'jds.col.domain', 'jds.col.stack', 'jds.col.jobs', 'jds.col.status'] as const).map((k) => (
                       <th key={k} className={TH}><div className="flex items-center gap-1">{t(k)}</div></th>
                     ))}
                     <th className={`${TH}text-right`}><div className="flex items-center gap-1">{t('jds.col.edited')}</div></th>
-                    <th className="px-2 py-4 w-12 border-b border-[#e6dddb] dark:border-[#2a2423] text-xs font-bold text-[#896a61] uppercase tracking-wider text-center"><span className="sr-only">{t('jds.col.actions')}</span></th>
+                    <th className="px-2 py-4 w-12 border-b border-line dark:border-dark-raised text-xs font-bold text-ink-muted uppercase tracking-wider text-center"><span className="sr-only">{t('jds.col.actions')}</span></th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#f4f1f0] dark:divide-[#2a2423]">
+                <tbody className="divide-y divide-hairline dark:divide-dark-raised">
                   {rows.map((jd) => (
                     <tr key={jd.id} className="hover:bg-gray-50 dark:hover:bg-white/5 transition-colors group ">
                       <td className={TD}>
                         <div className="text-sm font-semibold text-slate-700 dark:text-gray-300">
-                          {jd.client || <span className="text-gray-400 dark:text-gray-500 font-medium">{t('jds.client.internal')}</span>}
+                          {jd.client || <span className="text-muted dark:text-gray-500 font-medium">{t('jds.client.internal')}</span>}
                         </div>
                       </td>
                       <td className={TD}>
@@ -159,7 +162,7 @@ export function JdListPage() {
                       <td className={TD}>
                         <div className="flex gap-1.5 flex-wrap max-w-[150px]">
                           {jd.domains.slice(0, 2).map((d) => <span key={d} className="text-sm font-semibold text-slate-600 dark:text-gray-400">{d}</span>)}
-                          {jd.domains.length > 2 && <span className="text-sm font-semibold text-gray-400">+{jd.domains.length - 2}</span>}
+                          {jd.domains.length > 2 && <span className="text-sm font-semibold text-muted dark:text-gray-400">+{jd.domains.length - 2}</span>}
                         </div>
                       </td>
                       <td className={TD}>
@@ -179,7 +182,7 @@ export function JdListPage() {
                             {t('jds.jobsCount', { count: jobCount.get(jd.id)! })}
                           </button>
                         ) : (
-                          <span className="text-sm text-gray-400 whitespace-nowrap">{t('jds.jobsNone')}</span>
+                          <span className="text-sm text-muted dark:text-gray-400 whitespace-nowrap">{t('jds.jobsNone')}</span>
                         )}
                       </td>
                       <td className={`${TD}whitespace-nowrap`}><StatusBadge status={jd.status} /></td>
@@ -193,7 +196,7 @@ export function JdListPage() {
                         <Popover
                           align="right"
                           trigger={({ toggle }) => (
-                            <button aria-label={`${t('jds.col.actions')} ${jd.title}`} onClick={toggle} className="p-2 hover:bg-gray-100 dark:hover:bg-white/10 rounded-full transition-colors text-gray-400 hover:text-slate-900 dark:hover:text-white">
+                            <button aria-label={`${t('jds.col.actions')} ${jd.title}`} onClick={toggle} className="p-2 hover:bg-gray-100 dark:hover:bg-white/10 rounded-full transition-colors text-muted dark:text-gray-400 hover:text-slate-900 dark:hover:text-white">
                               <span className="material-symbols-outlined">more_horiz</span>
                             </button>
                           )}
@@ -201,9 +204,16 @@ export function JdListPage() {
                           {(close) => (
                             <>
                               <MenuItem onClick={() => { close(); open(jd); }}>{t('jds.menu.view')}</MenuItem>
-                              <MenuItem onClick={() => { close(); navigate({ pathname: `/jds/${jd.id}/edit`, search }); }}>{t('jds.menu.edit')}</MenuItem>
-                              <MenuItem onClick={() => { close(); publish(jd); }}>{t(jd.status === 'Published' ? 'jds.menu.unpublish' : 'jds.menu.publish')}</MenuItem>
-                              <MenuItem onClick={() => { close(); setDeleting(jd); }}>{t('jds.menu.delete')}</MenuItem>
+                              {/* Only the author, recruiters of jobs using it, and Super Admin / Lead change a JD; others see why. */}
+                              {(() => {
+                                const locked = !canEditJd(user, jd, jobs);
+                                const why = locked ? t('jds.page.readOnly') : undefined;
+                                return (<>
+                                  <MenuItem disabled={locked} title={why} onClick={() => { close(); navigate({ pathname: `/jds/${jd.id}/edit`, search }); }}>{t('jds.menu.edit')}</MenuItem>
+                                  <MenuItem disabled={locked} title={why} onClick={() => { close(); publish(jd); }}>{t(jd.status === 'Published' ? 'jds.menu.unpublish' : 'jds.menu.publish')}</MenuItem>
+                                  <MenuItem disabled={locked} title={why} onClick={() => { close(); setDeleting(jd); }}>{t('jds.menu.delete')}</MenuItem>
+                                </>);
+                              })()}
                             </>
                           )}
                         </Popover>
@@ -211,7 +221,7 @@ export function JdListPage() {
                     </tr>
                   ))}
                   {rows.length === 0 && (
-                    <tr><td colSpan={8} className="px-6 py-10 text-center text-sm text-[#896a61]">{t('jds.empty')}</td></tr>
+                    <tr><td colSpan={8} className="px-6 py-10 text-center text-sm text-ink-muted">{t('jds.empty')}</td></tr>
                   )}
                 </tbody>
               </table>

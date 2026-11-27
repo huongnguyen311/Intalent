@@ -3,9 +3,8 @@ import { stageLabel } from '../../domain/stages';
 import { fold } from '../../domain/techVocab';
 import { useLang, useT } from '../../i18n/i18n';
 import { useStore } from '../../store/store';
+import { FIELD } from '../../components/ui';
 
-const FIELD =
-  'w-full px-3 py-2 bg-white dark:bg-[#251f1e] border border-[#e6dddb] dark:border-[#3a3433] rounded-lg text-sm text-[#181211] dark:text-white focus:ring-1 focus:ring-primary focus:border-primary focus:outline-none';
 
 type Props = { jobId: string; selected: string[]; onChange: (ids: string[]) => void };
 
@@ -25,12 +24,12 @@ export function PoolSearch({ jobId, selected, onChange }: Props) {
   return (
     <div className="flex flex-col gap-2">
       <input aria-label={t('atp.search')} className={FIELD} placeholder={t('atp.search')} value={q} onChange={(e) => setQ(e.target.value)} />
-      <ul className="max-h-64 overflow-y-auto custom-scrollbar border border-[#e6dddb] dark:border-[#3a3433] rounded-lg divide-y divide-[#f4f1f0] dark:divide-[#2a2423]">
+      <ul className="max-h-64 overflow-y-auto custom-scrollbar border border-line dark:border-dark-line rounded-lg divide-y divide-hairline dark:divide-dark-raised">
         {matches.map((c) => {
           const existing = applications.find((a) => a.candidateId === c.id && a.jobId === jobId);
           return (
             <li key={c.id}>
-              <label className={`flex items-center gap-3 px-3 py-2 ${existing ? 'opacity-60' : 'cursor-pointer hover:bg-[#f8f6f6] dark:hover:bg-white/5'}`}>
+              <label className={`flex items-center gap-3 px-3 py-2 ${existing ? 'opacity-60' : 'cursor-pointer hover:bg-background-light dark:hover:bg-white/5'}`}>
                 <input
                   type="checkbox"
                   className="accent-primary"
@@ -40,7 +39,7 @@ export function PoolSearch({ jobId, selected, onChange }: Props) {
                 />
                 <span className="flex-1 min-w-0">
                   <span className="block font-medium truncate">{c.name}</span>
-                  <span className="block text-xs text-[#896a61] truncate">{c.title}</span>
+                  <span className="block text-xs text-ink-muted truncate">{c.title}</span>
                 </span>
                 {existing && (
                   <span className="text-xs text-amber-700 dark:text-amber-300 whitespace-nowrap">
@@ -51,7 +50,7 @@ export function PoolSearch({ jobId, selected, onChange }: Props) {
             </li>
           );
         })}
-        {matches.length === 0 && <li className="px-3 py-6 text-center text-[#896a61]">{t('atp.noMatch')}</li>}
+        {matches.length === 0 && <li className="px-3 py-6 text-center text-ink-muted">{t('atp.noMatch')}</li>}
       </ul>
     </div>
   );

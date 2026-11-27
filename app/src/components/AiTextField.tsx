@@ -3,7 +3,7 @@ import { rewritePoints } from '../domain/jdWriter';
 import { useT } from '../i18n/i18n';
 
 const FIELD =
-  'w-full px-3 py-2 bg-white dark:bg-[#251f1e] border border-[#e6dddb] dark:border-[#3a3433] rounded-lg text-sm text-[#181211] dark:text-white focus:ring-1 focus:ring-primary focus:border-primary focus:outline-none';
+  'w-full px-3 py-2 bg-white dark:bg-dark-surface border border-line dark:border-dark-line rounded-lg text-sm text-ink dark:text-white focus:ring-1 focus:ring-primary focus:border-primary focus:outline-none';
 const AI_BTN =
   'flex items-center gap-1 px-2 py-1 rounded-md text-xs font-semibold text-primary hover:bg-primary/10 disabled:opacity-40 disabled:hover:bg-transparent transition-colors';
 
@@ -29,7 +29,7 @@ export function AiTextField({ id, label, value, onChange, draft, rows = 6, place
   return (
     <div className="flex flex-col gap-1">
       <div className="flex items-center justify-between gap-2">
-        <label htmlFor={id} className="text-xs font-semibold text-[#896a61]">{label}</label>
+        <label htmlFor={id} className="text-xs font-semibold text-ink-muted">{label}</label>
         <div className="flex items-center gap-1">
           {undo !== null && (
             <button type="button" onClick={() => { onChange(undo); setUndo(null); }} className={AI_BTN}>

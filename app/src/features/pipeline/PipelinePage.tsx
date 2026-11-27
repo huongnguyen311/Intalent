@@ -24,12 +24,12 @@ export function PipelinePage() {
   const showAll = !jobId && openJobs.length > 0;
   return (
     <AppLayout title={t('nav.pipeline')} subtitle={t('pipeline.subtitle')}>
-      <div className="px-6 py-5 min-h-full">
+      <div className="p-8 min-h-full">
         {job || showAll ? (
           <PipelineWorkspace key={job?.id ?? 'all'} job={job} switchable={switchable} onSwitch={(id) => navigate(id ? `/pipeline/${id}` : '/pipeline')} />
         ) : (
           <div className="p-12 flex flex-col items-center text-center gap-3">
-            <p className="text-[#896a61]">{t(jobId ? 'pipeline.notFound' : 'pipeline.noOpenJobs')}</p>
+            <p className="text-ink-muted">{t(jobId ? 'pipeline.notFound' : 'pipeline.noOpenJobs')}</p>
             {/* Not a dead end: offer the user's own pipelines (or their job list when none is open). */}
             <Link to={openJobs[0] ? `/pipeline/${openJobs[0].id}` : '/jobs'} className="px-5 py-2.5 rounded-full bg-primary text-white text-sm font-bold">
               {t(openJobs[0] ? 'pipeline.goToMine' : 'nav.jobs')}

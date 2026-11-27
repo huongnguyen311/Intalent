@@ -3,7 +3,9 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { AppLayout } from '../../components/AppLayout';
 import { BackButton } from '../../components/BackButton';
 import { NotFoundState } from '../../components/NotFoundState';
+import { campaignJobIds } from '../../domain/campaigns';
 import { userName } from '../../domain/users';
+import { isFixtureMode } from '../../data/fixtureMockup';
 import { useT, type TKey } from '../../i18n/i18n';
 import { can, jobsInScope } from '../../domain/permissions';
 import { useMe } from '../../store/session';
@@ -15,14 +17,14 @@ import { ago, editorPath } from './jobForm';
 import { useJobActions } from './useJobActions';
 
 const SECONDARY =
-  'h-10 px-5 bg-white dark:bg-[#2a2423] border border-[#e6dddb] dark:border-[#3a3433] text-slate-700 dark:text-white text-sm font-bold rounded-full shadow-sm hover:border-primary/50 transition-colors flex items-center gap-2 whitespace-nowrap';
+  'h-10 px-5 bg-white dark:bg-dark-raised border border-line dark:border-dark-line text-slate-700 dark:text-white text-sm font-bold rounded-full shadow-sm hover:border-primary/50 transition-colors flex items-center gap-2 whitespace-nowrap';
 const PRIMARY =
   'h-10 px-5 bg-brand-accent hover:bg-brand-strong text-white text-sm font-bold rounded-full shadow-lg shadow-orange-500/20 transition-colors flex items-center gap-2 whitespace-nowrap';
 
-const TABS: Array<['pipeline' | 'candidates' | 'campaigns', TKey]> = [
-  ['pipeline', 'jobs.tab.pipeline'],
-  ['candidates', 'jobs.tab.candidates'],
-  ['campaigns', 'jobs.tab.campaigns'],
+const TABS: Array<['pipeline' | 'candidates' | 'campaigns', TKey, string]> = [
+  ['pipeline', 'jobs.tab.pipeline', 'view_kanban'],
+  ['candidates', 'jobs.tab.candidates', 'group'],
+  ['campaigns', 'jobs.tab.campaigns', 'campaign'],
 ];
 
 export function JobDetailPage() {
@@ -34,6 +36,12 @@ export function JobDetailPage() {
   const canEdit = can(user, 'job.edit');
   const users = useStore((s) => s.users);
   const [tab, setTab] = useState<(typeof TABS)[number][0]>('pipeline');
+  // Tab counts (app only; the mockup's tabs are plain labels).
+  const counts = {
+    candidates: useStore((s) => s.applications.filter((a) => a.jobId === id).length),
+    campaigns: useStore((s) => s.campaigns.filter((c) => !!id && campaignJobIds(c, { jobs: s.jobs, applications: s.applications }).includes(id)).length),
+  };
+  const fixture = isFixtureMode();
   const { actionsFor, dialog } = useJobActions();
 
   if (!job) {
@@ -57,14 +65,14 @@ export function JobDetailPage() {
 
   return (
     <AppLayout title={t('nav.jobs')} subtitle={t('jobs.subtitle')}>
-      <div className="min-h-full bg-[#fbf9f8] dark:bg-background-dark">
+      <div className="min-h-full bg-gray-50 dark:bg-dark-canvas">
         <div className="p-8 max-w-[1400px] mx-auto space-y-8">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-4">
               <BackButton label={t('jobs.detail.back')} onClick={() => navigate('/jobs')} />
               <div>
-                <h1 className="ty-title text-[22px] font-bold tracking-tight text-[#181211] dark:text-white mb-1">{job.title}</h1>
-                <p className="text-[#896a61] text-sm flex items-center gap-3 flex-wrap">
+                <h1 className="ty-title text-[22px] font-bold tracking-tight text-ink dark:text-white mb-1">{job.title}</h1>
+                <p className="text-ink-muted text-sm flex items-center gap-3 flex-wrap">
                   <span>{t('jobs.detail.meta', { department: job.department, location: job.location, level: job.level })}</span>
                   <span>• {t('jobs.detail.opened', { date: fullDate(job.openedAt) })}</span>
                 </p>
@@ -97,13 +105,15 @@ export function JobDetailPage() {
             </div>
           )}
 
-          <div role="tablist" className="flex gap-8 border-b border-[#e6dddb] dark:border-[#2a2423]">
-            {TABS.map(([key, label]) => (
+          <div role="tablist" className="ui-tabs flex gap-8 border-b border-line dark:border-dark-raised">
+            {TABS.map(([key, label, icon]) => (
               <button
                 key={key} role="tab" aria-selected={tab === key} onClick={() => setTab(key)}
-                className={`ty-tab pb-3 text-sm font-bold border-b-2 transition-colors ${tab === key ? 'border-primary text-primary' : 'border-transparent text-[#896a61] hover:text-slate-800'}`}
+                className={`ui-tab ty-tab pb-3 text-sm font-bold border-b-2 transition-colors ${tab === key ? 'border-primary text-primary' : 'border-transparent text-ink-muted hover:text-slate-800'}`}
               >
+                {!fixture && <span aria-hidden="true" className="material-symbols-outlined">{icon}</span>}
                 {t(label)}
+                {!fixture && key !== 'pipeline' && <span aria-hidden="true" className="ui-tab-count">{counts[key]}</span>}
               </button>
             ))}
           </div>

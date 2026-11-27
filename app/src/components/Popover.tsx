@@ -55,7 +55,7 @@ export function Popover({ trigger, children, wrapperClass, align = 'left' }: Pro
         <div
           role="menu"
           style={pos}
-          className="fixed z-50 min-w-[160px] max-h-72 overflow-y-auto py-1 bg-white dark:bg-[#1e1e1e] border border-[#e6dddb] dark:border-[#3a3433] rounded-lg shadow-lg"
+          className={`fixed z-50 min-w-[160px] max-h-72 overflow-y-auto py-1 bg-white dark:bg-dark-surface border border-line dark:border-dark-line rounded-lg shadow-lg`}
         >
           {children(close)}
         </div>
@@ -65,11 +65,21 @@ export function Popover({ trigger, children, wrapperClass, align = 'left' }: Pro
 }
 
 const ITEM =
-  'w-full text-left flex items-center gap-2 px-3 py-2 text-sm text-[#181211] dark:text-white hover:bg-[#f8f6f6] dark:hover:bg-white/5';
+  'w-full text-left flex items-center gap-2 px-3 py-2 text-sm text-ink dark:text-white hover:bg-background-light dark:hover:bg-white/5';
 
-export function MenuItem({ children, onClick, active }: { children: ReactNode; onClick: () => void; active?: boolean }) {
+/** `disabled` + `title`: shown greyed out with the reason on hover, so a missing permission is explained, not hidden. */
+export function MenuItem({ children, onClick, active, disabled, title }: {
+  children: ReactNode; onClick: () => void; active?: boolean; disabled?: boolean; title?: string;
+}) {
   return (
-    <button role="menuitem" onClick={onClick} className={`${ITEM} ${active ? 'font-bold text-primary' : ''}`}>
+    <button
+      role="menuitem"
+      onClick={onClick}
+      disabled={disabled}
+      aria-disabled={disabled || undefined}
+      title={title}
+      className={`${ITEM} ${active ? 'font-bold text-primary' : ''} ${disabled ? 'opacity-40 cursor-not-allowed hover:bg-transparent' : ''}`}
+    >
       {children}
     </button>
   );

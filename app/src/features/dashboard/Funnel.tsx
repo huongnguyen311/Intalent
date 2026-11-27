@@ -126,7 +126,7 @@ export function Funnel({ funnel }: { funnel: DashboardMetrics['recruitment']['fu
                   <span className="block truncate text-sm font-semibold text-slate-800 dark:text-gray-100">{label(s.stage)}</span>
                   {s.pass !== undefined && (
                     <span
-                      className={`block truncate text-[11px] tabular-nums ${weak ? 'font-semibold text-red-700 dark:text-red-300' : 'text-muted'}`}
+                      className={`block truncate text-2xs tabular-nums ${weak ? 'font-semibold text-red-700 dark:text-red-300' : 'text-muted'}`}
                       title={t('dashboard.funnelStep', { pct: s.pass, from: label(s.stage), to: label(after(s).stage) })}
                     >
                       ↓ {t('dashboard.movedOn', { pct: s.pass })}
@@ -154,10 +154,10 @@ export function Funnel({ funnel }: { funnel: DashboardMetrics['recruitment']['fu
 
                 <span className={`text-right tabular-nums transition-opacity ${dim}`}>
                   <span className="block text-sm font-bold text-slate-900 dark:text-white">
-                    {pct(s.reached, top)}% <span className="text-[11px] font-normal text-muted">{t('dashboard.ofTop')}</span>
+                    {pct(s.reached, top)}% <span className="text-2xs font-normal text-muted">{t('dashboard.ofTop')}</span>
                   </span>
                   {next && (
-                    <span className={`block text-[11px] ${weak ? 'font-semibold text-red-700 dark:text-red-300' : 'text-muted'}`}>
+                    <span className={`block text-2xs ${weak ? 'font-semibold text-red-700 dark:text-red-300' : 'text-muted'}`}>
                       {t('dashboard.dropped', { n: s.reached - next.reached })}
                     </span>
                   )}

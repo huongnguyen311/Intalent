@@ -15,11 +15,11 @@ export function CampaignFunnel({ perf }: { perf: CampaignPerformance }) {
               <div className="h-full rounded-full bg-primary" style={{ width: `${(s.count / top) * 100}%` }} />
             </div>
             <div className="w-10 text-right text-sm font-bold text-slate-800 dark:text-white">{s.count}</div>
-            <div className="w-14 text-right text-xs font-semibold text-[#896a61]">{s.rate === undefined ? '' : `${Math.round(s.rate * 100)}%`}</div>
+            <div className="w-14 text-right text-xs font-semibold text-ink-muted">{s.rate === undefined ? '' : `${Math.round(s.rate * 100)}%`}</div>
           </div>
         ))}
       </div>
-      <div className="flex gap-6 text-sm text-slate-600 dark:text-gray-300 border-t border-[#f4f1f0] dark:border-[#2a2423] pt-3">
+      <div className="flex gap-6 text-sm text-slate-600 dark:text-gray-300 border-t border-hairline dark:border-dark-raised pt-3">
         <span data-testid="funnel-new">{t('campaigns.funnel.new')}: <b className="text-slate-800 dark:text-white">{perf.new}</b></span>
         <span data-testid="funnel-rejected">{t('campaigns.funnel.rejected')}: <b className="text-slate-800 dark:text-white">{perf.rejected}</b></span>
       </div>

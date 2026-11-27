@@ -18,10 +18,10 @@ import { useJobActions } from './useJobActions';
 
 const PAGE_SIZES = [10, 20, 50];
 const FILTER_BTN =
-  'flex items-center gap-1.5 h-9 px-3 bg-white dark:bg-[#251f1e] border border-[#e6dddb] dark:border-[#3a3433] rounded-full text-sm text-[#896a61] hover:border-primary/50 transition-colors whitespace-nowrap';
-const TH = 'px-3 py-3 text-xs font-medium text-[#896a61] border-b border-[#e6dddb] dark:border-[#2a2423] whitespace-nowrap';
+  'flex items-center gap-1.5 h-9 px-3 bg-white dark:bg-dark-surface border border-line dark:border-dark-line rounded-full text-sm text-ink-muted hover:border-primary/50 transition-colors whitespace-nowrap';
+const TH = 'px-3 py-3 text-xs font-medium text-ink-muted border-b border-line dark:border-dark-raised whitespace-nowrap';
 const TD = 'px-3 py-3 whitespace-nowrap text-sm text-slate-600 dark:text-gray-400';
-const ROW_ICON = 'p-1.5 rounded-lg transition-colors text-[#896a61] hover:bg-gray-100 dark:hover:bg-white/10';
+const ROW_ICON = 'p-1.5 rounded-lg transition-colors text-ink-muted hover:bg-gray-100 dark:hover:bg-white/10';
 
 const has = (hay: string, needle: string) => hay.toLowerCase().includes(needle.trim().toLowerCase());
 
@@ -29,7 +29,7 @@ function FilterButton({ label, value, onClick }: { label: string; value: string;
   return (
     <button onClick={onClick} className={FILTER_BTN}>
       <span>{label}</span>
-      <span className="font-semibold text-[#181211] dark:text-white">{value}</span>
+      <span className="font-semibold text-ink dark:text-white">{value}</span>
       <span className="material-symbols-outlined text-[18px]">expand_more</span>
     </button>
   );
@@ -115,10 +115,10 @@ export function JobsPage() {
         <div className="flex items-start gap-2">
           <div className="flex items-center gap-2 flex-wrap flex-1 min-w-0">
           <div className="relative">
-            <span className="material-symbols-outlined text-[18px] absolute left-3 top-1/2 -translate-y-1/2 text-[#896a61]">search</span>
+            <span className="material-symbols-outlined text-[18px] absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted">search</span>
             <input
               aria-label={t('jobs.searchToggle')}
-              className="h-9 w-[346px] pl-9 pr-3 rounded-full bg-white dark:bg-[#251f1e] border border-[#e6dddb] dark:border-[#3a3433] focus:border-primary focus:ring-0 text-sm text-[#181211] dark:text-white placeholder-[#896a61]"
+              className="h-9 w-[346px] pl-9 pr-3 rounded-full bg-white dark:bg-dark-surface border border-line dark:border-dark-line focus:border-primary focus:ring-0 text-sm text-ink dark:text-white placeholder-ink-muted"
               placeholder={t('jobs.search')}
               value={q}
               onChange={(e) => reset(setQ)(e.target.value)}
@@ -158,10 +158,10 @@ export function JobsPage() {
         </div>
 
         {/* No height cap: the box grows to show every row on the page (Rows per page) and the page scrolls. */}
-        <div className="bg-white dark:bg-surface-dark rounded-2xl border border-[#e6dddb] dark:border-white/10 overflow-hidden">
+        <div className="bg-white dark:bg-dark-surface rounded-2xl border border-line dark:border-white/10 overflow-hidden">
           <div className="overflow-x-auto custom-scrollbar">
             <table className="w-full text-left border-collapse">
-              <thead className="bg-white dark:bg-[#251f1e] sticky top-0 z-10">
+              <thead className="bg-white dark:bg-dark-surface sticky top-0 z-10">
                 <tr>
                   {(['jobs.col.title', 'jobs.col.applicants', 'jobs.col.status', 'jobs.col.campaign', 'jobs.col.updated'] as const).map((k) => (
                     <th key={k} className={TH}>{t(k)}</th>
@@ -169,7 +169,7 @@ export function JobsPage() {
                   <th className={`${TH} w-24`}>{t('jobs.col.actions')}</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#f4f1f0] dark:divide-[#2a2423]">
+              <tbody className="divide-y divide-hairline dark:divide-dark-raised">
                 {rows.map((job) => {
                   const s = stats.get(job.id)!;
                   const when = ago(s.updatedAt, now);
@@ -178,10 +178,10 @@ export function JobsPage() {
                     <tr key={job.id} className="hover:bg-gray-50 dark:hover:bg-white/5 transition-colors group">
                       <td className="px-4 py-3 min-w-[300px]">
                         <div className="flex items-center gap-2">
-                          <Link to={`/jobs/${job.id}`} className="font-semibold text-sm text-[#181211] dark:text-gray-100 group-hover:text-primary transition-colors">{job.title}</Link>
+                          <Link to={`/jobs/${job.id}`} className="font-semibold text-sm text-ink dark:text-gray-100 group-hover:text-primary transition-colors">{job.title}</Link>
                           <PriorityBadge priority={priorityOf(job)} reason={job.urgencyReason} />
                         </div>
-                        <div className="text-xs text-[#896a61] mt-0.5">{[job.department, job.location, job.level].filter(Boolean).join(' · ')}</div>
+                        <div className="text-xs text-ink-muted mt-0.5">{[job.department, job.location, job.level].filter(Boolean).join(' · ')}</div>
                       </td>
                       <td className={`${TD} group/cell`}><StageBar compact job={job} counts={stageCounts(applications, job.id)} /></td>
                       <td className={TD}><JobStatusBadge status={job.status} /></td>
@@ -230,7 +230,7 @@ export function JobsPage() {
                   );
                 })}
                 {rows.length === 0 && (
-                  <tr><td colSpan={7} className="px-6 py-10 text-center text-sm text-[#896a61]">{t('jobs.empty')}</td></tr>
+                  <tr><td colSpan={7} className="px-6 py-10 text-center text-sm text-ink-muted">{t('jobs.empty')}</td></tr>
                 )}
               </tbody>
             </table>

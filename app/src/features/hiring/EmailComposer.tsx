@@ -84,8 +84,8 @@ export function EmailComposer({ open, candidateId, applicationId, templateId, in
       }
     >
       <div className="flex flex-col gap-3">
-        <div className="text-xs text-[#896a61]">
-          {t('email.to')}: <span className="font-semibold text-[#181211] dark:text-white">{to ? `${candidate.name} <${to}>` : candidate.name}</span>
+        <div className="text-xs text-ink-muted">
+          {t('email.to')}: <span className="font-semibold text-ink dark:text-white">{to ? `${candidate.name} <${to}>` : candidate.name}</span>
         </div>
         {!to && <p className="rounded-lg bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 px-3 py-2">{t('email.noAddress')}</p>}
         <Field id="email-template" label={t('email.template')}>
@@ -101,7 +101,7 @@ export function EmailComposer({ open, candidateId, applicationId, templateId, in
           <textarea id="email-body" rows={10} className={`${FIELD} font-mono text-[13px]`} value={body} onChange={(e) => setBody(e.target.value)} />
         </Field>
         {unfilled && <p className="text-xs text-amber-700 dark:text-amber-300">{t('email.unfilled')}</p>}
-        <p className="text-xs text-[#896a61]">{t('email.simulated')}</p>
+        <p className="text-xs text-ink-muted">{t('email.simulated')}</p>
       </div>
     </Modal>
   );

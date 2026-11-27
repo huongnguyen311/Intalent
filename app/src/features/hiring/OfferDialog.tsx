@@ -78,7 +78,7 @@ export function OfferDialog({ open, app, onClose }: Props) {
             </select>
           </Field>
         </div>
-        {range && <p className="text-xs text-[#896a61] -mt-2">{t('offer.jobRange', { range })}</p>}
+        {range && <p className="text-xs text-ink-muted -mt-2">{t('offer.jobRange', { range })}</p>}
         <div className="grid grid-cols-2 gap-3">
           <Field id="of-start" label={t('offer.startDate')}>
             <input id="of-start" type="date" className={FIELD} value={startDate} onChange={(e) => setStartDate(e.target.value)} />

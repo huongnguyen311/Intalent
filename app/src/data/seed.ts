@@ -1,7 +1,7 @@
 import { evaluateApplication, requirementsForJob } from '../domain/aiEvaluation';
 import type {
   Activity, Application, ApplicationComment, ApplicationRating, Campaign, Candidate, DemoState, Interview, Job, Jd, Note,
-  Offer, Prompt, Stage, StageHistoryEntry, TaxonomyItem, User, Via,
+  Offer, Prompt, Stage, StageHistoryEntry, TaxonomyItem, User, Via, EmploymentType, WorkMode,
 } from '../domain/types';
 import { nextCampaignCode } from '../domain/campaigns';
 import { SOURCE_CAREERS, SOURCE_CV_UPLOAD, SOURCE_MANUAL, SOURCE_REFERRAL, SOURCE_TALENT_POOL } from '../domain/sources';
@@ -11,6 +11,7 @@ import { normalizeEmail } from '../domain/normalize';
 import { withFlowDetail, withProfiles } from './seedDetail';
 import { buildShowcaseJd, buildShowcaseJob } from './showcaseJob';
 import { withDemoJobs } from './demoJobs';
+import { withMatchShowcase } from './matchShowcase';
 import { withJdDetails, withJobPosts } from './jobPosts';
 import {
   COMMENTS, DOMAINS, ENGLISH, FIRST_NAMES, GROUPS, LAST_NAMES, MIDDLE_NAMES, NOTE_TEXTS,
@@ -462,6 +463,10 @@ function buildCandidates(rng: Rng, count: number, contacts: Contacts, clock: Clo
   });
 }
 
+const slug = (name: string) => name.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/gi, 'd').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+const WORK_MODE_SETS: WorkMode[][] = [['hybrid', 'onsite'], ['remote'], ['remote', 'hybrid'], ['onsite']];
+const EMPLOYMENT_SETS: EmploymentType[][] = [['fulltime'], ['fulltime', 'contract'], ['contract', 'freelance'], ['fulltime']];
+
 /**
  * Give the pool overview's CV-quality block something to show, by index (no rng draws, so the rest of
  * the demo stays the same): most candidates consented, a few lack a phone or English level, some CVs
@@ -477,6 +482,13 @@ function withQualityVariety(candidates: Candidate[], clock: Clock): Candidate[] 
       english: i % 60 === 33 ? '' : c.english,
       consents: c.consents ?? (i % 5 === 3 ? undefined : [{ purpose: 'recruitment' as const, policyVersion: '2026-01', at: createdAt }]),
       parse: c.parse ?? (i % 15 === 7 ? { model: 'cv-extract', at: createdAt, confidence: { seniority: 0.45, english: 0.8, skills: 0.9 }, missing: [] } : undefined),
+      // Profile links, work preferences and one do-not-hire flag, so those profile sections have demo content.
+      github: c.github ?? (i % 3 === 0 ? `github.com/${slug(c.name)}` : undefined),
+      portfolio: c.portfolio ?? (i % 10 === 4 ? `${slug(c.name)}.dev` : undefined),
+      workModes: c.workModes ?? WORK_MODE_SETS[i % WORK_MODE_SETS.length],
+      employmentTypes: c.employmentTypes ?? EMPLOYMENT_SETS[i % EMPLOYMENT_SETS.length],
+      willingToRelocate: c.willingToRelocate ?? i % 4 === 1,
+      doNotHire: c.doNotHire ?? (i === 12 ? { reason: 'Accepted the offer, then did not show up on day one.', by: 'u-admin', at: clock.daysAgo(40) } : undefined),
     };
   });
 }
@@ -629,7 +641,8 @@ export function buildSeed(rng: Rng = mulberry32(20261116), base: number = SEED_B
   const taxonomy = buildTaxonomy(candidates);
   const applications = withAiEvaluations(withHiringRecords(apps, clock), candidates, jobs, jds, taxonomy);
   const portal = withCandidateAccounts(candidates, applications, clock);
-  return withFlowDetail(withDemoJobs({
+  // The matching showcase candidates go on last: they draw no rng and change no seeded figure built above.
+  return withMatchShowcase(withFlowDetail(withDemoJobs({
     candidates: portal.candidates,
     applications,
     // Full job posts and JD details go on after the AI evaluations, so the seeded applicants and scores stay the same.
@@ -645,5 +658,5 @@ export function buildSeed(rng: Rng = mulberry32(20261116), base: number = SEED_B
     chats: [],
     emails: [],
     ui: { lang: 'en', careersLang: 'vi', piiUnlocked: false },
-  }, base, (a) => withHiringRecords(a, clock)), base);
+  }, base, (a) => withHiringRecords(a, clock)), base), base);
 }

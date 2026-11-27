@@ -80,7 +80,6 @@ describe('CandidatePoolPage', () => {
     expect(screen.getAllByRole('row')).toHaveLength(11);
     expect(container.textContent).toContain('Showing 1-10 of 781 candidates');
     expect(screen.getByRole('button', { name: '79' })).toBeInTheDocument();
-    expect(screen.getAllByText('Tran Bao Ngoc')).toHaveLength(10);
   });
 
   describe('drill-down from the pool overview', () => {

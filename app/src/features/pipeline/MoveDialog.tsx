@@ -4,6 +4,7 @@ import { Modal } from '../../components/Modal';
 import { REJECT_CODES } from '../../domain/pipelineConfig';
 import type { RejectCode, Stage } from '../../domain/types';
 import { useT } from '../../i18n/i18n';
+import { FIELD } from '../../components/ui';
 
 type Props = {
   open: boolean;
@@ -15,8 +16,6 @@ type Props = {
   onConfirm: (note: string, notify: boolean, code?: RejectCode) => void;
 };
 
-const FIELD =
-  'w-full px-3 py-2 bg-white dark:bg-[#251f1e] border border-[#e6dddb] dark:border-[#3a3433] rounded-lg text-sm text-[#181211] dark:text-white focus:ring-1 focus:ring-primary focus:border-primary focus:outline-none';
 
 /**
  * Every stage move asks for a note (optional). Rejecting asks for a reason category, plus a note when the category is "Other".
@@ -47,8 +46,8 @@ export function MoveDialog({ open, name, to, canEmail = false, onCancel, onConfi
       footer={
         <>
           {/* Say what still blocks Reject instead of only greying the button out. */}
-          {blocked && <span className="mr-auto text-xs text-[#896a61]">{t(!code ? 'pipeline.reject.needCode' : 'pipeline.reject.needReason')}</span>}
-          <button onClick={onCancel} className="px-4 py-2 text-sm font-medium border border-[#e6dddb] dark:border-[#3a3433] text-[#181211] dark:text-white rounded-lg hover:border-primary/50 transition-colors">
+          {blocked && <span className="mr-auto text-xs text-ink-muted">{t(!code ? 'pipeline.reject.needCode' : 'pipeline.reject.needReason')}</span>}
+          <button onClick={onCancel} className="px-4 py-2 text-sm font-medium border border-line dark:border-dark-line text-ink dark:text-white rounded-lg hover:border-primary/50 transition-colors">
             {t('common.cancel')}
           </button>
           <button
@@ -65,11 +64,11 @@ export function MoveDialog({ open, name, to, canEmail = false, onCancel, onConfi
         {(() => {
           const desc = t(reject ? 'pipeline.reject.desc' : 'pipeline.move.desc', { name, stage: label(to) });
           // Move: one line, cut with "…" if a long name would wrap; the full text is in the tooltip.
-          return <p className={`text-[#896a61] ${reject ? '' : 'whitespace-nowrap truncate'}`} title={reject ? undefined : desc}>{desc}</p>;
+          return <p className={`text-ink-muted ${reject ? '' : 'whitespace-nowrap truncate'}`} title={reject ? undefined : desc}>{desc}</p>;
         })()}
         {reject && (
           <div className="flex flex-col gap-1">
-            <span className="text-xs font-semibold text-[#896a61]"><label htmlFor="reject-code">{t('pipeline.reject.category')}</label><span aria-hidden="true" className="text-red-500"> *</span></span>
+            <span className="text-xs font-semibold text-ink-muted"><label htmlFor="reject-code">{t('pipeline.reject.category')}</label><span aria-hidden="true" className="text-red-500"> *</span></span>
             <select id="reject-code" className={FIELD} value={code} onChange={(e) => setCode(e.target.value as RejectCode | '')}>
               <option value="">{t('pipeline.reject.pick')}</option>
               {REJECT_CODES.map((c) => <option key={c} value={c}>{t(`reject.${c}`)}</option>)}
@@ -78,7 +77,7 @@ export function MoveDialog({ open, name, to, canEmail = false, onCancel, onConfi
         )}
         <div className="flex flex-col gap-1">
           {/* Move: no visible label, the placeholder says what to write; screen readers still get "Note". */}
-          {reject && <span className="text-xs font-semibold text-[#896a61]"><label htmlFor="move-note">{t(code === 'other' ? 'pipeline.reject.reason' : 'pipeline.reject.detail')}</label>{code === 'other' && <span aria-hidden="true" className="text-red-500"> *</span>}</span>}
+          {reject && <span className="text-xs font-semibold text-ink-muted"><label htmlFor="move-note">{t(code === 'other' ? 'pipeline.reject.reason' : 'pipeline.reject.detail')}</label>{code === 'other' && <span aria-hidden="true" className="text-red-500"> *</span>}</span>}
           <textarea
             id="move-note"
             aria-label={reject ? undefined : t('pipeline.move.note')}

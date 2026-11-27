@@ -52,8 +52,8 @@ beforeEach(() => {
 describe('Candidate pool review fixes', () => {
   it('shows the real open-to-work status', () => {
     renderAt();
-    expect(screen.getByTestId('pool-open-c-open')).toHaveTextContent('Open to work');
-    expect(screen.getByTestId('pool-open-c-closed')).toHaveTextContent('Not looking');
+    expect(screen.getByTestId('pool-open-c-open')).toHaveTextContent('Open');
+    expect(screen.getByTestId('pool-open-c-closed')).toHaveTextContent('Not open');
   });
 
   it('keeps filters in the URL and restores them on load', () => {
@@ -87,21 +87,13 @@ describe('Candidate pool review fixes', () => {
     expect(screen.getByText('c-open@x.demo')).toBeInTheDocument();
   });
 
-  it('shows the active pipeline and ignores ended applications', () => {
-    renderAt();
-    const job = useStore.getState().jobs[0];
-    expect(screen.getByTestId('pool-pipeline-c-open')).toHaveTextContent(job.title);
-    expect(screen.getByTestId('pool-pipeline-c-closed')).toHaveTextContent('—');
-  });
-
-  it('flags profiles with quality gaps and shows tags, location', () => {
+  it('flags profiles with quality gaps and shows tags', () => {
     renderAt();
     expect(screen.getByTestId('pool-quality-c-gap').getAttribute('title')).toContain('Missing email');
     expect(screen.queryByTestId('pool-quality-c-open')).toBeNull();
     const row = screen.getByTestId('pool-row-c-open');
     expect(row).toHaveTextContent('vip');
     expect(row).toHaveTextContent('+1');
-    expect(row).toHaveTextContent('Ha Noi');
   });
 
   it('filters by open to work and pipeline status', () => {

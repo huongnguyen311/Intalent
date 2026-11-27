@@ -6,6 +6,7 @@ import type { Job } from '../../domain/types';
 import { useT, type TKey } from '../../i18n/i18n';
 import { useMe } from '../../store/session';
 import { useStore } from '../../store/store';
+import { FIELD } from '../../components/ui';
 
 export interface JobAction {
   id: 'publish' | 'submit' | 'approve' | 'reject' | 'withdraw' | 'hold' | 'close' | 'reopen';
@@ -16,8 +17,6 @@ export interface JobAction {
   run: () => void;
 }
 
-const FIELD =
-  'w-full px-3 py-2 bg-white dark:bg-[#251f1e] border border-[#e6dddb] dark:border-[#3a3433] rounded-lg text-sm text-[#181211] dark:text-white focus:ring-1 focus:ring-primary focus:border-primary focus:outline-none';
 
 /**
  * Status actions a user may take on a job, shared by the Jobs list and the job page.
@@ -75,15 +74,15 @@ export function useJobActions(): { actionsFor: (job: Job) => JobAction[]; dialog
       onClose={() => setRejecting(null)}
       footer={
         <>
-          <button type="button" onClick={() => setRejecting(null)} className="px-4 py-2 text-sm font-medium border border-[#e6dddb] dark:border-[#3a3433] rounded-lg">{t('common.cancel')}</button>
+          <button type="button" onClick={() => setRejecting(null)} className="px-4 py-2 text-sm font-medium border border-line dark:border-dark-line rounded-lg">{t('common.cancel')}</button>
           <button type="button" onClick={confirmReject} className="px-4 py-2 text-sm font-medium bg-red-600 hover:bg-red-700 text-white rounded-lg">{t('jobs.reject.confirm')}</button>
         </>
       }
     >
-      <label htmlFor="job-reject-reason" className="text-xs font-semibold text-[#896a61]">{t('jobs.reject.label')}</label>
+      <label htmlFor="job-reject-reason" className="text-xs font-semibold text-ink-muted">{t('jobs.reject.label')}</label>
       <textarea id="job-reject-reason" rows={3} className={`${FIELD} mt-1`} value={reason} onChange={(e) => { setReason(e.target.value); setError(''); }} />
       {error && <p className="text-xs text-red-600 mt-1">{error}</p>}
-      {rejecting && <p className="text-xs text-[#896a61] mt-2">{rejecting.title}</p>}
+      {rejecting && <p className="text-xs text-ink-muted mt-2">{rejecting.title}</p>}
     </Modal>
   );
 

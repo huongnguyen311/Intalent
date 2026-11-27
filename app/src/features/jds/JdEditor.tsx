@@ -7,19 +7,15 @@ import { draftSkillsExperience } from '../../domain/jdWriter';
 import type { Jd } from '../../domain/types';
 import { useT } from '../../i18n/i18n';
 import { useStore } from '../../store/store';
+import { BTN_GHOST, BTN_PRIMARY, FIELD } from '../../components/ui';
 
-const FIELD =
-  'w-full px-3 py-2 bg-white dark:bg-[#251f1e] border border-[#e6dddb] dark:border-[#3a3433] rounded-lg text-sm text-[#181211] dark:text-white focus:ring-1 focus:ring-primary focus:border-primary focus:outline-none';
-const BTN_PRIMARY = 'px-4 py-2 text-sm font-medium bg-primary hover:bg-primary-hover text-white rounded-lg shadow-sm transition-colors';
-const BTN_GHOST =
-  'px-4 py-2 text-sm font-medium border border-[#e6dddb] dark:border-[#3a3433] text-[#181211] dark:text-white rounded-lg hover:border-primary/50 transition-colors';
 
 const list = (s: string) => s.split(',').map((x) => x.trim()).filter(Boolean);
 
 function Field({ id, label, error, children }: { id: string; label: string; error?: string; children: ReactNode }) {
   return (
     <div className="flex flex-col gap-1">
-      <label htmlFor={id} className="text-xs font-semibold text-[#896a61]">{label}</label>
+      <label htmlFor={id} className="text-xs font-semibold text-ink-muted">{label}</label>
       {children}
       {error && <p className="text-xs text-red-600">{error}</p>}
     </div>
@@ -93,8 +89,8 @@ export function JdEditor({ open, jd, onClose, onSaved }: Props) {
     <Drawer open={open} title={t(jd ? 'jds.editor.editTitle' : 'jds.editor.createTitle')} onClose={onClose} guardUnsaved variant="center">
       <div className="flex flex-col gap-4">
         {!jd && (
-          <div className="flex flex-col gap-2 p-3 rounded-xl border border-dashed border-[#e6dddb] dark:border-[#3a3433]">
-            <label htmlFor="jd-paste" className="text-xs font-semibold text-[#896a61]">{t('jds.editor.paste')}</label>
+          <div className="flex flex-col gap-2 p-3 rounded-xl border border-dashed border-line dark:border-dark-line">
+            <label htmlFor="jd-paste" className="text-xs font-semibold text-ink-muted">{t('jds.editor.paste')}</label>
             <textarea id="jd-paste" rows={5} className={FIELD} placeholder={t('jds.editor.pastePlaceholder')} value={paste} onChange={(e) => setPaste(e.target.value)} />
             <button type="button" onClick={extract} disabled={!paste.trim()} className={`${BTN_GHOST} self-start flex items-center gap-1.5 disabled:opacity-50`}>
               <span className="material-symbols-outlined text-[18px] text-primary">auto_awesome</span>
@@ -125,7 +121,7 @@ export function JdEditor({ open, jd, onClose, onSaved }: Props) {
           draft={() => draftSkillsExperience(jdRequirements(draftJd(), taxonomy))}
         />
         {!jd && (
-          <label className="flex items-center gap-2 text-sm text-[#181211] dark:text-white">
+          <label className="flex items-center gap-2 text-sm text-ink dark:text-white">
             <input type="checkbox" checked={publish} onChange={(e) => setPublish(e.target.checked)} className="rounded border-gray-300 text-primary focus:ring-primary" />
             {t('jds.editor.publishNow')}
           </label>

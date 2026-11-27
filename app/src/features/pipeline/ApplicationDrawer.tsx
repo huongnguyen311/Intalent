@@ -1,5 +1,5 @@
 import { useStageName } from './jobStageContext';
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useState, type ElementType } from 'react';
 import { Link } from 'react-router-dom';
 import { Drawer } from '../../components/Drawer';
 import { DrawerSection as Section } from '../../components/DrawerSection';
@@ -51,6 +51,7 @@ export function ApplicationDrawer({ appId, job, onClose, onMove, focusInterviewI
   return (
     <Drawer
       open
+      size="lg"
       title={name}
       // The job sits right under the name; it links to the job page for those who can open it (interviewers cannot).
       subtitle={
@@ -62,22 +63,29 @@ export function ApplicationDrawer({ appId, job, onClose, onMove, focusInterviewI
           ) : (
             <span className="font-bold text-slate-700 dark:text-gray-200 truncate">{job.title}</span>
           )}
+          {/* Interview details: the CV is the one thing the panel reaches for, so it sits next to the job. */}
+          {focus && (<>
+            <span aria-hidden="true" className="shrink-0 px-1 text-ink-muted">·</span>
+            <Link to={`/candidates/${app.candidateId}`} className="shrink-0 inline-flex items-center gap-1 font-bold text-primary hover:underline">
+              <span aria-hidden="true" className="material-symbols-outlined text-[16px]">description</span>{t('pipeline.drawer.profileCv')}
+            </Link>
+          </>)}
         </span>
       }
       subheader={
-        <div role="tablist" aria-label={name} className="inline-flex items-center gap-1 rounded-xl bg-[#f4f1f0] dark:bg-white/10 p-1">
+        <div role="tablist" aria-label={name} className="ui-seg inline-flex items-center gap-1 rounded-xl bg-gray-100 dark:bg-white/10 p-1">
           {(['overview', 'comments'] as const).map((k) => (
             <button
               key={k}
               role="tab"
               aria-selected={tab === k}
               onClick={() => setTab(k)}
-              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-colors ${tab === k ? 'bg-white dark:bg-[#1e1e1e] text-slate-800 dark:text-white shadow-sm' : 'text-[#896a61] hover:text-slate-700 dark:hover:text-white'}`}
+              className={`ui-seg-item flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-colors ${tab === k ? 'bg-white dark:bg-dark-surface text-slate-800 dark:text-white shadow-sm' : 'text-ink-muted hover:text-slate-700 dark:hover:text-white'}`}
             >
               <span aria-hidden="true" className="material-symbols-outlined text-[16px]">{k === 'overview' ? 'person' : 'forum'}</span>
               {t(k === 'overview' ? 'pipeline.drawer.overview' : 'pipeline.drawer.comments')}
               {k === 'comments' && app.comments.length > 0 && (
-                <span className="min-w-5 px-1.5 rounded-full bg-primary/10 text-primary text-[11px] tabular-nums">{app.comments.length}</span>
+                <span className="min-w-5 px-1.5 rounded-full bg-primary/10 text-primary text-2xs tabular-nums">{app.comments.length}</span>
               )}
             </button>
           ))}
@@ -109,6 +117,8 @@ function DrawerBody({ app, job, candidate, onMove, focus, tab }: BodyProps) {
   const ratings = app.ratings ?? [];
   const avg = averageRating(app);
   const mine = ratings.find((r) => r.by === me())?.stars ?? 0;
+  // Interview details has no summary row; a bare fragment keeps the first section flush with the top.
+  const Wrap: ElementType = focus ? Fragment : 'div';
 
   const post = () => {
     if (useStore.getState().addComment(app.id, comment, me())) setComment('');
@@ -123,15 +133,16 @@ function DrawerBody({ app, job, candidate, onMove, focus, tab }: BodyProps) {
   ];
 
   return (
-    <div className="text-sm text-[#181211] dark:text-[#e6dddb]">
+    <div className="text-sm text-ink dark:text-[#e6dddb]">
       {tab === 'overview' && (<>
-      {/* Summary: where the application stands, and the actions on it. Name and job are in the drawer title. */}
-      <div className="pb-5">
-        <div className="flex flex-wrap items-center gap-2">
+      {/* Summary: where the application stands, and the actions on it. Name and job are in the drawer title.
+          Interview details leave out stage, time in stage and Move to: that is pipeline work, not the panel's. */}
+      <Wrap {...(focus ? {} : { className: 'pb-5' })}>
+        {!focus && <div className="flex flex-wrap items-center gap-2">
           <span className={`${CHIP} bg-primary/10 text-primary`}>
             <span aria-hidden="true" className="material-symbols-outlined text-[14px]">flag</span>{label(app.stage)}
           </span>
-          <span className={`${CHIP} bg-[#f4f1f0] text-[#896a61] dark:bg-white/10 dark:text-gray-300`}>
+          <span className={`${CHIP} bg-gray-100 text-ink-muted dark:bg-white/10 dark:text-gray-300`}>
             <span aria-hidden="true" className="material-symbols-outlined text-[14px]">schedule</span>
             {t('pipeline.drawer.inStageFor', { days: t('jobs.days', { n: daysInStage(app) }) })}
           </span>
@@ -139,11 +150,11 @@ function DrawerBody({ app, job, candidate, onMove, focus, tab }: BodyProps) {
             <Link to={`/candidates/${app.candidateId}`} className="inline-flex items-center gap-1 px-3 py-2 rounded-full text-xs font-bold text-primary hover:bg-primary/5">
               <span aria-hidden="true" className="material-symbols-outlined text-[16px]">description</span>{t('pipeline.drawer.profile')}
             </Link>
-            {!focus && perm('email.send') && <button
+            {perm('email.send') && <button
               aria-label={t('email.title')}
               title={t('email.title')}
               onClick={() => setMailing(true)}
-              className="size-9 shrink-0 rounded-full border border-[#e6dddb] dark:border-[#3a3433] flex items-center justify-center text-[#896a61] hover:border-primary/50 hover:text-primary transition-colors"
+              className="size-9 shrink-0 rounded-full border border-line dark:border-dark-line flex items-center justify-center text-ink-muted hover:border-primary/50 hover:text-primary transition-colors"
             >
               <span className="material-symbols-outlined text-[18px]">mail</span>
             </button>}
@@ -152,22 +163,22 @@ function DrawerBody({ app, job, candidate, onMove, focus, tab }: BodyProps) {
                 current={app.stage}
                 onMove={onMove}
                 button={(toggle) => (
-                  <button onClick={toggle} className="shrink-0 px-4 py-2 rounded-full border border-[#e6dddb] dark:border-[#3a3433] text-sm font-bold flex items-center gap-1 hover:border-primary/50 transition-colors">
+                  <button onClick={toggle} className="shrink-0 px-4 py-2 rounded-full border border-line dark:border-dark-line text-sm font-bold flex items-center gap-1 hover:border-primary/50 transition-colors">
                     {t('pipeline.moveTo')}<span className="material-symbols-outlined text-[18px]">expand_more</span>
                   </button>
                 )}
               />
             )}
           </div>
-        </div>
+        </div>}
         {app.stage === 'rejected' && (app.rejectedReason || app.rejectedCode) && (
-          <p className="mt-3 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-300 px-3 py-2">
+          <p className={`${focus ? 'mb-5' : 'mt-3'} rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-300 px-3 py-2`}>
             <span className="font-bold">{t('pipeline.drawer.reason')}:</span>{' '}
             {[app.rejectedCode && t(`reject.${app.rejectedCode}`), app.rejectedReason].filter(Boolean).join(' · ')}
           </p>
         )}
         <HandoffBanner app={app} />
-      </div>
+      </Wrap>
 
       {focus ? (<>
         <InterviewsSection app={app} candidate={candidate} job={job} focusId={focus} />
@@ -178,7 +189,7 @@ function DrawerBody({ app, job, candidate, onMove, focus, tab }: BodyProps) {
         <dl className="grid grid-cols-2 gap-x-6 gap-y-3">
           {facts.map(([k, v]) => (
             <div key={k}>
-              <dt className="text-xs text-[#896a61]">{k}</dt>
+              <dt className="text-xs text-ink-muted">{k}</dt>
               <dd className="font-medium">{v}</dd>
             </div>
           ))}
@@ -193,7 +204,7 @@ function DrawerBody({ app, job, candidate, onMove, focus, tab }: BodyProps) {
       {app.stage !== 'offer' && <OfferSection app={app} candidate={candidate} job={job} />}
 
       {perm('review') && !interviewer && <Section icon="star" title={t('pipeline.drawer.ratings')}>
-        <p className="text-[#896a61] mb-3">
+        <p className="text-ink-muted mb-3">
           {avg === undefined ? t('pipeline.drawer.noRatings') : t('pipeline.drawer.average', { avg, count: ratings.length })}
         </p>
         <ul className="space-y-2 mb-4">
@@ -205,7 +216,7 @@ function DrawerBody({ app, job, candidate, onMove, focus, tab }: BodyProps) {
           ))}
         </ul>
         <div className="flex items-center gap-3">
-          <span className="text-xs font-semibold text-[#896a61]">{t('pipeline.drawer.yourRating')}</span>
+          <span className="text-xs font-semibold text-ink-muted">{t('pipeline.drawer.yourRating')}</span>
           <span className="flex">
             {[1, 2, 3, 4, 5].map((n) => (
               <button
@@ -213,7 +224,7 @@ function DrawerBody({ app, job, candidate, onMove, focus, tab }: BodyProps) {
                 aria-label={t('pipeline.drawer.rate', { n })}
                 aria-pressed={n <= mine}
                 onClick={() => useStore.getState().rateApplication(app.id, me(), n)}
-                className={`material-symbols-outlined text-[22px] hover:scale-110 transition-transform ${n <= mine ? 'text-amber-400' : 'text-gray-300'}`}
+                className={`material-symbols-outlined text-[24px] hover:scale-110 transition-transform ${n <= mine ? 'text-amber-400' : 'text-gray-300'}`}
                 style={FILLED}
               >
                 star
@@ -224,7 +235,7 @@ function DrawerBody({ app, job, candidate, onMove, focus, tab }: BodyProps) {
       </Section>}
 
       <Section icon="timeline" title={t('pipeline.drawer.history')} count={app.history.length}>
-        <ol className="space-y-3 border-l-2 border-[#f4f1f0] dark:border-[#2a2423] pl-4">
+        <ol className="space-y-3 border-l-2 border-hairline dark:border-dark-raised pl-4">
           {[...app.history].reverse().map((h, i) => (
             <li key={`${h.at}-${i}`}>
               <div className="font-bold flex items-center gap-1.5">
@@ -236,7 +247,7 @@ function DrawerBody({ app, job, candidate, onMove, focus, tab }: BodyProps) {
                   </span>
                 )}
               </div>
-              <div className="text-xs text-[#896a61]">{fullDate(h.at)} · {who(h.by)}</div>
+              <div className="text-xs text-ink-muted">{fullDate(h.at)} · {who(h.by)}</div>
               {h.note && !(h.stage === 'rejected' && h.note === app.rejectedReason) && <div className="text-sm mt-1 whitespace-pre-wrap">{h.note}</div>}
             </li>
           ))}
@@ -250,18 +261,18 @@ function DrawerBody({ app, job, candidate, onMove, focus, tab }: BodyProps) {
 
       {tab === 'comments' && (<div>
         {blind ? (
-          <p className="text-[#896a61] flex items-center gap-1">
+          <p className="text-ink-muted flex items-center gap-1">
             <span className="material-symbols-outlined text-[18px]">visibility_off</span>{t('pipeline.drawer.hiddenUntilScored')}
           </p>
         ) : (<>
         <ul className="space-y-3 mb-4">
           {app.comments.map((c, i) => (
-            <li key={`${c.at}-${i}`} className="rounded-xl bg-[#f8f6f6] dark:bg-[#251f1e] px-3 py-2">
-              <div className="text-xs text-[#896a61] mb-1"><span className="font-bold text-slate-700 dark:text-gray-200">{who(c.by)}</span> · {fullDate(c.at)}</div>
+            <li key={`${c.at}-${i}`} className="rounded-xl bg-background-light dark:bg-dark-surface px-3 py-2">
+              <div className="text-xs text-ink-muted mb-1"><span className="font-bold text-slate-700 dark:text-gray-200">{who(c.by)}</span> · {fullDate(c.at)}</div>
               <div>{c.text}</div>
             </li>
           ))}
-          {app.comments.length === 0 && <li className="text-[#896a61]">{t('pipeline.drawer.noComments')}</li>}
+          {app.comments.length === 0 && <li className="text-ink-muted">{t('pipeline.drawer.noComments')}</li>}
         </ul>
         <label htmlFor="app-comment" className="sr-only">{t('pipeline.drawer.commentLabel')}</label>
         <textarea
@@ -270,7 +281,7 @@ function DrawerBody({ app, job, candidate, onMove, focus, tab }: BodyProps) {
           value={comment}
           onChange={(e) => setComment(e.target.value)}
           placeholder={t('pipeline.drawer.commentPlaceholder')}
-          className="w-full px-3 py-2 bg-white dark:bg-[#251f1e] border border-[#e6dddb] dark:border-[#3a3433] rounded-lg text-sm focus:ring-1 focus:ring-primary focus:border-primary focus:outline-none"
+          className="w-full px-3 py-2 bg-white dark:bg-dark-surface border border-line dark:border-dark-line rounded-lg text-sm focus:ring-1 focus:ring-primary focus:border-primary focus:outline-none"
         />
         <div className="flex justify-end mt-2">
           <button

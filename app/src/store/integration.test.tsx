@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { buildSeed } from '../data/seed';
 import { campaignStats, creditedCampaign } from '../domain/campaigns';
 import { dashboardMetrics } from '../domain/metrics';
-import { UsedIn } from '../features/candidates/UsedIn';
+import { ApplicationHistory } from '../features/candidates/ApplicationHistory';
 import { useStore } from './store';
 
 beforeEach(() => {
@@ -49,16 +49,18 @@ describe('campaign apply, end to end', () => {
     const stats = campaignStats(state, campaign.id);
     expect(stats.applicants).toBe(1);
     expect(stats.byJob[jobId].applicants).toBe(1);
-    // Candidate profile "Used in" lists both applications with their sources.
+    // Candidate profile "Application history" lists both applications with their sources.
+    const cand = useStore.getState().candidates.find((x) => x.id === first.application.candidateId)!;
     render(
       <MemoryRouter>
-        <UsedIn candidateId={first.application.candidateId} />
+        <ApplicationHistory c={cand} showFeedback={false} />
       </MemoryRouter>,
     );
-    const rows = screen.getAllByRole('row').slice(1);
-    expect(rows).toHaveLength(2);
+    const items = screen.getAllByRole('article');
+    expect(items).toHaveLength(2);
     // The campaign name is the source of the credited apply.
-    expect(within(screen.getByRole('table')).getByText(campaign.name)).toBeInTheDocument();
-    expect(within(screen.getByRole('table')).getByText('Careers page')).toBeInTheDocument();
+    const history = screen.getByRole('region', { name: 'Application history' });
+    expect(within(history).getByText(new RegExp(campaign.name))).toBeInTheDocument();
+    expect(within(history).getAllByText(/Careers page/).length).toBeGreaterThan(0);
   });
 });

@@ -5,11 +5,12 @@ import { useT, type TKey } from '../../i18n/i18n';
 import { useStore } from '../../store/store';
 import { PromptsTable } from './PromptsTable';
 import { UsageTab } from './UsageTab';
+import { isFixtureMode } from '../../data/fixtureMockup';
 
 type Tab = 'prompts' | 'email' | 'content' | 'usage';
 
-const TAB_ON = 'ty-tab flex items-center gap-2 px-6 py-3 border-b-2 transition-colors border-primary text-primary font-medium';
-const TAB_OFF = 'ty-tab flex items-center gap-2 px-6 py-3 border-b-2 transition-colors border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200';
+const TAB_ON = 'ui-tab ty-tab flex items-center gap-2 px-6 py-3 border-b-2 transition-colors border-primary text-primary font-medium';
+const TAB_OFF = 'ui-tab ty-tab flex items-center gap-2 px-6 py-3 border-b-2 transition-colors border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200';
 
 function Icon({ name, children }: { name: string; children: ReactNode }) {
   return (
@@ -65,19 +66,19 @@ export function SystemConfigPage() {
   const isPrompt = (id: string) => !isEmail(id) && !isContent(id);
 
   return (
-    <AppLayout title={t('systemConfig.title')}>
-      <div className="flex flex-col h-full bg-background-light dark:bg-background-dark overflow-hidden">
+    <AppLayout title={t('systemConfig.title')} subtitle={isFixtureMode() ? undefined : t('systemConfig.subtitle')}>
+      <div className="flex flex-col h-full bg-background-light dark:bg-dark-canvas overflow-hidden">
         <div className="flex-1 overflow-y-auto p-6">
           <div className="max-w-7xl mx-auto">
-            <div className="flex border-b border-gray-200 dark:border-gray-800 mb-6">
+            <div role="tablist" className="ui-tabs flex border-b border-gray-200 dark:border-gray-800 mb-6">
               {tabs.map(({ id, label, icon: TabIcon }) => (
-                <button key={id} onClick={() => setTab(id)} className={id === tab ? TAB_ON : TAB_OFF}>
+                <button key={id} role="tab" aria-selected={id === tab} onClick={() => setTab(id)} className={id === tab ? TAB_ON : TAB_OFF}>
                   <TabIcon />
                   {t(label)}
                 </button>
               ))}
             </div>
-            <div className="bg-white dark:bg-[#1e1e1e] rounded-xl shadow-sm border border-[#e6dddb] dark:border-[#2a2423] p-6">
+            <div className="bg-white dark:bg-dark-surface rounded-xl shadow-sm border border-line dark:border-dark-raised p-6">
               {tab === 'prompts' && (
                 <PromptsTable items={prompts.filter((p) => isPrompt(p.id))} title="systemConfig.prompts.title" desc="systemConfig.prompts.desc" noun="items" />
               )}

@@ -26,7 +26,7 @@ export function Column({ stage, apps, candidates, jobOf, showJob, onOpen, onMove
   const t = useT();
   const label = useStageName();
   const { setNodeRef, isOver } = useDroppable({ id: stage });
-  const over = isOver ? 'border-primary/50 bg-orange-50/60 dark:bg-white/5' : 'bg-slate-50 dark:bg-[#1a1a1a]';
+  const over = isOver ? 'border-primary/50 bg-orange-50/60 dark:bg-white/5' : 'bg-slate-50 dark:bg-dark-canvas';
   // Each column carries only a whisper of its stage colour (very light wash + border) so the board stays easy on the eyes.
   const color = STAGE_COLOR[stage];
   const tint = isOver
@@ -64,7 +64,7 @@ export function Column({ stage, apps, candidates, jobOf, showJob, onOpen, onMove
           return showJob ? <JobStageProvider key={a.id} job={jobOf(a)}>{card}</JobStageProvider> : card;
         })}
         {apps.length === 0 && (
-          <div className="flex-1 rounded-xl border-2 border-dashed border-[#e6dddb] dark:border-[#3a3433] flex items-center justify-center text-xs text-gray-400 py-4">
+          <div className="flex-1 rounded-xl border-2 border-dashed border-line dark:border-dark-line flex items-center justify-center text-xs text-muted dark:text-gray-400 py-4">
             {t('pipeline.dropHere')}
           </div>
         )}

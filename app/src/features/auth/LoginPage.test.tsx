@@ -15,19 +15,18 @@ beforeEach(() => {
 describe('LoginPage (app)', () => {
   it('asks for an email instead of signing in silently as Super Admin', () => {
     at('/login');
+    // The demo Super Admin is pre-filled; clearing it must not sign in silently.
+    expect(screen.getByLabelText(/Email Address/)).toHaveValue('admin@company.demo');
+    expect(screen.getByLabelText(/^Password/)).toHaveValue('demo1234');
+    fireEvent.change(screen.getByLabelText(/Email Address/), { target: { value: '' } });
     fireEvent.click(screen.getByRole('button', { name: /Log In/ }));
     expect(screen.getByText('Enter your work email')).toBeInTheDocument();
     expect(screen.queryByText('Total Candidates')).toBeNull();
   });
 
-  it('lists one demo account per role and fills the email', () => {
+  it('does not list demo accounts on the sign-in page', () => {
     at('/login');
-    const recruiter = screen.getByRole('button', { name: /Recruiter/ });
-    fireEvent.click(recruiter);
-    expect(screen.getByLabelText(/Email Address/)).toHaveValue('huy.pham@company.demo');
-    for (const role of ['Super Admin', 'Recruitment Lead', 'Hiring Manager', 'Interviewer']) {
-      expect(screen.getByRole('button', { name: new RegExp(role) })).toBeInTheDocument();
-    }
+    expect(screen.queryByText(/Demo accounts/)).not.toBeInTheDocument();
   });
 
   it('Forgot Password and Sign Up open their own flows', () => {

@@ -7,11 +7,13 @@ import { isFixtureMode } from '../../data/fixtureMockup';
 import type { TaxonomyItem } from '../../domain/types';
 import { useT, type TKey } from '../../i18n/i18n';
 import { useStore } from '../../store/store';
+import { BTN_PRIMARY as PRIMARY_BTN, FIELD } from '../../components/ui';
 
 type Kind = TaxonomyItem['kind'];
 type Sort = 'newest' | 'oldest' | 'name';
 type StatusFilter = '' | 'active' | 'inactive';
 
+const TAB_ICON: Record<Kind, string> = { english: 'translate', domain: 'category', seniority: 'stairs' };
 const KINDS: Array<{ kind: Kind; tab: TKey; add: TKey; search: TKey }> = [
   { kind: 'english', tab: 'taxonomy.tab.english', add: 'taxonomy.add.english', search: 'taxonomy.search.english' },
   { kind: 'domain', tab: 'taxonomy.tab.domain', add: 'taxonomy.add.domain', search: 'taxonomy.search.domain' },
@@ -20,15 +22,13 @@ const KINDS: Array<{ kind: Kind; tab: TKey; add: TKey; search: TKey }> = [
 const SORTS: Array<[Sort, TKey]> = [['newest', 'taxonomy.sort.newest'], ['oldest', 'taxonomy.sort.oldest'], ['name', 'taxonomy.sort.name']];
 const STATUSES: Array<[StatusFilter, TKey]> = [['', 'taxonomy.filter.all'], ['active', 'taxonomy.filter.active'], ['inactive', 'taxonomy.filter.inactive']];
 
-const TAB_ON = '-mb-px px-3 py-2.5 text-sm font-semibold text-primary border-b-2 border-primary';
-const TAB_OFF = '-mb-px px-3 py-2.5 text-sm font-semibold border-b-2 border-transparent text-[#5a4a46] dark:text-gray-400 hover:text-[#181211] dark:hover:text-gray-200 transition-colors';
+const TAB_ON = 'ui-tab -mb-px px-3 py-2.5 text-sm font-semibold text-primary border-b-2 border-primary';
+const TAB_OFF = 'ui-tab -mb-px px-3 py-2.5 text-sm font-semibold border-b-2 border-transparent text-gray-600 dark:text-gray-400 hover:text-ink dark:hover:text-gray-200 transition-colors';
 const FILTER_BTN =
-  'flex items-center gap-1.5 h-9 px-3 bg-white dark:bg-[#251f1e] border border-[#e6dddb] dark:border-[#3a3433] rounded-lg text-sm font-medium text-[#181211] dark:text-white hover:border-primary/50 transition-colors whitespace-nowrap';
-const TH = 'px-4 py-2.5 text-xs font-bold text-[#896a61] uppercase tracking-wider border-b border-[#e6dddb] dark:border-[#2a2423] whitespace-nowrap';
+  'flex items-center gap-1.5 h-9 px-3 bg-white dark:bg-dark-surface border border-line dark:border-dark-line rounded-lg text-sm font-medium text-ink dark:text-white hover:border-primary/50 transition-colors whitespace-nowrap';
+const TH = 'px-4 py-2.5 text-xs font-bold text-ink-muted uppercase tracking-wider border-b border-line dark:border-dark-raised whitespace-nowrap';
 const TD = 'px-4 py-2.5 whitespace-nowrap';
-const CHECK = 'rounded border-gray-300 text-primary focus:ring-primary dark:bg-[#1e1e1e] dark:border-[#3a3433]';
-const PRIMARY_BTN = 'px-4 py-2 bg-primary hover:bg-primary-hover text-white rounded-lg font-semibold text-sm transition-colors';
-const FIELD = 'w-full px-3 py-2 bg-white dark:bg-[#251f1e] border border-[#e6dddb] dark:border-[#3a3433] focus:border-primary focus:ring-0 rounded-lg text-sm text-[#181211] dark:text-white';
+const CHECK = 'rounded border-gray-300 text-primary focus:ring-primary dark:bg-dark-surface dark:border-dark-line';
 
 /** "2026-02-24" -> "2/24/2026" (read from the date part, so no timezone shift). */
 const mdy = (iso: string) => {
@@ -39,9 +39,9 @@ const mdy = (iso: string) => {
 function FilterButton({ icon, label, onClick }: { icon: string; label: string; onClick: () => void }) {
   return (
     <button onClick={onClick} className={FILTER_BTN}>
-      <span className="material-symbols-outlined text-[18px] text-[#896a61]">{icon}</span>
+      <span className="material-symbols-outlined text-[18px] text-ink-muted">{icon}</span>
       <span>{label}</span>
-      <span className="material-symbols-outlined text-[18px] text-[#896a61] -mr-1">expand_more</span>
+      <span className="material-symbols-outlined text-[18px] text-ink-muted -mr-1">expand_more</span>
     </button>
   );
 }
@@ -62,12 +62,12 @@ function LabelDialog({ title, initial, onSave, onClose }: { title: string; initi
       onClose={onClose}
       footer={
         <>
-          <button onClick={onClose} className="px-4 py-2 text-sm font-medium text-[#5a4a46] hover:text-[#181211]">{t('common.cancel')}</button>
+          <button onClick={onClose} className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-ink">{t('common.cancel')}</button>
           <button onClick={submit} className={PRIMARY_BTN}>{t('taxonomy.save')}</button>
         </>
       }
     >
-      <label className="block text-xs font-bold text-[#896a61] uppercase tracking-wider mb-1" htmlFor="taxonomy-label">{t('taxonomy.col.name')}</label>
+      <label className="block text-xs font-bold text-ink-muted uppercase tracking-wider mb-1" htmlFor="taxonomy-label">{t('taxonomy.col.name')}</label>
       <input
         id="taxonomy-label"
         autoFocus
@@ -128,17 +128,17 @@ export function TaxonomyPage() {
 
   return (
     <AppLayout title={t('taxonomy.title')} subtitle={t('taxonomy.subtitle')}>
-      <div className="px-6 py-5 max-w-[1400px] mx-auto space-y-4">
-        <div className="flex border-b border-[#e6dddb] dark:border-[#2a2423] gap-1">
+      <div className={`${fixture ? 'px-6 py-5' : 'p-8'} max-w-[1400px] mx-auto space-y-4`}>
+        <div role="tablist" className="ui-tabs flex border-b border-line dark:border-dark-raised gap-1">
           {KINDS.map((k) => (
-            <button key={k.kind} onClick={() => { setKind(k.kind); setSelected(new Set()); }} className={k.kind === kind ? TAB_ON : TAB_OFF}>{t(k.tab)}</button>
+            <button key={k.kind} role="tab" aria-selected={k.kind === kind} onClick={() => { setKind(k.kind); setSelected(new Set()); }} className={k.kind === kind ? TAB_ON : TAB_OFF}>{!fixture && <span aria-hidden="true" className="material-symbols-outlined">{TAB_ICON[k.kind]}</span>}{t(k.tab)}</button>
           ))}
         </div>
         <div className="flex flex-wrap gap-2 items-center">
           <div className="relative w-full sm:w-80">
-            <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#896a61] material-symbols-outlined text-[18px]">search</span>
+            <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-ink-muted material-symbols-outlined text-[18px]">search</span>
             <input
-              className="w-full h-9 pl-9 pr-3 bg-white dark:bg-[#251f1e] border border-[#e6dddb] dark:border-[#3a3433] focus:border-primary focus:ring-0 rounded-lg text-sm text-[#181211] dark:text-white transition-all placeholder-[#896a61]"
+              className="w-full h-9 pl-9 pr-3 bg-white dark:bg-dark-surface border border-line dark:border-dark-line focus:border-primary focus:ring-0 rounded-lg text-sm text-ink dark:text-white transition-all placeholder-ink-muted"
               placeholder={t(cfg.search)}
               type="text"
               value={q}
@@ -157,10 +157,10 @@ export function TaxonomyPage() {
             <span className="material-symbols-outlined text-[18px]">add</span>{t(cfg.add)}
           </button>
         </div>
-        <div className="bg-white dark:bg-[#1e1e1e] rounded-xl border border-[#e6dddb] dark:border-[#2a2423] shadow-sm overflow-hidden">
+        <div className="bg-white dark:bg-dark-surface rounded-xl border border-line dark:border-dark-raised shadow-sm overflow-hidden">
           <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-220px)] custom-scrollbar">
             <table className="w-full text-left border-collapse">
-              <thead className="bg-[#f8f6f6] dark:bg-[#251f1e] sticky top-0 z-10">
+              <thead className="bg-background-light dark:bg-dark-surface sticky top-0 z-10">
                 <tr>
                   <th className={`${TH} w-10 pr-0`}>
                     <input aria-label={t('taxonomy.selectAll')} className={`${CHECK} align-middle`} type="checkbox" checked={allSelected} onChange={toggleAll} />
@@ -172,24 +172,24 @@ export function TaxonomyPage() {
                   <th className={`${TH} w-16 text-center`}>{t('taxonomy.col.actions')}</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#f4f1f0] dark:divide-[#2a2423]">
+              <tbody className="divide-y divide-hairline dark:divide-dark-raised">
                 {rows.map((i) => (
                   <tr key={i.id} className="hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
                     <td className={`${TD} pr-0`}><input className={`${CHECK} align-middle`} type="checkbox" checked={selected.has(i.id)} onChange={() => toggle(i.id)} /></td>
-                    <td className={TD}><span className="font-semibold text-sm text-[#181211] dark:text-white">{i.label}</span></td>
-                    <td className={`${TD} text-right tabular-nums`}><span className="text-sm text-[#5a4a46] dark:text-gray-400">{usage(i)}</span></td>
+                    <td className={TD}><span className="font-semibold text-sm text-ink dark:text-white">{i.label}</span></td>
+                    <td className={`${TD} text-right tabular-nums`}><span className="text-sm text-gray-600 dark:text-gray-400">{usage(i)}</span></td>
                     <td className={TD}>
                       <div className="flex items-center gap-2">
                         <span className={`size-2 rounded-full ${i.active ? 'bg-emerald-500' : 'bg-gray-400'}`}></span>
-                        <span className="text-sm font-medium text-[#181211] dark:text-white">{t(i.active ? 'taxonomy.active' : 'taxonomy.inactive')}</span>
+                        <span className="text-sm font-medium text-ink dark:text-white">{t(i.active ? 'taxonomy.active' : 'taxonomy.inactive')}</span>
                       </div>
                     </td>
-                    <td className={TD}><span className="text-sm text-[#896a61] tabular-nums">{mdy(i.updatedAt)}</span></td>
+                    <td className={TD}><span className="text-sm text-ink-muted tabular-nums">{mdy(i.updatedAt)}</span></td>
                     <td className={`${TD} py-1 text-center`}>
                       <Popover
                         align="right"
                         trigger={({ toggle: tg }) => (
-                          <button aria-label={t('taxonomy.col.actions')} onClick={tg} className="p-1.5 hover:bg-gray-100 dark:hover:bg-white/10 rounded-full transition-colors text-gray-400 hover:text-slate-900 dark:hover:text-white">
+                          <button aria-label={t('taxonomy.col.actions')} onClick={tg} className="p-1.5 hover:bg-gray-100 dark:hover:bg-white/10 rounded-full transition-colors text-muted dark:text-gray-400 hover:text-slate-900 dark:hover:text-white">
                             <span className="material-symbols-outlined text-[20px] block">more_horiz</span>
                           </button>
                         )}
@@ -207,7 +207,7 @@ export function TaxonomyPage() {
                   </tr>
                 ))}
                 {rows.length === 0 && (
-                  <tr><td colSpan={6} className="px-4 py-8 text-center text-sm text-[#896a61]">{t('taxonomy.empty')}</td></tr>
+                  <tr><td colSpan={6} className="px-4 py-8 text-center text-sm text-ink-muted">{t('taxonomy.empty')}</td></tr>
                 )}
               </tbody>
             </table>

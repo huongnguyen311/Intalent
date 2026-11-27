@@ -4,15 +4,17 @@ import { homeFor, normalizeRole, ROLES } from '../domain/permissions';
 import { CURRENT_USER_ID } from '../domain/users';
 import { useShowNew } from '../hooks';
 import { useLang, useT } from '../i18n/i18n';
-import { signInAs, useMe } from '../store/session';
+import { signInAs, signOut, useIsDemoWorkspace, useMe } from '../store/session';
 import { useStore } from '../store/store';
 import { Modal } from './Modal';
+import { isFixtureMode } from '../data/fixtureMockup';
 import { toast } from './Toast';
 import { companyOf } from '../domain/company';
 import { findAccounts } from '../features/auth/accounts';
 import { activeWorkspaceId, enterWorkspace, setPendingLogin } from '../store/platform';
 
-const ITEM = 'w-full text-left px-3 py-2 rounded-md text-sm text-[#e6dddb] hover:bg-white/5 hover:text-white';
+const ITEM = 'w-full text-left px-3 py-2 rounded-lg text-sm font-medium text-ink dark:text-white hover:bg-background-light dark:hover:bg-white/5';
+const SECTION = 'px-3 pt-1.5 pb-1 text-2xs font-semibold uppercase tracking-wider text-gray-500 dark:text-ink-muted';
 
 export function UserMenu({ rail = false }: { rail?: boolean }) {
   const [open, setOpen] = useState(false);
@@ -23,6 +25,7 @@ export function UserMenu({ rail = false }: { rail?: boolean }) {
   const showNew = useShowNew();
   const user = useMe();
   const users = useStore((s) => s.users);
+  const demoWorkspace = useIsDemoWorkspace();
   const isDemoAdmin = user.id === CURRENT_USER_ID;
   // The demo admin keeps the mockup's exact label; anyone else shows their name and role.
   const name = isDemoAdmin ? 'Super Admin' : user.name;
@@ -55,51 +58,70 @@ export function UserMenu({ rail = false }: { rail?: boolean }) {
   };
 
   return (
-    <div className={`${rail ? 'p-2' : showNew ? 'p-2' : 'p-4'} border-t border-border-dark relative`}>
+    <div className={`${rail ? 'p-2' : showNew ? 'p-2' : 'p-4'} border-t border-dark-raised relative`}>
       {open && (
-        <div className={`absolute bottom-full ${showNew ? 'left-2' : 'left-4'} ${rail ? 'w-48' : 'right-4'} mb-2 p-2 bg-sidebar-dark border border-border-dark rounded-lg shadow-2xl flex flex-col gap-1`}>
-          <div className="flex gap-1 p-1">
-            {(['en', 'vi'] as const).map((l) => (
-              <button
-                key={l}
-                onClick={() => setLang(l)}
-                className={`flex-1 px-2 py-1 rounded-md text-xs font-semibold ${lang === l ? 'bg-primary text-white' : 'text-[#e6dddb] hover:bg-white/5'}`}
-              >
-                {l.toUpperCase()}
-              </button>
-            ))}
-          </div>
+        <div className={`absolute bottom-full ${showNew ? 'left-2' : 'left-4'} ${rail ? 'w-60' : 'right-2 min-w-[232px]'} mb-2 p-1.5 bg-white dark:bg-dark-surface text-ink dark:text-white border border-line dark:border-dark-raised rounded-xl shadow-2xl flex flex-col z-50`}>
+          {/* The language switch lives in the page header; the static mockup has no header switch, so keep it here. */}
+          {isFixtureMode() && (
+            <div className="flex gap-1 p-1">
+              {(['en', 'vi'] as const).map((l) => (
+                <button
+                  key={l}
+                  onClick={() => setLang(l)}
+                  className={`flex-1 px-2 py-1 rounded-md text-xs font-semibold ${lang === l ? 'bg-primary text-white' : 'text-ink-muted hover:bg-background-light dark:hover:bg-white/5'}`}
+                >
+                  {l.toUpperCase()}
+                </button>
+              ))}
+            </div>
+          )}
           {showNew && (
-            <div className="border-t border-border-dark pt-1">
-              <p className="px-3 pt-1 pb-1 text-[11px] font-semibold uppercase tracking-wider text-[#896a61]">{t('ws.label')}</p>
-              <p className="px-3 pb-1 text-sm text-white truncate">{company.name}</p>
+            <div className="pb-1">
+              <p className={SECTION}>{t('ws.label')}</p>
+              <p className="px-3 pb-1.5 text-sm font-semibold truncate">{company.name}</p>
               {others.map((a) => (
                 <button key={a.workspace.id} onClick={() => switchWorkspace(a.workspace.id)} className={`${ITEM} flex items-center gap-2`}>
-                  <span aria-hidden="true" className="material-symbols-outlined text-[16px]">swap_horiz</span>
+                  <span aria-hidden="true" className="material-symbols-outlined text-[18px] text-ink-muted">swap_horiz</span>
                   <span className="truncate">{a.workspace.name}</span>
                 </button>
               ))}
               <button className={`${ITEM} flex items-center gap-2`} onClick={() => navigate('/signup')}>
-                <span aria-hidden="true" className="material-symbols-outlined text-[16px]">add_business</span>{t('ws.create')}
+                <span aria-hidden="true" className="material-symbols-outlined text-[18px] text-ink-muted">add_business</span>{t('ws.create')}
               </button>
               <a className={`${ITEM} flex items-center gap-2`} href="/inbox" target="_blank" rel="noreferrer">
-                <span aria-hidden="true" className="material-symbols-outlined text-[16px]">mail</span>{t('ws.inbox')}
+                <span aria-hidden="true" className="material-symbols-outlined text-[18px] text-ink-muted">mail</span>{t('ws.inbox')}
               </a>
             </div>
           )}
-          {showNew && (
-            <div className="border-y border-border-dark py-1 my-1">
-              <p className="px-3 pt-1 pb-1 text-[11px] font-semibold uppercase tracking-wider text-[#896a61]">{t('session.viewAs')}</p>
-              {switchable.map((u) => (
-                <button key={u.id} onClick={() => switchTo(u.id)} className={`${ITEM} flex flex-col !py-1.5 ${u.id === user.id ? 'text-white bg-white/5' : ''}`}>
-                  <span className="truncate leading-tight">{normalizeRole(u.role)}</span>
-                  <span className="text-[11px] text-[#896a61] truncate leading-tight">{u.name}</span>
-                </button>
-              ))}
+          {/* "View as" is a demo tool: in a real tenant anyone could switch to Super Admin with it. */}
+          {showNew && demoWorkspace && (
+            <div className="border-y border-line dark:border-dark-raised py-1 my-1">
+              <p className={SECTION}>{t('session.viewAs')}</p>
+              {switchable.map((u) => {
+                const active = u.id === user.id;
+                return (
+                  <button
+                    key={u.id}
+                    onClick={() => switchTo(u.id)}
+                    aria-current={active || undefined}
+                    className={`w-full text-left px-3 py-1.5 rounded-lg flex items-center gap-2 transition-colors ${active ? 'bg-primary/10 dark:bg-primary/20' : 'hover:bg-background-light dark:hover:bg-white/5'}`}
+                  >
+                    <span className="flex flex-col min-w-0 flex-1">
+                      <span className={`text-sm leading-tight truncate ${active ? 'font-semibold text-primary' : 'font-medium'}`}>{normalizeRole(u.role)}</span>
+                      <span className="text-xs text-gray-500 dark:text-ink-muted leading-tight truncate">{u.name}</span>
+                    </span>
+                    {active && <span aria-hidden="true" className="material-symbols-outlined text-[18px] text-primary">check</span>}
+                  </button>
+                );
+              })}
             </div>
           )}
-          <button className={ITEM} onClick={() => setConfirming(true)}>Reset demo data</button>
-          <button className={ITEM} onClick={() => { signInAs(undefined); navigate('/login'); }}>Log out</button>
+          <button className={`${ITEM} flex items-center gap-2`} onClick={() => setConfirming(true)}>
+            <span aria-hidden="true" className="material-symbols-outlined text-[18px] text-ink-muted">restart_alt</span>Reset demo data
+          </button>
+          <button className={`${ITEM} flex items-center gap-2`} onClick={() => { signOut(); navigate('/login'); }}>
+            <span aria-hidden="true" className="material-symbols-outlined text-[18px] text-ink-muted">logout</span>Log out
+          </button>
         </div>
       )}
       <button onClick={() => setOpen((o) => !o)} aria-label={name} className={`flex items-center ${showNew ? 'gap-2.5 p-1.5' : 'gap-3 p-2'} w-full rounded-lg transition-colors text-left group hover:bg-white/5 ${rail ? 'justify-center' : ''}`}>
@@ -110,9 +132,9 @@ export function UserMenu({ rail = false }: { rail?: boolean }) {
           <>
             <div className="flex flex-col overflow-hidden">
               <span className="text-sm font-medium truncate text-white">{name}</span>
-              <span className="text-xs truncate text-[#896a61]">{subtitle}</span>
+              <span className="text-xs truncate text-ink-muted">{subtitle}</span>
             </div>
-            <span className="material-symbols-outlined ml-auto text-lg text-[#896a61]">expand_more</span>
+            <span className="material-symbols-outlined ml-auto text-lg text-ink-muted">expand_more</span>
           </>
         )}
       </button>
@@ -122,7 +144,7 @@ export function UserMenu({ rail = false }: { rail?: boolean }) {
         onClose={() => setConfirming(false)}
         footer={
           <>
-            <button onClick={() => setConfirming(false)} className="px-4 py-2 rounded-lg text-sm font-medium border border-[#e6dddb] dark:border-[#3a3433]">Cancel</button>
+            <button onClick={() => setConfirming(false)} className="px-4 py-2 rounded-lg text-sm font-medium border border-line dark:border-dark-line">Cancel</button>
             <button onClick={reset} className="px-4 py-2 rounded-lg text-sm font-medium bg-primary text-white">Reset</button>
           </>
         }

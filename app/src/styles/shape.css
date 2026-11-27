@@ -1,0 +1,68 @@
+/*
+ * App shape system (admin + careers). Scoped to html:not([data-fixture]) so `?fixture=mockup` keeps the mockup's
+ * pills and large radii for the pixel diff; the Tailwind classes on each element stay as the fixture truth.
+ *
+ *   Buttons     8px radius, 36px tall (40px when full-width in a form), 14px / 500, flat (no drop shadow)
+ *   Inputs      8px radius, 40px tall where the mockup used 44–48px
+ *   Cards       12px radius (was 16px); hero panels and dialogs 16px (was 24–32px)
+ *   Chips/tags  stay pills: only clickable controls with text padding lose the pill shape
+ *
+ * A "text button" is a button/link with horizontal padding and no fixed square size (icon buttons use size-*).
+ */
+
+/* --- Buttons ---------------------------------------------------------------------------------------------- */
+html:not([data-fixture]) :is(button, a, [role="button"]):not(.ui-tab, .ui-seg-item):is([class*="px-"], [class*="pl-"]):not([class*="size-"]):is(
+    .rounded-full, .rounded-xl, .rounded-2xl, .rounded-3xl, .rounded-\[24px\], .rounded-\[16px\]
+  ) {
+  border-radius: 8px;
+}
+
+/* Slimmer: tall mockup buttons come down to 36px; full-width form submits match the 40px inputs. */
+html:not([data-fixture]) :is(button, a, [role="button"]):not(.ui-tab, .ui-seg-item):is([class*="px-"], [class*="pl-"]):not([class*="size-"]):is(.h-10, .h-11, .h-12) {
+  height: 36px;
+}
+html:not([data-fixture]) :is(button, a, [role="button"]):not(.ui-tab, .ui-seg-item).w-full:is(.h-10, .h-11, .h-12) {
+  height: 40px;
+}
+html:not([data-fixture]) :is(button, a, [role="button"]):not(.ui-tab, .ui-seg-item):is([class*="px-"], [class*="pl-"]):not([class*="size-"]):is(.py-2\.5, .py-3, .py-4) {
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+
+/* Filled and outlined buttons: medium weight and 14px text read lighter than the mockup's bold 16px. */
+html:not([data-fixture]) :is(button, a, [role="button"]):not(.ui-tab, .ui-seg-item):is([class*="px-"], [class*="pl-"], .w-full):is([class*="bg-"], [class*="border"]):is(
+    .font-bold, .font-extrabold, .font-semibold, .ty-btn
+  ) {
+  font-weight: 500;
+}
+html:not([data-fixture]) :is(button, a, [role="button"]):not(.ui-tab, .ui-seg-item):is([class*="px-"], [class*="pl-"], .w-full):is(.text-base, .ty-btn) {
+  font-size: 14px;
+  line-height: 20px;
+}
+
+/* Flat buttons: drop shadows go, focus rings (box-shadow via --tw-ring-*) keep working. */
+html:not([data-fixture]) :is(button, a, [role="button"]):not(.ui-tab, .ui-seg-item):is([class*="px-"], [class*="pl-"], .w-full):is(
+    .shadow, .shadow-sm, .shadow-md, .shadow-lg, .shadow-xl, .shadow-2xl
+  ) {
+  --tw-shadow: 0 0 #0000;
+  --tw-shadow-colored: 0 0 #0000;
+}
+
+/* --- Inputs ----------------------------------------------------------------------------------------------- */
+html:not([data-fixture]) :is(input, select):is(.h-11, .h-12) {
+  height: 40px;
+}
+/* Same 8px corner as the buttons beside them (search boxes and filters were pills or 12–16px). */
+html:not([data-fixture]) :is(input:not([type="checkbox"], [type="radio"], [type="range"]), select, textarea):is(
+    .rounded-full, .rounded-xl, .rounded-2xl, .rounded-3xl, .rounded-\[16px\], .rounded-\[24px\]
+  ) {
+  border-radius: 8px;
+}
+
+/* --- Surfaces --------------------------------------------------------------------------------------------- */
+html:not([data-fixture]) :is(.rounded-2xl, .rounded-\[16px\], .rounded-\[24px\]):not(button, a, [role="button"], input, select, textarea) {
+  border-radius: 12px;
+}
+html:not([data-fixture]) :is(.rounded-3xl, .rounded-\[2rem\], .rounded-\[1\.9rem\], .rounded-\[1\.5rem\]):not(button, a, [role="button"], input, select, textarea) {
+  border-radius: 16px;
+}

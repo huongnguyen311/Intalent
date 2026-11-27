@@ -3,6 +3,8 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { AppLayout } from '../../components/AppLayout';
 import { NotFoundState } from '../../components/NotFoundState';
 import { canEdit } from '../../domain/campaigns';
+import { canEditCampaign } from '../../domain/permissions';
+import { useMe } from '../../store/session';
 import { CAMPAIGN_PRIORITIES, CURRENCIES, type Campaign, type CampaignPriority, type Currency } from '../../domain/types';
 import { assignableUsers } from '../../domain/users';
 import { useT } from '../../i18n/i18n';
@@ -10,19 +12,22 @@ import { useStore } from '../../store/store';
 import { BTN_GHOST, BTN_PRIMARY, Field, FIELD } from '../jobs/steps/ui';
 import { useCampaignForm, type CampaignForm } from './useCampaignForm';
 
-const CARD = 'bg-white dark:bg-[#1e1e1e] rounded-xl border border-[#e6dddb] dark:border-[#2a2423] p-6 lg:p-8 shadow-sm flex flex-col gap-4';
+const CARD = 'bg-white dark:bg-dark-surface rounded-xl border border-line dark:border-dark-raised p-6 lg:p-8 shadow-sm flex flex-col gap-4';
 
 /** Create / Edit campaign as a full page: `/campaigns/new`, `/campaigns/:id/edit` (same layout as the job editor). */
 export function CampaignEditorPage({ mode }: { mode: 'create' | 'edit' }) {
   const t = useT();
   const { id } = useParams();
   const campaign = useStore((s) => (id ? s.campaigns.find((c) => c.id === id) : undefined));
-  if (mode === 'edit' && (!campaign || !canEdit(campaign))) {
+  const user = useMe();
+  // Finished campaigns are frozen; other people's are read-only for Recruiters.
+  const ownerOk = !campaign || canEditCampaign(user, campaign);
+  if (mode === 'edit' && (!campaign || !canEdit(campaign) || !ownerOk)) {
     return (
       <AppLayout title={t('nav.campaigns')}>
         <NotFoundState
           icon={campaign ? 'lock' : 'search_off'}
-          message={t(campaign ? 'campaigns.detail.readOnly' : 'campaigns.detail.notFound')}
+          message={t(!campaign ? 'campaigns.detail.notFound' : !ownerOk ? 'campaigns.detail.notOwner' : 'campaigns.detail.readOnly')}
           backTo={campaign ? `/campaigns/${campaign.id}` : '/campaigns'}
           backLabel={t('campaigns.detail.back')}
         />
@@ -35,7 +40,7 @@ export function CampaignEditorPage({ mode }: { mode: 'create' | 'edit' }) {
 function Section({ n, id, title, children }: { n: number; id: string; title: string; children: ReactNode }) {
   return (
     <section aria-labelledby={id} className={CARD}>
-      <h2 id={id} className="flex items-center gap-2 text-base font-bold text-[#181211] dark:text-white">
+      <h2 id={id} className="flex items-center gap-2 text-base font-bold text-ink dark:text-white">
         <span aria-hidden="true" className="size-6 grid place-items-center rounded-full bg-primary/10 text-primary text-xs">{n}</span>
         {title}
       </h2>
@@ -71,7 +76,7 @@ function Editor({ campaign }: { campaign?: Campaign }) {
   // Assignable people, plus the current owner even if no longer assignable.
   const people = useMemo(() => users.filter((u) => assignableUsers(users).includes(u) || u.id === v.owner), [users, v.owner]);
   const footer = (
-    <div className="bg-white dark:bg-[#1e1e1e] border-t border-[#e6dddb] dark:border-[#2a2423] shadow-[0_-2px_8px_rgba(0,0,0,0.04)]">
+    <div className="bg-white dark:bg-dark-surface border-t border-line dark:border-dark-raised shadow-[0_-2px_8px_rgba(0,0,0,0.04)]">
       <div className="max-w-[1400px] mx-auto pl-8 pr-20 py-3 flex items-center justify-end gap-2">
         <button type="button" onClick={leave} className={BTN_GHOST}>{t('common.cancel')}</button>
         {campaign ? (
@@ -93,11 +98,11 @@ function Editor({ campaign }: { campaign?: Campaign }) {
       back={{ label: t('common.backTo', { name: campaign ? campaign.name : t('nav.campaigns') }), onClick: leave }}
       footer={footer}
     >
-      <div data-testid="campaign-editor" className="min-h-full bg-[#fbf9f8] dark:bg-background-dark">
+      <div data-testid="campaign-editor" className="min-h-full bg-gray-50 dark:bg-dark-canvas">
         {leaveTo && (
           <div role="alertdialog" aria-label={t('drawer.discard.title')} className="sticky top-0 z-20 px-8 py-3 bg-amber-50 dark:bg-amber-900/30 border-b border-amber-200 dark:border-amber-800 flex items-center gap-3 text-sm">
             <span className="flex-1 font-semibold text-amber-900 dark:text-amber-100">{t('drawer.discard.title')}</span>
-            <button type="button" onClick={() => setLeaveTo(null)} className="px-3 py-1.5 rounded-full border border-[#e6dddb] bg-white dark:bg-transparent dark:text-white font-bold">{t('drawer.discard.keep')}</button>
+            <button type="button" onClick={() => setLeaveTo(null)} className="px-3 py-1.5 rounded-full border border-line bg-white dark:bg-transparent dark:text-white font-bold">{t('drawer.discard.keep')}</button>
             <button type="button" onClick={() => navigate(leaveTo)} className="px-3 py-1.5 rounded-full bg-red-600 text-white font-bold">{t('drawer.discard.confirm')}</button>
           </div>
         )}
@@ -106,7 +111,7 @@ function Editor({ campaign }: { campaign?: Campaign }) {
             <DetailsFields form={form} people={people} />
           </Section>
 
-          <p className="text-sm text-[#896a61] -mt-1">{t('campaigns.editor.jobsHint')}</p>
+          <p className="text-sm text-ink-muted -mt-1">{t('campaigns.editor.jobsHint')}</p>
 
           <Section n={2} id="camp-section-goals" title={t('campaigns.editor.section.goals')}>
             <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">

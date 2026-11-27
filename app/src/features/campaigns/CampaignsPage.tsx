@@ -15,10 +15,10 @@ import { CampaignStatusBadge, PRIMARY_BTN } from './CampaignBits';
 
 const PAGE_SIZE = 10;
 const FILTER_BTN =
-  'flex items-center gap-2 px-3 py-2 bg-white dark:bg-[#251f1e] border border-[#e6dddb] dark:border-[#3a3433] rounded-lg text-sm font-medium text-[#181211] dark:text-white hover:border-primary/50 transition-colors whitespace-nowrap ';
+  'flex items-center gap-2 px-3 py-2 bg-white dark:bg-dark-surface border border-line dark:border-dark-line rounded-lg text-sm font-medium text-ink dark:text-white hover:border-primary/50 transition-colors whitespace-nowrap ';
 const INPUT =
-  'w-full pl-10 pr-4 py-2.5 bg-white dark:bg-[#251f1e] border border-[#e6dddb] dark:border-[#3a3433] focus:border-primary focus:ring-0 rounded-lg text-sm text-[#181211] dark:text-white transition-all placeholder-[#896a61]';
-const TH = 'px-4 py-4 text-xs font-bold text-[#896a61] uppercase tracking-wider border-b border-[#e6dddb] dark:border-[#2a2423]';
+  'w-full pl-10 pr-4 py-2.5 bg-white dark:bg-dark-surface border border-line dark:border-dark-line focus:border-primary focus:ring-0 rounded-lg text-sm text-ink dark:text-white transition-all placeholder-ink-muted';
+const TH = 'px-4 py-4 text-xs font-bold text-ink-muted uppercase tracking-wider border-b border-line dark:border-dark-raised';
 const TD = 'px-4 py-4 whitespace-nowrap text-sm font-semibold text-slate-600 dark:text-gray-400';
 const STATUSES: CampaignStatus[] = [...CAMPAIGN_STATUSES];
 const COLUMNS = ['campaigns.col.name', 'campaigns.col.owner', 'campaigns.col.jobs', 'campaigns.col.period', 'campaigns.col.status', 'campaigns.col.progress'] as const;
@@ -67,7 +67,7 @@ export function CampaignsPage() {
       <div className="p-8 max-w-[1400px] mx-auto space-y-8 min-h-full">
         <div className="flex items-center gap-3 flex-wrap">
           <div className="flex-1 min-w-[280px] max-w-md relative group">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#896a61] group-focus-within:text-primary transition-colors">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted group-focus-within:text-primary transition-colors">
               <span className="material-symbols-outlined text-[20px]">search</span>
             </span>
             <input className={INPUT} placeholder={t('campaigns.search')} type="text" value={q} onChange={(e) => { setQ(e.target.value); setPage(1); }} />
@@ -75,9 +75,9 @@ export function CampaignsPage() {
           <Popover
             trigger={({ toggle }) => (
               <button onClick={toggle} className={FILTER_BTN}>
-                <span className="material-symbols-outlined text-[18px] text-[#896a61]">radio_button_checked</span>
+                <span className="material-symbols-outlined text-[18px] text-ink-muted">radio_button_checked</span>
                 <span>{t('campaigns.filter.status', { value: status ? t(`campaigns.status.${status}`) : t('campaigns.filter.all') })}</span>
-                <span className="material-symbols-outlined text-[18px] text-[#896a61]">expand_more</span>
+                <span className="material-symbols-outlined text-[18px] text-ink-muted">expand_more</span>
               </button>
             )}
           >
@@ -86,15 +86,15 @@ export function CampaignsPage() {
           <div className="ml-auto">{createButton}</div>
         </div>
 
-        <div className="bg-white dark:bg-surface-dark rounded-[1.5rem] shadow-sm border border-gray-100 dark:border-white/10 overflow-hidden">
+        <div className="bg-white dark:bg-dark-surface rounded-[1.5rem] shadow-sm border border-gray-100 dark:border-white/10 overflow-hidden">
           <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-274px)] custom-scrollbar">
             <table className="w-full text-left border-collapse">
-              <thead className="bg-[#f8f6f6] dark:bg-[#251f1e] sticky top-0 z-10">
+              <thead className="bg-background-light dark:bg-dark-surface sticky top-0 z-10">
                 <tr>
                   {COLUMNS.map((k) => <th key={k} className={TH}>{t(k)}</th>)}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#f4f1f0] dark:divide-[#2a2423]">
+              <tbody className="divide-y divide-hairline dark:divide-dark-raised">
                 {rows.map((c) => {
                   const target = targetHires({ applications, jobs }, c);
                   const filled = filledHires({ applications, jobs }, c);
@@ -106,7 +106,7 @@ export function CampaignsPage() {
                           <Link to={`/campaigns/${c.id}`} className="font-bold text-slate-800 dark:text-gray-200 group-hover:text-primary transition-colors">{c.name}</Link>
                           <PriorityBadge priority={c.priority} />
                         </div>
-                        <div className="text-xs font-medium text-[#896a61] mt-0.5">{c.code}</div>
+                        <div className="text-xs font-medium text-ink-muted mt-0.5">{c.code}</div>
                       </td>
                       <td className={TD}>{c.owner ? userName(users, c.owner) : '—'}</td>
                       <td className={TD}><span className="block max-w-[200px] truncate" title={jobsLabel(c)}>{jobsLabel(c)}</span></td>
@@ -122,7 +122,7 @@ export function CampaignsPage() {
                   );
                 })}
                 {rows.length === 0 && (
-                  <tr><td colSpan={COLUMNS.length} className="px-6 py-10 text-center text-sm text-[#896a61]">{t('campaigns.empty')}</td></tr>
+                  <tr><td colSpan={COLUMNS.length} className="px-6 py-10 text-center text-sm text-ink-muted">{t('campaigns.empty')}</td></tr>
                 )}
               </tbody>
             </table>

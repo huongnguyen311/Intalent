@@ -22,7 +22,7 @@ export function TeamStep({ form }: { form: JobForm }) {
         <select id="job-manager" className={FIELD} value={v.manager} onChange={(e) => set.manager(e.target.value)}>
           {managerOptions.map((u) => <option key={u.id} value={u.id}>{u.name} · {u.role}</option>)}
         </select>
-        {keepsMe && <p className="text-xs text-[#896a61] mt-1">{t('jobs.drawer.keepsMe')}</p>}
+        {keepsMe && <p className="text-xs text-ink-muted mt-1">{t('jobs.drawer.keepsMe')}</p>}
       </Field>
       </div>
       <div className="grid gap-6 lg:grid-cols-2 items-start">
@@ -30,7 +30,7 @@ export function TeamStep({ form }: { form: JobForm }) {
         <legend className={LEGEND}>{t('jobs.drawer.recruiters')}</legend>
         <div className="grid grid-cols-2 gap-2">
           {recruiterOptions(users, recruiters).map((u, i) => (
-            <label key={u.id} className="flex items-center gap-2 text-sm text-[#181211] dark:text-white cursor-pointer">
+            <label key={u.id} className="flex items-center gap-2 text-sm text-ink dark:text-white cursor-pointer">
               <input
                 type="checkbox"
                 id={i === 0 ? 'job-recruiters' : undefined}
@@ -55,7 +55,7 @@ export function TeamStep({ form }: { form: JobForm }) {
         <legend className={LEGEND}>{t('jobs.drawer.interviewers')}</legend>
         <div className="grid grid-cols-2 gap-2">
           {assignableUsers(users).map((u) => (
-            <label key={u.id} className="flex items-center gap-2 text-sm text-[#181211] dark:text-white cursor-pointer">
+            <label key={u.id} className="flex items-center gap-2 text-sm text-ink dark:text-white cursor-pointer">
               <input type="checkbox" checked={v.interviewers.includes(u.id)} onChange={() => form.toggleInterviewer(u.id)} className={CHECKBOX} />
               {u.name}
             </label>

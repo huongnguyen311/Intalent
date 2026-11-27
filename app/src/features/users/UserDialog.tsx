@@ -2,20 +2,22 @@ import { useState } from 'react';
 import { Modal } from '../../components/Modal';
 import { toast } from '../../components/Toast';
 import type { User } from '../../domain/types';
-import { normalizeRole } from '../../domain/permissions';
-import { CURRENT_USER_ID, ROLES, type Role } from '../../domain/users';
+import { activeSuperAdmins, manageableRoles, normalizeRole } from '../../domain/permissions';
+import { CURRENT_USER_ID, type Role } from '../../domain/users';
 import { useT, type TKey } from '../../i18n/i18n';
 import { useStore } from '../../store/store';
-import { currentUser } from '../../store/session';
+import { currentUser, useMe } from '../../store/session';
 import { sendInvitation } from '../auth/accounts';
+import { FIELD } from '../../components/ui';
 
-const FIELD = 'w-full px-3 py-2 bg-white dark:bg-[#251f1e] border border-[#e6dddb] dark:border-[#3a3433] focus:border-primary focus:ring-0 rounded-lg text-sm text-[#181211] dark:text-white';
-const LABEL = 'block text-xs font-bold text-[#896a61] uppercase tracking-wider mb-1';
+const LABEL = 'block text-xs font-bold text-ink-muted uppercase tracking-wider mb-1';
 
 const REASONS: Record<string, TKey> = {
   invalid: 'users.err.invalid',
   duplicate: 'users.err.duplicate',
   protected: 'users.err.protected',
+  forbidden: 'users.err.forbidden',
+  last_admin: 'users.err.lastAdmin',
   not_found: 'users.err.invalid',
 };
 
@@ -24,6 +26,8 @@ export function UserDialog({ user, onClose }: { user?: User; onClose: () => void
   const t = useT();
   const [name, setName] = useState(user?.name ?? '');
   const [email, setEmail] = useState(user?.email ?? '');
+  // Recruitment Leads only hand out the hiring-team roles; Super Admins every role.
+  const roles = manageableRoles(useMe());
   const [role, setRole] = useState<Role>(user ? normalizeRole(user.role) : 'Recruiter');
   const [error, setError] = useState<TKey | null>(null);
 
@@ -31,6 +35,8 @@ export function UserDialog({ user, onClose }: { user?: User; onClose: () => void
     const { addUser, updateUser, setUserRole } = useStore.getState();
     // All-or-nothing: refuse a protected role change before anything is saved.
     if (user?.id === CURRENT_USER_ID && role !== 'Super Admin') return setError(REASONS.protected);
+    const admins = activeSuperAdmins(useStore.getState().users);
+    if (user && role !== 'Super Admin' && admins.length === 1 && admins[0].id === user.id) return setError(REASONS.last_admin);
     const res = user ? updateUser(user.id, { name, email }) : addUser({ name, email, role });
     if (!res.ok) return setError(REASONS[res.reason]);
     // New users get an invitation email (demo mailbox) with a link to set their password.
@@ -50,7 +56,7 @@ export function UserDialog({ user, onClose }: { user?: User; onClose: () => void
       onClose={onClose}
       footer={
         <>
-          <button onClick={onClose} className="px-4 py-2 text-sm font-medium text-[#5a4a46] hover:text-[#181211]">{t('common.cancel')}</button>
+          <button onClick={onClose} className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-ink">{t('common.cancel')}</button>
           <button onClick={submit} className="px-4 py-2 bg-primary hover:bg-primary-hover text-white rounded-lg font-semibold text-sm transition-colors">{t('users.save')}</button>
         </>
       }
@@ -67,7 +73,7 @@ export function UserDialog({ user, onClose }: { user?: User; onClose: () => void
         <div>
           <label className={LABEL} htmlFor="user-role">{t('users.field.role')}</label>
           <select id="user-role" className={FIELD} value={role} onChange={(e) => { setRole(e.target.value as Role); setError(null); }}>
-            {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
+            {roles.map((r) => <option key={r} value={r}>{r}</option>)}
           </select>
         </div>
         {error && <p role="alert" className="text-xs text-red-600">{t(error)}</p>}

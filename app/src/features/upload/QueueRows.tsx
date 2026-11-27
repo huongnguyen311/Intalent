@@ -21,7 +21,7 @@ export function QueueSummary({ rows, dark }: { rows: QueueRow[]; dark?: boolean 
   const done = rows.filter((r) => r.status === 'done').length;
   const review = rows.filter((r) => r.status === 'review').length;
   const failed = rows.filter((r) => r.status === 'failed').length;
-  return <p className={`text-xs font-semibold ${dark ? 'text-gray-300' : 'text-[#896a61]'}`}>{t('upload.summary', { done, review, failed })}</p>;
+  return <p className={`text-xs font-semibold ${dark ? 'text-gray-300' : 'text-ink-muted'}`}>{t('upload.summary', { done, review, failed })}</p>;
 }
 
 type Actions = { onResolve?: (id: number, choice: 'merge' | 'skip') => void; onRetry?: (id: number) => void };
@@ -41,19 +41,19 @@ export function QueueRows({ rows, dark, compact, maxFiles, onResolve, onRetry }:
         ? dark ? 'text-amber-300' : 'text-amber-700'
       : r.status === 'done'
         ? r.outcome === 'merged' ? (dark ? 'text-blue-300' : 'text-blue-600') : dark ? 'text-green-400' : 'text-green-600'
-        : dark ? 'text-gray-300' : 'text-[#896a61]';
+        : dark ? 'text-gray-300' : 'text-ink-muted';
 
   return (
-    <ul className={dark ? 'space-y-3 max-h-[420px] overflow-y-auto custom-scrollbar pr-1' : 'divide-y divide-gray-100 dark:divide-[#2a2423]'}>
+    <ul className={dark ? 'space-y-3 max-h-[420px] overflow-y-auto custom-scrollbar pr-1' : 'divide-y divide-gray-100 dark:divide-dark-raised'}>
       {rows.map((r) => (
         <li
           key={r.id}
           className={dark ? 'flex items-center gap-4 bg-white/5 rounded-xl border border-white/10 px-4 py-3' : 'flex items-center gap-4 px-6 py-4'}
         >
-          <span className={`material-symbols-outlined text-[24px] ${dark ? 'text-gray-400' : 'text-[#896a61]'}`}>description</span>
+          <span className={`material-symbols-outlined text-[24px] ${dark ? 'text-gray-400' : 'text-ink-muted'}`}>description</span>
           <div className="min-w-0 flex-1">
-            <p className={`text-sm font-semibold truncate ${dark ? 'text-white' : 'text-[#181211] dark:text-white'}`}>{r.name}</p>
-            <p className={`text-xs ${dark ? 'text-gray-400' : 'text-[#896a61]'}`}>{formatSize(r.size)}</p>
+            <p className={`text-sm font-semibold truncate ${dark ? 'text-white' : 'text-ink dark:text-white'}`}>{r.name}</p>
+            <p className={`text-xs ${dark ? 'text-muted dark:text-gray-400' : 'text-ink-muted'}`}>{formatSize(r.size)}</p>
             {r.status === 'parsing' && (
               <div className={`mt-2 h-1.5 rounded-full overflow-hidden ${dark ? 'bg-white/10' : 'bg-gray-100 dark:bg-gray-800'}`}>
                 <div className="h-full bg-primary transition-all" style={{ width: `${r.progress}%` }} />
@@ -110,13 +110,13 @@ const ICON: Record<QueueRow['status'], string> = {
   skipped: 'do_not_disturb_on',
 };
 const LINK = 'text-xs font-bold text-primary hover:underline shrink-0';
-const BTN_SM = 'h-7 px-2.5 rounded-md border border-gray-200 dark:border-[#3a3433] text-xs font-bold text-[#181211] dark:text-white hover:border-primary hover:text-primary shrink-0';
+const BTN_SM = 'h-7 px-2.5 rounded-md border border-gray-200 dark:border-dark-line text-xs font-bold text-ink dark:text-white hover:border-primary hover:text-primary shrink-0';
 
 /** Dense rows for the redesigned upload workspace: file, size, status pill and inline actions. */
 function CompactRows({ rows, maxFiles, onResolve, onRetry }: { rows: QueueRow[]; maxFiles: number } & Actions) {
   const t = useT();
   return (
-    <ul className="divide-y divide-gray-100 dark:divide-[#2a2423]">
+    <ul className="divide-y divide-gray-100 dark:divide-dark-raised">
       {rows.map((r) => {
         const pill = r.status === 'done' && r.outcome === 'merged' ? MERGED_PILL : PILL[r.status];
         const label =
@@ -131,9 +131,9 @@ function CompactRows({ rows, maxFiles, onResolve, onRetry }: { rows: QueueRow[];
               <span className={`material-symbols-outlined text-[18px] ${r.status === 'parsing' ? 'animate-spin' : ''}`}>{ICON[r.status]}</span>
             </span>
             <div className="min-w-0 flex-1">
-              <p className="text-[13px] font-semibold truncate text-[#181211] dark:text-white" title={r.name}>{r.name}</p>
+              <p className="text-[13px] font-semibold truncate text-ink dark:text-white" title={r.name}>{r.name}</p>
               <div className="flex items-center gap-2 mt-0.5 min-w-0">
-                <span className="text-[11px] text-gray-400 tabular-nums shrink-0">{formatSize(r.size)}</span>
+                <span className="text-2xs text-muted dark:text-gray-400 tabular-nums shrink-0">{formatSize(r.size)}</span>
                 {r.status === 'parsing' ? (
                   <span className="flex-1 max-w-[160px] h-1 rounded-full bg-gray-100 dark:bg-white/10 overflow-hidden">
                     <span className="block h-full bg-primary transition-all" style={{ width: `${r.progress}%` }} />
@@ -141,7 +141,7 @@ function CompactRows({ rows, maxFiles, onResolve, onRetry }: { rows: QueueRow[];
                 ) : null}
               </div>
             </div>
-            <span className={`inline-flex items-center h-6 shrink-0 px-2 rounded-full text-[11px] font-semibold max-w-[260px] truncate ${pill}`}>
+            <span className={`inline-flex items-center h-6 shrink-0 px-2 rounded-full text-2xs font-semibold max-w-[260px] truncate ${pill}`}>
               <span className="truncate">{label}</span>
             </span>
             {r.status === 'review' && onResolve && (
@@ -200,7 +200,7 @@ export function QueueStats({ rows }: { rows: QueueRow[] }) {
   const shown = STAT.filter((s) => c[s.key] > 0);
   const summary = t('upload.summary', { done: c.created + c.merged, review: c.review, failed: c.failed });
   return (
-    <div className="px-4 pt-1 pb-3 border-b border-gray-100 dark:border-[#2a2423]">
+    <div className="px-4 pt-1 pb-3 border-b border-gray-100 dark:border-dark-raised">
       <div className="flex items-center gap-3">
         <div
           role="progressbar"
@@ -216,13 +216,13 @@ export function QueueStats({ rows }: { rows: QueueRow[] }) {
             ) : null,
           )}
         </div>
-        <span className="text-[11px] font-bold tabular-nums text-[#181211] dark:text-white w-9 text-right">{pct}%</span>
+        <span className="text-2xs font-bold tabular-nums text-ink dark:text-white w-9 text-right">{pct}%</span>
       </div>
       <ul aria-label={summary} className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
         {shown.map((s) => (
-          <li key={s.key} className="inline-flex items-center gap-1.5 text-xs text-[#896a61]">
+          <li key={s.key} className="inline-flex items-center gap-1.5 text-xs text-ink-muted">
             <span className={`size-2 rounded-full ${s.bar}`} aria-hidden="true" />
-            <span className="font-bold tabular-nums text-[#181211] dark:text-white">{c[s.key]}</span>
+            <span className="font-bold tabular-nums text-ink dark:text-white">{c[s.key]}</span>
             {t(s.label)}
           </li>
         ))}

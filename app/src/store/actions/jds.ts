@@ -1,5 +1,6 @@
 import type { Jd } from '../../domain/types';
 import type { DemoActions, Env, Get, Set } from './types';
+import { actorOf } from './audit';
 
 /** Next free JD-YYYY-NNN for the year `now` falls in. */
 function nextCode(existing: Jd[], now: string): string {
@@ -40,6 +41,8 @@ export function jdActions(
         ...(skillsExperience ? { skillsExperience } : {}),
         // Structured fields from the full-page editor; undefined ones are dropped so old JDs keep their shape.
         ...Object.fromEntries(Object.entries(details).filter(([, v]) => v !== undefined)),
+        // The author keeps edit rights on their own JD (see canEditJd).
+        createdBy: actorOf(get),
         createdAt: at,
         updatedAt: at,
       };

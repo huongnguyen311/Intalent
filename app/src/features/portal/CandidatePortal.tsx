@@ -9,15 +9,15 @@ import { useMe } from '../../store/session';
 import { useStore } from '../../store/store';
 import { OfferResponse } from './OfferResponse';
 
-const INPUT = 'w-full h-11 px-4 rounded-lg bg-[#f8f6f6] ring-1 ring-gray-200 focus:ring-2 focus:ring-primary outline-none text-sm';
+const INPUT = 'w-full h-11 px-4 rounded-lg bg-background-light ring-1 ring-gray-200 focus:ring-2 focus:ring-primary outline-none text-sm';
 const CV_LIMITS = { ...UPLOAD_LIMITS, extensions: ['pdf', 'docx'] };
 const LEVELS = ['Intern', 'Fresher', 'Junior', 'Middle', 'Senior', 'Lead', 'Manager'];
 
 function Card({ title, hint, children }: { title: string; hint?: string; children: ReactNode }) {
   return (
-    <section className="bg-white rounded-3xl border border-[#e6dddb] p-6 sm:p-8">
+    <section className="bg-white rounded-3xl border border-line p-6 sm:p-8">
       <h2 className="text-lg font-bold">{title}</h2>
-      {hint && <p className="text-sm text-[#896a61] mt-1">{hint}</p>}
+      {hint && <p className="text-sm text-ink-muted mt-1">{hint}</p>}
       <div className="mt-5">{children}</div>
     </section>
   );
@@ -110,13 +110,13 @@ function Portal({ candidate: c, userId }: { candidate: Candidate; userId: string
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">{t('portal.hello', { name: c.name })}</h1>
-          <p className="text-sm text-[#896a61] mt-1">{t('portal.subtitle')}</p>
+          <p className="text-sm text-ink-muted mt-1">{t('portal.subtitle')}</p>
         </div>
         <button
           role="switch"
           aria-checked={!!c.openToWork}
           onClick={toggleOpen}
-          className={`h-11 px-5 rounded-full text-sm font-bold flex items-center gap-2 ring-1 ${c.openToWork ? 'bg-emerald-50 text-emerald-700 ring-emerald-200' : 'bg-white text-[#896a61] ring-gray-200'}`}
+          className={`h-11 px-5 rounded-full text-sm font-bold flex items-center gap-2 ring-1 ${c.openToWork ? 'bg-emerald-50 text-emerald-700 ring-emerald-200' : 'bg-white text-ink-muted ring-gray-200'}`}
         >
           <span className={`size-2.5 rounded-full ${c.openToWork ? 'bg-emerald-500' : 'bg-gray-300'}`}></span>
           {t('portal.openToWork')}
@@ -129,9 +129,9 @@ function Portal({ candidate: c, userId }: { candidate: Candidate; userId: string
 
       <Card title={t('portal.apps.title')}>
         {mine.length === 0 ? (
-          <p className="text-sm text-[#896a61]">{t('portal.apps.none')} <Link to="/careers" className="font-bold text-primary hover:underline">{t('careers.applied.browse')}</Link></p>
+          <p className="text-sm text-ink-muted">{t('portal.apps.none')} <Link to="/careers" className="font-bold text-primary hover:underline">{t('careers.applied.browse')}</Link></p>
         ) : (
-          <ul className="divide-y divide-[#e6dddb]">
+          <ul className="divide-y divide-line">
             {mine.map((a) => {
               const job = jobs.find((j) => j.id === a.jobId);
               const iv = nextInterview(a);
@@ -141,7 +141,7 @@ function Portal({ candidate: c, userId }: { candidate: Candidate; userId: string
                   <div className="flex items-center justify-between gap-3">
                     <div className="min-w-0">
                       <p className="font-semibold truncate">{job?.title ?? a.jobId}</p>
-                      <p className="text-xs text-[#896a61]">{t('careers.status.appliedOn', { date: fmt(a.addedAt) })}</p>
+                      <p className="text-xs text-ink-muted">{t('careers.status.appliedOn', { date: fmt(a.addedAt) })}</p>
                     </div>
                     <span className="px-3 py-1 rounded-full bg-primary/10 text-primary-ink text-xs font-bold shrink-0">{t(`careers.stage.${a.stage}`)}</span>
                   </div>
@@ -166,11 +166,11 @@ function Portal({ candidate: c, userId }: { candidate: Candidate; userId: string
         {versions.length > 0 && (
           <ul className="mt-4 space-y-2">
             {versions.map((v, i) => (
-              <li key={v.id} className="flex items-center gap-3 rounded-lg bg-[#f8f6f6] px-3 py-2 text-sm">
+              <li key={v.id} className="flex items-center gap-3 rounded-lg bg-background-light px-3 py-2 text-sm">
                 <span className="material-symbols-outlined text-[18px] text-red-500">picture_as_pdf</span>
                 <span className="flex-1 min-w-0 truncate">{v.fileName}</span>
-                {i === 0 && <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[11px] font-bold">{t('portal.cv.latest')}</span>}
-                <span className="text-xs text-[#896a61]">{fmt(v.at)}</span>
+                {i === 0 && <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-2xs font-bold">{t('portal.cv.latest')}</span>}
+                <span className="text-xs text-ink-muted">{fmt(v.at)}</span>
               </li>
             ))}
           </ul>

@@ -34,7 +34,7 @@ type Props = {
   onSelect?: (ids: string[], on: boolean) => void;
 };
 
-const TH = 'px-4 py-3 text-left text-xs font-bold text-[#896a61] uppercase tracking-wider whitespace-nowrap';
+const TH = 'px-4 py-3 text-left text-xs font-bold text-ink-muted uppercase tracking-wider whitespace-nowrap';
 const FILLED = { fontVariationSettings: "'FILL' 1" };
 
 /** Sortable, paged table version of the pipeline; the row menu goes through the same move flow as the board. */
@@ -93,10 +93,10 @@ export function PipelineList({ jobOf, showJob, apps, candidates, onOpen, onMove,
   };
 
   return (
-    <div className="bg-white dark:bg-[#1e1e1e] rounded-2xl border border-gray-100 dark:border-white/10 shadow-sm overflow-hidden">
+    <div className="bg-white dark:bg-dark-surface rounded-2xl border border-gray-100 dark:border-white/10 shadow-sm overflow-hidden">
       <div className="overflow-x-auto custom-scrollbar">
         <table className="w-full text-sm">
-          <thead className="bg-[#f8f6f6] dark:bg-[#251f1e] border-b border-[#f4f1f0] dark:border-[#2a2423]">
+          <thead className="bg-background-light dark:bg-dark-surface border-b border-hairline dark:border-dark-raised">
             <tr>
               {onSelect && selected && (
                 <th className="w-10 pl-4">
@@ -131,7 +131,7 @@ export function PipelineList({ jobOf, showJob, apps, candidates, onOpen, onMove,
                   key={a.id}
                   data-testid={`row-${a.id}`}
                   onClick={() => onOpen(a.id)}
-                  className="border-b border-[#f4f1f0] dark:border-[#2a2423] last:border-b-0 cursor-pointer hover:bg-[#f8f6f6] dark:hover:bg-white/5 transition-colors"
+                  className="border-b border-hairline dark:border-dark-raised last:border-b-0 cursor-pointer hover:bg-background-light dark:hover:bg-white/5 transition-colors"
                 >
                   {onSelect && selected && (
                     <td className="pl-4" onClick={(e) => e.stopPropagation()}>
@@ -155,17 +155,17 @@ export function PipelineList({ jobOf, showJob, apps, candidates, onOpen, onMove,
                         >
                           {n}
                         </button>
-                        <div className="text-xs text-[#896a61] truncate">{showJob ? job.title : c?.title}</div>
+                        <div className="text-xs text-ink-muted truncate">{showJob ? job.title : c?.title}</div>
                       </div>
                     </div>
                   </td>
                   <td className="px-4 py-2.5">
-                    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-[#f4f1f0] dark:bg-[#2a2423] text-xs font-medium whitespace-nowrap">
+                    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-gray-100 dark:bg-dark-raised text-xs font-medium whitespace-nowrap">
                       <span aria-hidden="true" className="size-2 rounded-full" style={{ background: STAGE_COLOR[a.stage] }}></span>
                       {label(a.stage, job)}
                     </span>
                   </td>
-                  <td className="px-4 py-2.5 text-[#896a61]">{a.source}</td>
+                  <td className="px-4 py-2.5 text-ink-muted">{a.source}</td>
                   <td className="px-4 py-2.5 font-medium" title={late ? t('pipeline.overSla', { n: job.stageSla[a.stage] ?? 0 }) : undefined}>
                     {t('jobs.days', { n: daysInStage(a) })}{late ? ' ⚠' : ''}
                   </td>
@@ -180,13 +180,13 @@ export function PipelineList({ jobOf, showJob, apps, candidates, onOpen, onMove,
                       <span className="text-gray-300">–</span>
                     )}
                   </td>
-                  <td className="px-4 py-2.5 text-[#896a61] whitespace-nowrap">{fullDate(a.addedAt)}</td>
+                  <td className="px-4 py-2.5 text-ink-muted whitespace-nowrap">{fullDate(a.addedAt)}</td>
                   <td className="px-2 py-2.5" onClick={(e) => e.stopPropagation()}>
                     {showJob ? <JobStageProvider job={job}>{<MoveToMenu
                       current={a.stage}
                       onMove={(to) => onMove(a.id, to)}
                       button={(open) => (
-                        <button aria-label={t('pipeline.moveTo')} onClick={open} className="size-7 rounded-full flex items-center justify-center text-[#896a61] hover:text-primary hover:bg-[#f4f1f0] dark:hover:bg-white/5">
+                        <button aria-label={t('pipeline.moveTo')} onClick={open} className="size-7 rounded-full flex items-center justify-center text-ink-muted hover:text-primary hover:bg-gray-100 dark:hover:bg-white/5">
                           <span className="material-symbols-outlined text-[18px]">more_vert</span>
                         </button>
                       )}
@@ -195,7 +195,7 @@ export function PipelineList({ jobOf, showJob, apps, candidates, onOpen, onMove,
                       current={a.stage}
                       onMove={(to) => onMove(a.id, to)}
                       button={(open) => (
-                        <button aria-label={t('pipeline.moveTo')} onClick={open} className="size-7 rounded-full flex items-center justify-center text-[#896a61] hover:text-primary hover:bg-[#f4f1f0] dark:hover:bg-white/5">
+                        <button aria-label={t('pipeline.moveTo')} onClick={open} className="size-7 rounded-full flex items-center justify-center text-ink-muted hover:text-primary hover:bg-gray-100 dark:hover:bg-white/5">
                           <span className="material-symbols-outlined text-[18px]">more_vert</span>
                         </button>
                       )}
@@ -218,7 +218,7 @@ function ScoreCell({ app }: { app: Application }) {
   const t = useT();
   const user = useMe();
   if (normalizeRole(user.role) === 'Interviewer' && awaitsScorecardFrom(app, user.id)) return <span className="text-gray-300">–</span>;
-  if (app.aiPending) return <span className="text-xs text-gray-400">{t('ai.badge.pending')}</span>;
+  if (app.aiPending) return <span className="text-xs text-muted dark:text-gray-400">{t('ai.badge.pending')}</span>;
   const e = latestEvaluation(app);
   if (!e || e.noCriteria) return <span className="text-gray-300">–</span>;
   return <span className={`text-xs font-bold ${AI_PILL}`}>{`✦ ${e.score}`}</span>;

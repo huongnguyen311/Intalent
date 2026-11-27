@@ -200,6 +200,8 @@ export function withProfiles(candidates: Candidate[], base: number): Candidate[]
       openToWork: i % 4 !== 3,
       // Every third candidate has not shared a rate ("Contact for rate"); the rest vary a little around their level.
       expectedRate: i % 3 === 2 ? undefined : (RATES[rank < 0 ? 2 : rank] ?? 1600) + (i % 5) * 100,
+      // Most candidates state a start date 1-8 weeks out; every fourth has not said.
+      availableFrom: i % 4 === 1 ? undefined : new Date(base + ((i % 8) + 1) * 7 * 86_400_000).toISOString().slice(0, 10),
       experience: experience(c, i, base),
       education: education(c, i, base),
       address: `${12 + ((i * 37) % 400)} ${STREETS[i % STREETS.length]} Street, District ${1 + (i % 10)}, ${CITIES[i % CITIES.length]}`,

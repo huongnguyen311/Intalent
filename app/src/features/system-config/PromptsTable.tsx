@@ -5,7 +5,7 @@ import { useT, type TKey } from '../../i18n/i18n';
 import { PromptEditor } from './PromptEditor';
 
 const PAGE_SIZE = 10;
-const TH = 'px-6 py-4 text-xs font-bold text-[#896a61] uppercase tracking-wider border-b border-[#e6dddb] dark:border-[#2a2423]  ';
+const TH = 'px-6 py-4 text-xs font-bold text-ink-muted uppercase tracking-wider border-b border-line dark:border-dark-raised  ';
 
 /** "3/24/2026, 3:30:21 PM" */
 const stamp = (iso: string) => new Date(iso).toLocaleString('en-US');
@@ -33,17 +33,17 @@ export function PromptsTable({ items, title, desc, noun }: { items: Prompt[]; ti
           <p className="text-sm text-gray-500">{t(desc)}</p>
         </div>
       </div>
-      <div className="bg-white dark:bg-[#1e1e1e] rounded-xl border border-[#e6dddb] dark:border-[#2a2423] shadow-sm flex flex-col ">
+      <div className="bg-white dark:bg-dark-surface rounded-xl border border-line dark:border-dark-raised shadow-sm flex flex-col ">
         <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-274px)] custom-scrollbar">
           <table className="w-full text-left border-collapse">
-            <thead className="bg-[#f8f6f6] dark:bg-[#251f1e] sticky top-0 z-10">
+            <thead className="bg-background-light dark:bg-dark-surface sticky top-0 z-10">
               <tr>
                 {(['systemConfig.col.key', 'systemConfig.col.description', 'systemConfig.col.updated', 'systemConfig.col.actions'] as const).map((k) => (
                   <th key={k} className={TH}><div className="flex items-center gap-1">{t(k)}</div></th>
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#f4f1f0] dark:divide-[#2a2423]">
+            <tbody className="divide-y divide-hairline dark:divide-dark-raised">
               {rows.map((p) => (
                 <tr key={p.id} className="hover:bg-gray-50 dark:hover:bg-white/5 transition-colors group ">
                   <td className="px-6 py-4 whitespace-nowrap "><span className="font-medium">{p.name}</span></td>
@@ -57,7 +57,7 @@ export function PromptsTable({ items, title, desc, noun }: { items: Prompt[]; ti
                 </tr>
               ))}
               {rows.length === 0 && (
-                <tr><td colSpan={4} className="px-6 py-10 text-center text-sm text-[#896a61]">{t('systemConfig.empty')}</td></tr>
+                <tr><td colSpan={4} className="px-6 py-10 text-center text-sm text-ink-muted">{t('systemConfig.empty')}</td></tr>
               )}
             </tbody>
           </table>

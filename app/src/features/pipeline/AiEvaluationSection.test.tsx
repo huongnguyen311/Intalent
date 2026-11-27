@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { buildSeed } from '../../data/seed';
@@ -26,18 +26,22 @@ beforeEach(() => {
 const section = () => render(<MemoryRouter><AiEvaluationSection app={app} /></MemoryRouter>);
 
 describe('AiEvaluationSection', () => {
-  it('shows three gaps and folds the rest behind "+N more"', () => {
+  it('reads as a score with a word, a table per requirement and the missing skills', () => {
     section();
-    const gaps = screen.getByText('Gaps').parentElement!;
-    expect(within(gaps).getAllByRole('listitem')).toHaveLength(3);
-    fireEvent.click(within(gaps).getByRole('button', { name: '+4 more' }));
-    expect(within(gaps).getAllByRole('listitem')).toHaveLength(7);
-    expect(within(gaps).getByRole('button', { name: 'Show less' })).toBeInTheDocument();
+    expect(screen.getByText('Weak match')).toBeInTheDocument();
+    const skills = screen.getByRole('rowheader', { name: 'Skills' }).closest('tr')!;
+    expect(skills).toHaveTextContent('6 skills');
+    expect(skills).toHaveTextContent('None');
+    expect(screen.getByText('A1, B2, C3, D4, E5, F6')).toBeInTheDocument();
   });
 
-  it('leaves out an unknown level instead of printing a dash', () => {
+  it('puts the JD requirement next to what the CV shows, leaving out an unknown level', () => {
     section();
-    fireEvent.click(within(screen.getByText('Gaps').parentElement!).getByRole('button', { name: /more/ }));
-    expect(screen.getByText('~0 yrs vs required Senior, 5+ yrs')).toBeInTheDocument();
+    const exp = screen.getByRole('rowheader', { name: 'Experience' }).closest('tr')!;
+    expect(exp).toHaveTextContent('Senior, 5+ yrs');
+    expect(exp).toHaveTextContent('~0 yrs');
+    expect(exp).not.toHaveTextContent('-,');
+    // Domain and English were not asked for: said in words, full points.
+    expect(screen.getAllByText('Not required')).toHaveLength(2);
   });
 });

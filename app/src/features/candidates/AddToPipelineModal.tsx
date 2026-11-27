@@ -8,6 +8,7 @@ import { useLang, useT } from '../../i18n/i18n';
 import { me, useMe } from '../../store/session';
 import { useStore } from '../../store/store';
 import { PoolSearch } from './PoolSearch';
+import { BTN_GHOST, BTN_PRIMARY, FIELD } from '../../components/ui';
 
 type Props = {
   open: boolean;
@@ -20,12 +21,6 @@ type Props = {
 
 type Result = { ok: true } | { ok: false; stage: Stage } | { ok: false; closed: true };
 
-const FIELD =
-  'w-full px-3 py-2 bg-white dark:bg-[#251f1e] border border-[#e6dddb] dark:border-[#3a3433] rounded-lg text-sm text-[#181211] dark:text-white focus:ring-1 focus:ring-primary focus:border-primary focus:outline-none';
-const BTN_PRIMARY =
-  'px-4 py-2 text-sm font-medium bg-primary hover:bg-primary-hover text-white rounded-lg shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed';
-const BTN_GHOST =
-  'px-4 py-2 text-sm font-medium border border-[#e6dddb] dark:border-[#3a3433] text-[#181211] dark:text-white rounded-lg hover:border-primary/50 transition-colors';
 
 /** Adds Talent Pool candidates to one open job's pipeline and reports the outcome per candidate. */
 export function AddToPipelineModal({ open, onClose, candidateIds: fixedIds, jobId: fixedJobId }: Props) {
@@ -50,6 +45,8 @@ export function AddToPipelineModal({ open, onClose, candidateIds: fixedIds, jobI
   const jobId = fixedJobId ?? pickedJobId;
   // Only jobs this user works on: adding to someone else's job would leave them unable to follow the candidate.
   const openJobs = jobsInScope(user, jobs).filter((j) => j.status === 'open');
+  // HR flagged these people "do not hire": still allowed, but say so before they go into a pipeline.
+  const flagged = candidates.filter((c) => candidateIds.includes(c.id) && c.doNotHire);
   const people = candidateIds.map((id) => ({ id, name: candidates.find((c) => c.id === id)?.name ?? id }));
 
   const confirm = () => {
@@ -84,11 +81,17 @@ export function AddToPipelineModal({ open, onClose, candidateIds: fixedIds, jobI
       }
     >
       <div className="flex flex-col gap-4">
+        {!results && flagged.length > 0 && (
+          <div role="alert" className="flex items-start gap-2 rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/10 px-3 py-2 text-sm text-red-800 dark:text-red-300">
+            <span aria-hidden="true" className="material-symbols-outlined text-[18px] shrink-0">block</span>
+            <span>{t('atp.dnhWarn', { names: flagged.map((c) => c.name).join(', ') })}</span>
+          </div>
+        )}
         {!results && (
           <>
             {!fixedJobId && (
               <div className="flex flex-col gap-1">
-                <label htmlFor="atp-job" className="text-xs font-semibold text-[#896a61]">{t('atp.job')}</label>
+                <label htmlFor="atp-job" className="text-xs font-semibold text-ink-muted">{t('atp.job')}</label>
                 <select id="atp-job" className={FIELD} value={jobId} onChange={(e) => setJobId(e.target.value)}>
                   <option value="">{t('atp.selectJob')}</option>
                   {openJobs.map((j) => (
@@ -102,7 +105,7 @@ export function AddToPipelineModal({ open, onClose, candidateIds: fixedIds, jobI
         )}
         {(!searchMode || results) && (
           <div className="flex flex-col gap-1">
-          <p id="atp-people" className="text-xs font-semibold text-[#896a61]">{t('atp.people')}</p>
+          <p id="atp-people" className="text-xs font-semibold text-ink-muted">{t('atp.people')}</p>
           <ul aria-labelledby="atp-people" className="flex flex-col gap-2">
             {people.map((p) => {
               const r = results?.[p.id];

@@ -56,7 +56,7 @@ describe('TaxonomyPage', () => {
 
   it('switches to the Domain tab', () => {
     page(<TaxonomyPage />);
-    click('Domain');
+    fireEvent.click(screen.getByRole('tab', { name: 'Domain' }));
     expect(screen.getByRole('button', { name: /Add New Domain/ })).toBeInTheDocument();
     expect(screen.queryByText('Advanced')).toBeNull();
   });
@@ -68,8 +68,9 @@ describe('UsersPage', () => {
     const users = useStore.getState().users;
     // Six-role model: staff vs candidate accounts.
     const candidates = users.filter((u) => u.role === 'Candidate').length;
-    expect(within(screen.getByText('Staff accounts').parentElement!).getByText(String(users.length - candidates))).toBeInTheDocument();
-    expect(within(screen.getByText('Candidate accounts').parentElement!).getByText(String(candidates))).toBeInTheDocument();
+    const card = (label: string) => screen.getByText(label).closest<HTMLElement>('[data-stat-card]')!;
+    expect(within(card('Staff accounts')).getByText(String(users.length - candidates))).toBeInTheDocument();
+    expect(within(card('Candidate accounts')).getByText(String(candidates))).toBeInTheDocument();
   });
 
   it('adds a user, blocks a duplicate email, deactivates and changes role', () => {
@@ -149,9 +150,9 @@ describe('SystemConfigPage', () => {
   it('lists email templates on their own tab and shows simulated usage', () => {
     page(<SystemConfigPage />);
     expect(screen.queryByText('Rejection')).toBeNull();
-    click('Email Templates');
+    fireEvent.click(screen.getByRole('tab', { name: /Email Templates/ }));
     expect(screen.getByText('Rejection')).toBeInTheDocument();
-    click('AI Usage & Cost');
+    fireEvent.click(screen.getByRole('tab', { name: /AI Usage & Cost/ }));
     expect(screen.getByText(/Simulated figures/)).toBeInTheDocument();
   });
 });

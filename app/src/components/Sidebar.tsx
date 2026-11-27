@@ -26,9 +26,9 @@ const MATCH: Item = { to: '/jd-matching', icon: 'fact_check', label: 'nav.jdMatc
 const CONFIG: Group = {
   title: 'nav.group.configuration',
   items: [
-    { to: '/taxonomy', icon: 'category', label: 'nav.taxonomy', perm: 'config' },
+    { to: '/taxonomy', icon: 'category', label: 'nav.taxonomy', perm: 'taxonomy' },
     { to: '/system-config', icon: 'settings', label: 'nav.systemConfig', perm: 'config' },
-    { to: '/users', icon: 'manage_accounts', label: 'nav.userManagement', perm: 'config' },
+    { to: '/users', icon: 'manage_accounts', label: 'nav.userManagement', perm: 'users.manage' },
     { to: '/ta-contribution', icon: 'leaderboard', label: 'nav.cvByTa', perm: 'reports' },
   ],
 };
@@ -148,15 +148,15 @@ export function Sidebar() {
         {!rail && <span className={`${showNew ? 'text-[13px] truncate' : 'text-sm'} font-medium`}>{t(it.label)}</span>}
         {!rail && it.newTab && <span aria-hidden="true" className="material-symbols-outlined text-[14px] ml-auto opacity-60">open_in_new</span>}
         {!!it.badge && (
-          <span title={t('nav.pendingReview', { n: it.badge })} className={`${rail ? 'absolute translate-x-2.5 -translate-y-2.5' : 'ml-auto'} min-w-[18px] h-[18px] px-1 rounded-full bg-amber-400 text-[11px] font-bold text-[#181211] flex items-center justify-center`}>{it.badge}</span>
+          <span title={t('nav.pendingReview', { n: it.badge })} className={`${rail ? 'absolute translate-x-2.5 -translate-y-2.5' : 'ml-auto'} min-w-[18px] h-[18px] px-1 rounded-full bg-amber-400 text-2xs font-bold text-ink flex items-center justify-center`}>{it.badge}</span>
         )}
       </Link>
     );
   };
 
   return (
-    <aside className={`${rail ? 'w-14' : showNew ? 'w-56' : 'w-64'} bg-sidebar-dark flex flex-col h-full flex-shrink-0 border-r border-border-dark z-30 shadow-2xl`}>
-      <div className={`h-16 flex items-center border-b border-border-dark ${rail ? 'justify-center px-2' : showNew ? 'px-3' : 'px-6'}`}>
+    <aside className={`${rail ? 'w-14' : showNew ? 'w-56' : 'w-64'} bg-sidebar-dark flex flex-col h-full flex-shrink-0 border-r border-dark-raised z-30 shadow-2xl`}>
+      <div className={`h-16 flex items-center border-b border-dark-raised ${rail ? 'justify-center px-2' : showNew ? 'px-3' : 'px-6'}`}>
         {!rail && showNew && (
           <Link to={{ pathname: '/', search }} className="flex items-center gap-2.5 cursor-pointer">
             <BrandMark className="h-7" />
@@ -166,7 +166,7 @@ export function Sidebar() {
         {!rail && !showNew && (
           <Link to={{ pathname: '/', search }} className="flex items-center gap-3 cursor-pointer">
             <div className="size-9 rounded-full bg-primary flex items-center justify-center text-white shadow-sm shrink-0">
-              <span className="material-symbols-outlined icon-filled text-[22px]">hub</span>
+              <span className="material-symbols-outlined icon-filled text-[24px]">hub</span>
             </div>
             <h1 className="text-white font-bold tracking-tight text-lg">InApps Talent Pool</h1>
           </Link>
@@ -176,7 +176,7 @@ export function Sidebar() {
             onClick={() => (narrow ? setPhoneOpen(!phoneOpen) : update({ ...nav, rail: !nav.rail }))}
             title={t(rail ? 'nav.expand' : 'nav.collapse')}
             aria-label={t(rail ? 'nav.expand' : 'nav.collapse')}
-            className={`flex items-center p-1 rounded-lg text-[#896a61] hover:bg-white/5 hover:text-white ${rail ? '' : 'ml-auto'}`}
+            className={`flex items-center p-1 rounded-lg text-ink-muted hover:bg-white/5 hover:text-white ${rail ? '' : 'ml-auto'}`}
           >
             <span className="material-symbols-outlined text-[20px]">{rail ? 'keyboard_double_arrow_right' : 'keyboard_double_arrow_left'}</span>
           </button>
@@ -192,7 +192,7 @@ export function Sidebar() {
                 <button
                   onClick={() => update({ ...nav, folded: { ...nav.folded, [g.title]: open } })}
                   aria-expanded={open}
-                  className="px-2.5 py-1 text-[10px] font-semibold text-sidebar-label uppercase tracking-wider flex items-center gap-1 w-full text-left hover:text-white"
+                  className="px-2.5 py-1 text-2xs font-semibold text-sidebar-label uppercase tracking-wider flex items-center gap-1 w-full text-left hover:text-white"
                 >
                   <span>{t(g.title)}</span>
                   {!open && <span className="font-normal">({g.items.length})</span>}

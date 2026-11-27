@@ -16,25 +16,38 @@ const DEMO_ADMIN: User = { id: CURRENT_USER_ID, name: 'Super Admin', email: '', 
 export const GUEST: User = { id: 'guest', name: 'Guest', email: '', role: 'Guest', status: 'Active', createdAt: '' };
 export const isGuest = (u: Pick<User, 'id'>): boolean => u.id === GUEST.id;
 
+/** The original demo workspace (as opposed to a tenant created through sign-up). */
+const isDemoWorkspaceId = (workspaceId: string | undefined): boolean => !workspaceId || workspaceId === DEFAULT_COMPANY.workspaceId;
+
+/** Whether the demo "View as" role switcher may show: only in the demo workspace, never in a real tenant. */
+export function useIsDemoWorkspace(): boolean {
+  return useStore((s) => isDemoWorkspaceId(s.company?.workspaceId));
+}
+
 /**
  * The original demo workspace keeps its "always signed in as the demo admin" behaviour; any other workspace
  * (a real tenant) requires a signed-in, active member.
  */
-function resolve(users: User[], actingAs: string | undefined, workspaceId: string | undefined): User {
+function resolve(users: User[], actingAs: string | undefined, workspaceId: string | undefined, signedIn: boolean | undefined): User {
+  // Hosted demo (VITE_REQUIRE_LOGIN=1): nobody is signed in until they pass the login page.
+  if (REQUIRE_LOGIN && !signedIn) return GUEST;
   const acting = actingAs ? users.find((u) => u.id === actingAs && u.status !== 'Inactive') : undefined;
   if (acting) return acting;
-  if (workspaceId && workspaceId !== DEFAULT_COMPANY.workspaceId) return GUEST;
+  if (!isDemoWorkspaceId(workspaceId)) return GUEST;
   return users.find((u) => u.id === CURRENT_USER_ID) || DEMO_ADMIN;
 }
 
+/** Set on the hosted build so visitors start at the login page instead of the auto-signed-in demo admin. */
+const REQUIRE_LOGIN = import.meta.env.VITE_REQUIRE_LOGIN === '1';
+
 /** The signed-in user, re-rendering when it changes. */
 export function useMe(): User {
-  return useStore((s) => resolve(s.users, s.ui.actingAs, s.company?.workspaceId));
+  return useStore((s) => resolve(s.users, s.ui.actingAs, s.company?.workspaceId, s.ui.signedIn));
 }
 
 export function currentUser(): User {
   const { ui, users, company } = useStore.getState();
-  return resolve(users, ui.actingAs, company?.workspaceId);
+  return resolve(users, ui.actingAs, company?.workspaceId, ui.signedIn);
 }
 
 /** Permission check for the signed-in user. */
@@ -44,5 +57,10 @@ export function useCan(): (perm: Perm) => boolean {
 }
 
 export function signInAs(userId: string | undefined): void {
-  useStore.setState((s) => ({ ui: { ...s.ui, actingAs: userId } }));
+  useStore.setState((s) => ({ ui: { ...s.ui, actingAs: userId, signedIn: true } }));
+}
+
+/** Log out: back to the demo admin locally, or to a guest (login page) on the hosted build. */
+export function signOut(): void {
+  useStore.setState((s) => ({ ui: { ...s.ui, actingAs: undefined, signedIn: false } }));
 }

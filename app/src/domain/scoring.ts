@@ -18,17 +18,21 @@ export interface ScoreResult {
   breakdown: { stack: number; experience: number; domain: number; english: number };
   have: string[];
   miss: string[];
+  /** Wanted domains the candidate has / lacks. */
+  domainHave: string[];
+  domainMiss: string[];
   reason: string;
 }
 
 /** Shown on the JD Matching screen. Experience & seniority split evenly. */
 export const WEIGHTS = { stack: 40, experience: 30, domain: 20, english: 10 } as const;
 
-/** none < basic (= beginner) < intermediate < advanced < fluent (= native). */
-function englishRank(s: string): number {
-  switch (s.trim().toLowerCase()) {
+/** none < basic (= beginner) < intermediate < upper-intermediate < advanced < fluent (= native). */
+export function englishRank(s: string): number {
+  switch (s.trim().toLowerCase().replace(/[\s_]+/g, '-')) {
     case 'basic': case 'beginner': return 1;
     case 'intermediate': return 2;
+    case 'upper-intermediate': return 2.5;
     case 'advanced': return 3;
     case 'fluent': case 'native': return 4;
     default: return 0;
@@ -85,7 +89,7 @@ export function scoreCandidate(c: Candidate, req: Requirements): ScoreResult {
   const domain = wanted.length ? domainHits.length / wanted.length : 1;
 
   const lack = req.english ? englishRank(req.english) - englishRank(c.english) : 0;
-  const english = lack <= 0 ? 1 : lack === 1 ? 0.5 : 0;
+  const english = lack <= 0 ? 1 : lack <= 1 ? 0.5 : 0;
 
   const breakdown = {
     stack: Math.round(stack * WEIGHTS.stack),
@@ -102,7 +106,7 @@ export function scoreCandidate(c: Candidate, req: Requirements): ScoreResult {
   }
   const facts = [c.seniority, `${estimateYears(c)} yrs`, c.english && `English ${c.english}`].filter(Boolean);
   if (domainHits.length) facts.push(domainHits.join(', '));
-  return { score, breakdown, have, miss, reason: `${parts.join('; ')}${parts.length ? '. ' : ''}${facts.join(' · ')}` };
+  return { score, breakdown, have, miss, domainHave: domainHits, domainMiss: wanted.filter((d) => !mine.has(fold(d))), reason: `${parts.join('; ')}${parts.length ? '. ' : ''}${facts.join(' · ')}` };
 }
 
 const SENIORITY_WORDS: Array<[canon: string, words: string[]]> = [

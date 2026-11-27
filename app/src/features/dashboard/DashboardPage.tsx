@@ -11,6 +11,7 @@ import { DASHBOARD_RECRUITERS } from '../../data/seed';
 import { useShowNew } from '../../hooks';
 import { useStore } from '../../store/store';
 import { EnglishDonut, SeniorityBars, StackPie } from './charts';
+import { useT } from '../../i18n/i18n';
 
 
 const PERIODS: { id: Period; label: string }[] = [
@@ -24,10 +25,10 @@ const PERIODS: { id: Period; label: string }[] = [
 const STACK_COLORS = ['#3b82f6', '#8b5cf6', '#fbbf24', '#10b981', '#f97316', '#ef4444'];
 const BAR_TONES = [
   { bar: 'bg-blue-500', icon: 'bg-blue-50 text-blue-500' },
-  { bar: 'bg-purple-500', icon: 'bg-purple-50 text-purple-500' },
+  { bar: 'bg-violet-500', icon: 'bg-violet-50 text-violet-500' },
 ];
-const CONTRIBUTOR_BARS = ['bg-blue-500', 'bg-purple-500', 'bg-amber-500'];
-const DOMAIN_BARS = ['bg-orange-500', 'bg-blue-500', 'bg-red-400', 'bg-slate-800', 'bg-purple-500'];
+const CONTRIBUTOR_BARS = ['bg-blue-500', 'bg-violet-500', 'bg-amber-500'];
+const DOMAIN_BARS = ['bg-orange-500', 'bg-blue-500', 'bg-red-400', 'bg-slate-800', 'bg-violet-500'];
 const ENGLISH_COLORS: Record<string, string> = { Advanced: '#ef5125', Intermediate: '#fca5a5' };
 const ENGLISH_FALLBACK = '#fef3f2';
 
@@ -50,6 +51,7 @@ export function seniorityRows(seniority: Record<string, number>) {
 }
 
 export function DashboardPage() {
+  const tr = useT();
   const [period, setPeriod] = useState<Period>('all');
   const [range, setRange] = useState<DateRange>({ kind: 'all' });
   // The recruitment row filters by date range and recruiter.
@@ -83,8 +85,8 @@ export function DashboardPage() {
   // App: the Dashboard is recruitment only; the talent-pool charts live on Candidate Pool (PoolInsights).
   if (showNew) {
     return (
-      <AppLayout title="Dashboard">
-        <div className="p-4 sm:p-8 max-w-[1600px] mx-auto bg-canvas min-h-full">
+      <AppLayout title={tr('nav.dashboard')}>
+        <div className="p-4 sm:p-8 max-w-[1400px] mx-auto bg-canvas min-h-full">
           <RecruitmentRow
             metrics={m.recruitment}
             // Comparing recruiters is for those who see every job; a recruiter's dashboard is already just their jobs.
@@ -129,7 +131,7 @@ export function DashboardPage() {
       </div>
       <div className={`${CARD} flex flex-col justify-between h-40`}>
         <div className="flex justify-between items-start">
-          <div className="size-12 rounded-2xl bg-purple-50 flex items-center justify-center text-purple-600">
+          <div className="size-12 rounded-2xl bg-violet-50 flex items-center justify-center text-violet-600">
             <span className="material-symbols-outlined !text-[24px]">auto_awesome</span>
           </div>
           <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-green-50 text-green-600 text-2xs font-bold">
@@ -189,7 +191,7 @@ export function DashboardPage() {
                 onClick={() => setPeriod(p.id)}
                 aria-pressed={period === p.id}
                 className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-colors ${
-                  period === p.id ? 'bg-slate-900 text-white' : 'text-gray-400 hover:text-slate-700'
+                  period === p.id ? 'bg-slate-900 text-white' : 'text-muted dark:text-gray-400 hover:text-slate-700'
                 }`}
               >
                 {p.label}
@@ -204,7 +206,7 @@ export function DashboardPage() {
           <div className={`lg:col-span-2 ${CARD}`}>
             <div className="mb-8">
               <h3 className="ty-section text-xl font-bold text-slate-900">Top Tech Stacks</h3>
-              <p className="text-xs text-gray-400 font-bold">Skills distribution (Showing &gt;10%)</p>
+              <p className="text-xs text-muted dark:text-gray-400 font-bold">Skills distribution (Showing &gt;10%)</p>
             </div>
             <div className="flex flex-col md:flex-row items-center justify-around gap-8">
               <div className="size-64">
@@ -217,7 +219,7 @@ export function DashboardPage() {
                       <div className="size-3 rounded-full" style={{ backgroundColor: s.color }}></div>
                       <span className="text-sm font-bold text-slate-700">{s.name}</span>
                     </div>
-                    <span className="text-sm font-bold text-gray-400">{s.value.toFixed(2)}%</span>
+                    <span className="text-sm font-bold text-muted dark:text-gray-400">{s.value.toFixed(2)}%</span>
                   </div>
                 ))}
               </div>
@@ -271,7 +273,7 @@ export function DashboardPage() {
           <div className={`${CARD} flex flex-col h-full`}>
             <div className="mb-6">
               <h3 className="ty-section text-xl font-bold text-slate-900">English Level</h3>
-              <p className="text-xs text-gray-400 font-bold">Candidate self-assessment</p>
+              <p className="text-xs text-muted dark:text-gray-400 font-bold">Candidate self-assessment</p>
             </div>
             <div className="flex-1 flex flex-col items-center justify-center space-y-8">
               <div className="relative size-48">
@@ -290,7 +292,7 @@ export function DashboardPage() {
                       <div className="size-3.5 rounded-sm" style={{ backgroundColor: e.color }}></div>
                       <span className="text-sm font-bold text-slate-700">{e.name}</span>
                     </div>
-                    <span className="text-sm font-bold text-gray-400 group-hover:text-slate-900 transition-colors">{e.value}</span>
+                    <span className="text-sm font-bold text-muted dark:text-gray-400 group-hover:text-slate-900 transition-colors">{e.value}</span>
                   </div>
                 ))}
               </div>

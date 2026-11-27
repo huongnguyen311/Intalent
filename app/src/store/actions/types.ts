@@ -48,7 +48,7 @@ export type TaxonomyResult =
   | { ok: false; reason: 'empty' | 'duplicate' | 'not_found' };
 export type UserResult =
   | { ok: true; user: User }
-  | { ok: false; reason: 'invalid' | 'duplicate' | 'not_found' | 'protected' };
+  | { ok: false; reason: 'invalid' | 'duplicate' | 'not_found' | 'protected' | 'forbidden' | 'last_admin' };
 
 export type TransferResult = { ok: true } | { ok: false; reason: 'not_found' | 'same_owner' | 'not_assignable' };
 
@@ -61,6 +61,10 @@ export interface DemoActions {
   updateCandidate(id: string, patch: CandidatePatch, by?: string): UpdateCandidateResult;
   /** PRD AC-12: erases PII (contact, CV, files, emails), withdraws consents, logs an audit event. False if unknown or already done. */
   anonymizeCandidate(id: string, by: string): boolean;
+  /** A Recruiter opening contact data outside their own jobs: logged as pii_revealed (which also keeps it visible). */
+  revealContact(id: string, by: string): boolean;
+  /** Logs a CSV export that included email and phone. */
+  logContactExport(count: number, by: string): void;
   addToPipeline(
     candidateId: string,
     jobId: string,
@@ -117,7 +121,7 @@ export interface DemoActions {
   /** Also rewrites the label on every candidate using it. */
   renameTaxonomy(id: string, label: string): TaxonomyResult;
   setTaxonomyActive(id: string, active: boolean): boolean;
-  /** New users start Invited (PRD 3.1): they become Active when they accept, i.e. first sign in. */
+  /** New users start Invited (PRD 3.1): they become Active when they accept, i.e. first sign in. Refuses roles the signed-in user cannot manage ('forbidden'). */
   addUser(input: { name: string; email: string; role: Role }): UserResult;
   /** Invited -> Active, logged as user_joined. */
   acceptInvitation(id: string, patch?: { name?: string; passwordHash?: string }): UserResult;
@@ -126,7 +130,10 @@ export interface DemoActions {
   /** Saves the workspace profile and logs settings_updated. */
   updateCompany(patch: Partial<import('../../domain/company').CompanySettings>): void;
   updateUser(id: string, patch: { name: string; email: string }): UserResult;
-  /** The demo user cannot leave Super Admin or be deactivated ('protected'). */
+  /**
+   * The demo user cannot leave Super Admin or be deactivated ('protected'); nor can the last active Super Admin
+   * ('last_admin'). The signed-in user must manage both the old and the new role ('forbidden', see manageableRoles).
+   */
   setUserRole(id: string, role: Role): UserResult;
   setUserActive(id: string, active: boolean): UserResult;
   /** Saved only; prompts and email templates are never executed. */

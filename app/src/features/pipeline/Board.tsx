@@ -180,12 +180,12 @@ function BoardInner({ job, jobs, filter, view = 'kanban', sort = 'board', onConf
 
   if (jobApps.length === 0) {
     return (
-      <div className="bg-white dark:bg-[#1e1e1e] rounded-2xl border border-gray-100 dark:border-white/10 shadow-sm p-12 flex flex-col items-center text-center gap-3">
+      <div className="bg-white dark:bg-dark-surface rounded-2xl border border-gray-100 dark:border-white/10 shadow-sm p-12 flex flex-col items-center text-center gap-3">
         <span className="size-14 rounded-full bg-orange-50 text-brand-accent flex items-center justify-center">
           <span className="material-symbols-outlined text-[28px]">view_kanban</span>
         </span>
         <h3 className="ty-section font-bold text-lg text-slate-800 dark:text-white">{t('pipeline.empty.title')}</h3>
-        <p className="text-sm text-[#896a61] max-w-md">{t('pipeline.empty.desc')}</p>
+        <p className="text-sm text-ink-muted max-w-md">{t('pipeline.empty.desc')}</p>
       </div>
     );
   }
@@ -202,7 +202,7 @@ function BoardInner({ job, jobs, filter, view = 'kanban', sort = 'board', onConf
         <BulkBar count={selected.size} stages={bulkStages} onClear={clearSelection} onMove={moveSelected} />
       )}
       {noMatch ? (
-        <div className="bg-white dark:bg-[#1e1e1e] rounded-2xl border border-gray-100 dark:border-white/10 shadow-sm p-12 text-center text-sm text-[#896a61]">
+        <div className="bg-white dark:bg-dark-surface rounded-2xl border border-gray-100 dark:border-white/10 shadow-sm p-12 text-center text-sm text-ink-muted">
           {t('pipeline.filter.noMatch')}
         </div>
       ) : view === 'list' ? (
@@ -235,9 +235,9 @@ function BoardInner({ job, jobs, filter, view = 'kanban', sort = 'board', onConf
               onClick={onConfigure}
               aria-label={t('pipeline.col.add')}
               title={t('pipeline.col.add')}
-              className="w-12 shrink-0 self-start h-12 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#1e1e1e] shadow-sm flex items-center justify-center text-slate-600 dark:text-gray-300 hover:text-primary hover:border-primary/50"
+              className="w-12 shrink-0 self-start h-12 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-dark-surface shadow-sm flex items-center justify-center text-slate-600 dark:text-gray-300 hover:text-primary hover:border-primary/50"
             >
-              <span aria-hidden="true" className="material-symbols-outlined text-[22px]">add</span>
+              <span aria-hidden="true" className="material-symbols-outlined text-[24px]">add</span>
             </button>
           )}
         </div>
